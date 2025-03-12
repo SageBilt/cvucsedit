@@ -11,7 +11,9 @@ const UCSFileTypes: UCSFileType[] = [
   {FileTypeName: "None",Extension: "",IconName: ""},
   {FileTypeName: "Divider",Extension: "",IconName: "Divider.png"},
   {FileTypeName: "UCSJS",Extension: "js",IconName: "UCSJS.png"},
-  {FileTypeName: "UCSM",Extension: "ucsm",IconName: "UCSM.png"}
+  {FileTypeName: "UCSM",Extension: "ucsm",IconName: "UCSM.png"},
+  {FileTypeName: "UCSJS-Disabled",Extension: "js",IconName: "UCSJS-disabled.png"},
+  {FileTypeName: "UCSM-Disabled",Extension: "ucsm",IconName: "UCSM-disabled.png"}
 
 ]
 
@@ -20,14 +22,23 @@ function GetFileTypeByName(FileTypeName: String): UCSFileType {
   return FileType ? FileType : UCSFileTypes[0];
 }
 
-export function GetFileType(UCSTypeID: number, MacroType: number): UCSFileType {
+export function GetFileType(UCSTypeID: number, MacroType: number, Disabled: boolean): UCSFileType {
   if (UCSTypeID == 4) return GetFileTypeByName('Divider');
   else {
-    switch (MacroType) {
-      case 1:
-        return GetFileTypeByName('UCSJS');
-      default:
-        return GetFileTypeByName('UCSM');
+    if (Disabled) {
+      switch (MacroType) {
+        case 1:
+          return GetFileTypeByName('UCSJS-Disabled');
+        default:
+          return GetFileTypeByName('UCSM-Disabled');
+      }
+    } else {
+      switch (MacroType) {
+        case 1:
+          return GetFileTypeByName('UCSJS');
+        default:
+          return GetFileTypeByName('UCSM');
+      }
     }
   }
 }
@@ -73,6 +84,11 @@ export class LookupTreeDataProvider implements vscode.TreeDataProvider<CustomTre
   //   this.results = newResults;
   //   this._onDidChangeTreeData.fire();
   // }
+
+  clearItems() {
+    this.results = []; // Reset the data to an empty array
+    this._onDidChangeTreeData.fire(); // Notify VS Code of the change
+}
 
   updateResults(newResults: CustomTreeItem[]) {
     this.results = newResults;

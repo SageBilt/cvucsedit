@@ -24,7 +24,7 @@
         },
         "cvucsedit.Database": {
           "type": "string",
-          "default": "CVData_2021",
+          "default": "CVData",
           "description": "The name of the Cabinet Vision SQL database."
         }
       }
@@ -41,16 +41,18 @@
     "views": {
       "cvucs-container": [
         {
+          "icon": "",
           "id": "CVUCSList",
           "name": "Cabinet Vision UCS List"
+        },
+        {
+          "icon": "",
+          "id": "CVUCSLibList",
+          "name": "Cabinet Vision JavaScript Library List"
         }
       ]
     },
     "commands": [
-      {
-        "command": "cvucsedit.loaducs",
-        "title": "Load Cabinet Vision UCS list"
-      },
       {
         "command": "cvucsedit.showUCSList",
         "title": "Show Cabinet Vision UCS list"

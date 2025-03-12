@@ -11,12 +11,17 @@ import { SQLConnection } from './SQLConnection';
 
 class SQLScriptProvider implements vscode.TextDocumentContentProvider {
     private UCS: Map<string, string> = new Map();
-    public lookupProvider: CLT.LookupTreeDataProvider;
+    private DBVersion: number = 0;
+    public UCSListlookupProvider: CLT.LookupTreeDataProvider;
+    public UCSLibListlookupProvider: CLT.LookupTreeDataProvider;
 
     constructor (public SQLConn : SQLConnection,public readonly context: vscode.ExtensionContext)
     {
-        this.lookupProvider = new CLT.LookupTreeDataProvider(this.context);
-        vscode.window.registerTreeDataProvider('CVUCSList', this.lookupProvider);
+        this.UCSListlookupProvider = new CLT.LookupTreeDataProvider(this.context);
+        vscode.window.registerTreeDataProvider('CVUCSList', this.UCSListlookupProvider);
+        this.UCSLibListlookupProvider = new CLT.LookupTreeDataProvider(this.context);
+        vscode.window.registerTreeDataProvider('CVUCSLibList', this.UCSLibListlookupProvider);
+        
     }
 
     // async loadScripts() {
@@ -29,22 +34,49 @@ class SQLScriptProvider implements vscode.TextDocumentContentProvider {
     //     });
     // }
 
-    async loadSideBarMenu() {
-        //await sql.connect(config);
+    async GetDBVersion() : Promise<number> {
+        const result =  await this.SQLConn.ExecuteStatment('Select Version From DbInfo',[]);
+        if (result.recordset) {
+            return result.recordset[0]['Version'];
+        }
+        return 0;
+    }
 
-        const result =  await this.SQLConn.ExecuteStatment('SELECT ID,Name, Code, MacroType, UCSLibrary, UCSTypeID FROM UCS Order By Ordinal',[]);
+    async loadSideBarMenus() {
+        this.DBVersion = await this.GetDBVersion();
+        let SQLText: string;
+
+        if (this.DBVersion >= 2024) {
+            /*Load UCS List which includes both UCSM & UCSJS*/
+            SQLText = 'SELECT ID,Name, Code, MacroType, UCSLibrary, UCSTypeID,Disabled FROM UCS Where UCSLibrary = 0 Order By Ordinal';
+            await this.loadSideBarMenu(this.UCSListlookupProvider,SQLText);
+            /*Load JS Libraries */
+            SQLText = 'SELECT ID,Name, Code, MacroType, UCSLibrary, UCSTypeID,Disabled FROM UCS Where UCSLibrary = 1 Order By Ordinal';
+            await this.loadSideBarMenu(this.UCSLibListlookupProvider,SQLText);
+
+        } else {
+            /*Load UCS List for legacy versions which only have UCSM*/
+            SQLText = 'SELECT ID,Name, Code,0 as MacroType,0 as UCSLibrary, UCSTypeID,Disabled FROM UCS Order By Ordinal';
+            await this.loadSideBarMenu(this.UCSListlookupProvider,SQLText);
+        }
+    }
+
+    private async loadSideBarMenu(lookupProvider: CLT.LookupTreeDataProvider,SQLText: string) {
+        lookupProvider.clearItems();
+
+        const result =  await this.SQLConn.ExecuteStatment(SQLText,[]);
         if (result.recordset) {
             //const result = await sql.query('SELECT ID,Name, Code, MacroType, UCSLibrary, UCSTypeID FROM UCS Order By Ordinal'); 
-            const List = result.recordset.map((ucsrecord: { ID: number,Name: string; Code: string; MacroType: number,UCSTypeID: number}) => 
+            const List = result.recordset.map((ucsrecord: { ID: number,Name: string; Code: string; MacroType: number,UCSTypeID: number,Disabled: boolean}) => 
                 new CLT.CustomTreeItem(ucsrecord.ID
                                         ,ucsrecord.Name
-                                        ,CLT.GetFileType(ucsrecord.UCSTypeID,ucsrecord.MacroType)
+                                        ,CLT.GetFileType(ucsrecord.UCSTypeID,ucsrecord.MacroType,ucsrecord.Disabled)
                                         ,ucsrecord.Code
                                         ,vscode.TreeItemCollapsibleState.Expanded
                                         ,this.context
                                     )
             );
-            this.lookupProvider.updateResults(List);
+            lookupProvider.updateResults(List);
         }
     }
 
@@ -60,30 +92,12 @@ export async function activate(context: vscode.ExtensionContext) {
     const SQLConn = new SQLConnection();
     const provider = new SQLScriptProvider(SQLConn,context);
     const textProvider = new DFSProvider.DatabaseFileSystemProvider();
-    //await provider.loadScripts();
-    await provider.loadSideBarMenu();
+    await provider.loadSideBarMenus();
 
-    //vscode.workspace.registerTextDocumentContentProvider('cvucs', provider);
     vscode.workspace.registerFileSystemProvider('cvucs', textProvider, { isCaseSensitive: true });
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('cvucsedit.loaducs', async () => {
-            const result = await sql.query('SELECT Name, Code, MacroType FROM UCS');
-            const scriptPick = await vscode.window.showQuickPick(
-                result.recordset.map((ucsrecord: { Name: { toString: () => any; }; Code: string; MacroType: number; }) => 
-					({ label: ucsrecord.Name.toString(), description: ucsrecord.Code.substring(0, 50), FileExt: ucsrecord.MacroType }))
-            );
-            if (scriptPick) {
-                const FileExt = scriptPick.FileExt == 1 ? 'js' : 'ucsm';
-                const uri = vscode.Uri.parse(`cvucs:${scriptPick.label}.${FileExt}`);
-                const document = await vscode.workspace.openTextDocument(uri);
-                await vscode.window.showTextDocument(document);
-            }
-        })
-    );
-
-    context.subscriptions.push(
-        vscode.commands.registerCommand('cvucsedit.showUCSList',provider.loadSideBarMenu)
+        vscode.commands.registerCommand('cvucsedit.showUCSList',provider.loadSideBarMenus.bind(provider))
     );
 
     context.subscriptions.push(
@@ -105,7 +119,7 @@ export async function activate(context: vscode.ExtensionContext) {
                 //     ID: item.UCSID,
                 //   }) ; 
 
-                provider.lookupProvider.storeTreeItem(document.uri.toString(), item);  
+                provider.UCSListlookupProvider.storeTreeItem(document.uri.toString(), item);  
 
                 //   editor.edit(editBuilder => {editBuilder.insert(new vscode.Position(0, 0),item.Code)});
             }
@@ -116,18 +130,16 @@ export async function activate(context: vscode.ExtensionContext) {
     vscode.workspace.onDidSaveTextDocument(async (document) => {
         if (document.uri.scheme === 'cvucs') {
             const key = `treeItem:${document.uri.toString()}`;
-            //const treeItemData = context.workspaceState.get<{ID: number}>(key);
-            const treeItem = provider.lookupProvider.getTreeItemByDocumentUri(document.uri.toString());
+            let treeItem = provider.UCSListlookupProvider.getTreeItemByDocumentUri(document.uri.toString());
+            if (!treeItem)
+                treeItem = provider.UCSLibListlookupProvider.getTreeItemByDocumentUri(document.uri.toString());
 
             if (treeItem) {
-                //const scriptId = treeItemData?.ID;// document.uri.path.replace('.sql', '');
                 const scriptId = treeItem.UCSID;
                 const content = document.getText();
 
                 SQLConn.ExecuteStatment(`Update UCS Set Code = @Code Where ID = @ID`,[{"Name":"ID","Value": scriptId},{"Name":"Code","Value": content}]);
                 treeItem.Code = content;
-                //await sql.connect(config);
-                //await sql.query`UPDATE Scripts SET script_content = ${content} WHERE id = ${scriptId}`;
                 vscode.window.showInformationMessage(`Updated UCS ${treeItem.label} in Cabinet Vision SQL Server Database.`);
             }
         }
