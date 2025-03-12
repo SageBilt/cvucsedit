@@ -1,0 +1,89 @@
+{
+  "name": "cvucsedit",
+  "displayName": "CV-UCS-Editor",
+  "description": "Cabinet Vision UCS Editor",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.98.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "CVUCS Editor Database Configuration",
+      "properties": {
+        "cvucsedit.Server": {
+          "type": "string",
+          "default": "localhost\\CV24",
+          "description": "The Cabinet Vision database SQL server instance name"
+        },
+        "cvucsedit.Database": {
+          "type": "string",
+          "default": "CVData_2021",
+          "description": "The name of the Cabinet Vision SQL database."
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "cvucs-container",
+          "title": "CVUCS",
+          "icon": "./icons/UCSM.svg"
+        }
+      ]
+    },
+    "views": {
+      "cvucs-container": [
+        {
+          "id": "CVUCSList",
+          "name": "Cabinet Vision UCS List"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "cvucsedit.loaducs",
+        "title": "Load Cabinet Vision UCS list"
+      },
+      {
+        "command": "cvucsedit.showUCSList",
+        "title": "Show Cabinet Vision UCS list"
+      },
+      {
+        "command": "cvucsedit.onUCSItemClick",
+        "title": "UCS list Item Click"
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/mssql": "^9.1.7",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.98.0",
+    "@typescript-eslint/eslint-plugin": "^8.25.0",
+    "@typescript-eslint/parser": "^8.25.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "eslint": "^9.21.0",
+    "typescript": "^5.7.3"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "msnodesqlv8": "^4.5.0",
+    "mssql": "^11.0.1"
+  }
+}
