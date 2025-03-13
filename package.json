@@ -14,6 +14,26 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "languages": [
+      {
+        "id": "ucsm",
+        "aliases": [
+          "Cabinet Vision User Created Standard",
+          "ucsm"
+        ],
+        "extensions": [
+          ".ucsm"
+        ],
+        "configuration": "./Languages/ucsm/language-configuration-ucsm.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "ucsm",
+        "scopeName": "source.ucsm",
+        "path": "./Languages/ucsm/ucsm.tmLanguage.json"
+      }
+    ],
     "configuration": {
       "title": "CVUCS Editor Database Configuration",
       "properties": {
@@ -81,11 +101,14 @@
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.4.1",
     "eslint": "^9.21.0",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "vscode-languageserver": "^9.0.1"
   },
   "dependencies": {
     "express": "^4.21.2",
     "msnodesqlv8": "^4.5.0",
-    "mssql": "^11.0.1"
+    "mssql": "^11.0.1",
+    "vscode-languageclient": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.12"
   }
 }

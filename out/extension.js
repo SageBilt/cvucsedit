@@ -37,74 +37,24 @@ exports.activate = activate;
 exports.deactivate = deactivate;
 // The module 'vscode' contains the VS Code extensibility API
 // Import the module and reference it with the alias vscode in your code below
+const path = __importStar(require("path"));
 const vscode = __importStar(require("vscode"));
 const DFSProvider = __importStar(require("./DatabaseFileSystemProvider"));
-const CLT = __importStar(require("./CustomLookupTree"));
 const SQLConnection_1 = require("./SQLConnection");
-class SQLScriptProvider {
-    SQLConn;
-    context;
-    UCS = new Map();
-    DBVersion = 0;
-    UCSListlookupProvider;
-    UCSLibListlookupProvider;
-    constructor(SQLConn, context) {
-        this.SQLConn = SQLConn;
-        this.context = context;
-        this.UCSListlookupProvider = new CLT.LookupTreeDataProvider(this.context);
-        vscode.window.registerTreeDataProvider('CVUCSList', this.UCSListlookupProvider);
-        this.UCSLibListlookupProvider = new CLT.LookupTreeDataProvider(this.context);
-        vscode.window.registerTreeDataProvider('CVUCSLibList', this.UCSLibListlookupProvider);
-    }
-    // async loadScripts() {
-    //     await sql.connect(config);
-    //     const result = await sql.query('SELECT Name, Code, MacroType FROM UCS');
-    //     result.recordset.forEach((ucsrecord: { Name: any; Code: string; MacroType: number; }) => {
-    //         const FileExt = ucsrecord.MacroType == 1 ? 'js' : 'ucsm';
-    //         const uri = vscode.Uri.parse(`cvucs:${ucsrecord.Name}.${FileExt}`);
-    //         this.UCS.set(uri.toString(), ucsrecord.Code);
-    //     });
-    // }
-    async GetDBVersion() {
-        const result = await this.SQLConn.ExecuteStatment('Select Version From DbInfo', []);
-        if (result.recordset) {
-            return result.recordset[0]['Version'];
-        }
-        return 0;
-    }
-    async loadSideBarMenus() {
-        this.DBVersion = await this.GetDBVersion();
-        let SQLText;
-        if (this.DBVersion >= 2024) {
-            /*Load UCS List which includes both UCSM & UCSJS*/
-            SQLText = 'SELECT ID,Name, Code, MacroType, UCSLibrary, UCSTypeID,Disabled FROM UCS Where UCSLibrary = 0 Order By Ordinal';
-            await this.loadSideBarMenu(this.UCSListlookupProvider, SQLText);
-            /*Load JS Libraries */
-            SQLText = 'SELECT ID,Name, Code, MacroType, UCSLibrary, UCSTypeID,Disabled FROM UCS Where UCSLibrary = 1 Order By Ordinal';
-            await this.loadSideBarMenu(this.UCSLibListlookupProvider, SQLText);
-        }
-        else {
-            /*Load UCS List for legacy versions which only have UCSM*/
-            SQLText = 'SELECT ID,Name, Code,0 as MacroType,0 as UCSLibrary, UCSTypeID,Disabled FROM UCS Order By Ordinal';
-            await this.loadSideBarMenu(this.UCSListlookupProvider, SQLText);
-        }
-    }
-    async loadSideBarMenu(lookupProvider, SQLText) {
-        lookupProvider.clearItems();
-        const result = await this.SQLConn.ExecuteStatment(SQLText, []);
-        if (result.recordset) {
-            //const result = await sql.query('SELECT ID,Name, Code, MacroType, UCSLibrary, UCSTypeID FROM UCS Order By Ordinal'); 
-            const List = result.recordset.map((ucsrecord) => new CLT.CustomTreeItem(ucsrecord.ID, ucsrecord.Name, CLT.GetFileType(ucsrecord.UCSTypeID, ucsrecord.MacroType, ucsrecord.Disabled), ucsrecord.Code, vscode.TreeItemCollapsibleState.Expanded, this.context));
-            lookupProvider.updateResults(List);
-        }
-    }
-    provideTextDocumentContent(uri) {
-        return this.UCS.get(uri.toString()) || '-- Script not found';
-    }
-}
+const SQLScriptProvider_1 = require("./SQLScriptProvider");
+const client_1 = require("./client/client");
+let clients = [];
 async function activate(context) {
+    // Instantiate a client for languages
+    const UCSMClient = new client_1.LanguageClientWrapper({
+        languageId: 'ucsm',
+        serverModulePath: path.join('out', 'server', 'server.js'),
+        fileExtension: '.ucsm'
+    }, context);
+    clients.push(UCSMClient);
+    //UCS Text editors
     const SQLConn = new SQLConnection_1.SQLConnection();
-    const provider = new SQLScriptProvider(SQLConn, context);
+    const provider = new SQLScriptProvider_1.SQLScriptProvider(SQLConn, context);
     const textProvider = new DFSProvider.DatabaseFileSystemProvider();
     await provider.loadSideBarMenus();
     vscode.workspace.registerFileSystemProvider('cvucs', textProvider, { isCaseSensitive: true });
@@ -150,5 +100,10 @@ async function activate(context) {
     }));
 }
 function deactivate() {
+    if (!clients.length) {
+        return undefined;
+    }
+    // Stop all clients in parallel
+    return Promise.all(clients.map(client => client.stop())).then(() => undefined);
 }
 //# sourceMappingURL=extension.js.map

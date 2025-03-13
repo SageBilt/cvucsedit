@@ -1,0 +1,5 @@
+{
+    "keywords": ["Exit", "Part", "Delete", "If", "Then", "Else", "End"],
+    "variables": ["SysVar1", "SysVar2", "CurrentUser"],
+    "methods": ["GetData()", "SetValue()", "ProcessItem()"]
+  }
