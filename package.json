@@ -18,7 +18,7 @@
       {
         "id": "ucsm",
         "aliases": [
-          "Cabinet Vision User Created Standard",
+          "Cabinet Vision UCS",
           "ucsm"
         ],
         "extensions": [
@@ -32,6 +32,23 @@
         "language": "ucsm",
         "scopeName": "source.ucsm",
         "path": "./Languages/ucsm/ucsm.tmLanguage.json"
+      },
+      {
+        "path": "./Languages/ucsjs/ucsjs.tmLanguage.json",
+        "scopeName": "source.ucsjs",
+        "injectTo": ["source.js"]
+      }
+    ],
+    "typescriptServerPlugins": [
+      {
+        "name": "ucsjs-ts-plugin",
+        "path": "./out/ts-plugin.js"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "ucsm",
+        "path": "./Languages/ucsm/ucsm.snippets.json"
       }
     ],
     "configuration": {
@@ -101,7 +118,7 @@
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.4.1",
     "eslint": "^9.21.0",
-    "typescript": "^5.7.3",
+    "typescript": "^5.8.2",
     "vscode-languageserver": "^9.0.1"
   },
   "dependencies": {

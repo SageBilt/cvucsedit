@@ -1,0 +1,809 @@
+_M:MH1P
+
+Specifies the Wire basket First Hole Offset.
+
+
+
+Applies To:
+ 
+Wire Basket
+ 
+
+Valid Range:
+ 
+Unlimited
+ 
+
+Values:
+ 
+Numeric (Measurement)
+ 
+Visibility:
+ 
+Never
+
+
+_M:RT
+
+Specifies the Board Stock Rough Thickness.
+
+
+Applies To:
+ 
+Board Stock
+ 
+
+Valid Range:
+ 
+Unlimited
+ 
+
+Values:
+ 
+Numeric (Measurement)
+
+Visibility:
+ 
+Never
+
+
+
+
+_M:CNCCC
+
+Specifies a Climb Cut.
+
+
+Applies To:
+ 
+Board Stock, Composite, Laminate, Panel Stock
+ 
+
+Valid Range:
+ 
+0 = No, 1 = Yes
+ 
+
+Values:
+ 
+Boolean
+ 
+Visibility:
+ 
+Never
+ 
+
+
+_M:CNCDL
+
+Specifies the Drop Length.
+
+
+Applies To:
+ 
+Board Stock, Composite, Laminate, Panel Stock
+ 
+
+Valid Range:
+ 
+Unlimited
+ 
+
+Values:
+ 
+Numeric (Measurement)
+ 
+Visibility:
+ 
+Never
+
+
+_M:CNCDW
+
+Specifies the Drop Width.
+
+
+Applies To:
+ 
+Board Stock, Composite, Laminate, Panel Stock
+ 
+
+Valid Range:
+ 
+Unlimited
+ 
+
+Values:
+ 
+Numeric (Measurement)
+ 
+Visibility:
+ 
+Never
+
+
+_M:CNCFRP
+
+Specifies the Feedrate Percent.
+
+
+Applies To:
+ 
+Board Stock, Composite, Laminate, Panel Stock
+ 
+
+Valid Range:
+ 
+0-100
+ 
+
+Values:
+ 
+Numeric (Percentage)
+ 
+Visibility:
+ 
+Never
+
+
+
+
+_M:CNCGD
+
+Specifies Grain Dependency.
+
+
+Applies To:
+ 
+Board Stock, Composite, Laminate, Panel Stock
+ 
+
+Valid Range:
+ 
+0 = No, 1 = Yes
+ 
+
+Values:
+ 
+Boolean
+
+Visibility:
+ 
+Never
+
+
+
+
+_M:CNCMBC
+
+Specifies minimize back chip.
+
+
+Applies To:
+ 
+Board Stock, Composite, Laminate, Panel Stock
+ 
+
+Valid Range:
+ 
+0 = No, 1 = Yes
+ 
+
+Values:
+ 
+Boolean
+ 
+Visibility:
+ 
+Never
+
+
+
+
+_M:CNCMDPP
+
+Specifies maximum depth per pass.
+
+
+Applies To:
+ 
+Board Stock, Composite, Laminate, Panel Stock
+ 
+
+Valid Range:
+ 
+Unlimited
+ 
+
+Values:
+ 
+Numeric (Measurement)
+ 
+Visibility:
+ 
+Never
+
+
+
+
+_M:CNCMFC
+
+Specifies minimize face chip.
+
+Applies To:
+ 
+Board Stock, Composite, Laminate, Panel Stock
+ 
+
+Valid Range:
+ 
+0 = No, 1 = Yes
+ 
+
+Values:
+ 
+Boolean
+ 
+Visibility:
+ 
+Never
+
+
+
+_M:CNCOPT
+
+Specifies optimizable.
+
+
+Applies To:
+ 
+Board Stock, Composite, Laminate, Panel Stock
+ 
+
+Valid Range:
+ 
+0 = No, 1 = Yes
+ 
+
+Values:
+ 
+Boolean
+ 
+Visibility:
+ 
+Never
+
+
+_M:CNCSSP
+
+Specifies spindle speed percent.
+
+
+Applies To:
+ 
+Board Stock, Composite, Laminate, Panel Stock
+ 
+
+Valid Range:
+ 
+0-100
+ 
+
+Values:
+ 
+Numeric (Percentage)
+ 
+Visibility:
+ 
+Never
+
+
+
+
+_M:_PREASM
+
+Specifies pre-assembly.
+
+
+Applies To:
+ 
+Composite
+ 
+
+Valid Range:
+ 
+0 = No, 1 = Yes
+ 
+
+Values:
+ 
+Boolean
+ 
+Visibility:
+ 
+Never
+
+
+
+_M:CONT
+
+Specifies the Connector Type.
+
+
+Applies To:
+ 
+Connector
+ 
+
+Valid Range:
+ 
+1 = Rafix, 2 = Clamex P-10, 3 = Clamex p-15, 4 = Clamex P Medius 15/10, 5 = Tenso P-14, 6 = Connector
+ 
+
+Values:
+ 
+Numeric (Integer)
+ 
+Visibility:
+ 
+Never
+
+
+
+_M:BKNHGT
+
+Specifies the Drawer Guide Back Notch Height.
+
+
+Applies To:
+ 
+Drawer Guide
+ 
+
+Valid Range:
+ 
+Unlimited
+ 
+
+Values:
+ 
+Numeric (Measurement)
+ 
+Visibility:
+ 
+Never
+
+
+
+
+_M:BKNLEN
+
+Specifies the Drawer Guide Back Notch Length.
+
+
+Applies To:
+ 
+Drawer Guide
+ 
+
+Valid Range:
+ 
+Unlimited
+ 
+
+Values:
+ 
+Numeric (Measurement)
+ 
+Visibility:
+ 
+Never
+
+
+_M:BKNOFF
+
+Specifies the Drawer Guide Back Notch Offset.
+
+
+Applies To:
+ 
+Drawer Guide
+ 
+
+Valid Range:
+ 
+Unlimited
+ 
+
+Values:
+ 
+Numeric (Measurement)
+ 
+Visibility:
+ 
+Never
+
+
+
+
+_M:MH1P
+
+Specifies the Drawer Guide First Hole Offset.
+
+
+Applies To:
+ 
+Drawer Guide
+ 
+
+Valid Range:
+ 
+Unlimited
+ 
+
+Values:
+ 
+Numeric (Measurement)
+ 
+Visibility:
+ 
+Never
+
+
+
+
+_M:SCREF
+
+Specifies the Drawer Guide Screw Center Reference.
+
+
+Applies To:
+ 
+Drawer Guide
+ 
+
+Valid Range: 
+
+0 = Top, 1 = Bottom
+ 
+
+Values:
+ 
+Boolean
+ 
+Visibility:
+ 
+Never
+
+
+_M:SCTBB
+
+Specifies the Drawer Guide Screw Center to Box Bottom dimension.
+
+
+Applies To:
+ 
+Drawer Guide
+ 
+
+Valid Range:
+ 
+Unlimited
+ 
+
+Values:
+ 
+Numeric (Measurement)
+ 
+Visibility:
+ 
+Never
+
+
+
+
+_M:ROCLR
+
+Specifies the Hinge Roll Out Clearance.
+
+Applies To:
+ 
+Hinge
+ 
+
+Valid Range:
+ 
+Unlimited
+ 
+
+Values:
+ 
+Numeric (Measurement)
+ 
+Visibility:
+ 
+Never
+
+
+
+
+_M:MODEL
+
+Specifies if the Miscellaneous Material includes a Model.
+
+
+Applies To:
+ 
+Miscellaneous
+ 
+
+Valid Range:
+ 
+0 = No, 1 = Yes
+ 
+
+Values:
+ 
+Boolean
+ 
+Visibility:
+ 
+Never
+
+
+
+
+_M:_MTRIM
+
+Specifies the Molding Miter Trim.
+
+
+Applies To:
+ 
+Molding
+ 
+
+Valid Range:
+ 
+Unlimited
+ 
+
+Values:
+ 
+Numeric (Measurement)
+ 
+Visibility:
+ 
+Never
+
+
+
+
+
+_M:LEN
+
+Specifies the Closet Rod Length.
+
+
+Applies To:
+ 
+Banding
+ 
+
+Valid Range:
+ 
+Unlimited
+ 
+
+Values:
+ 
+Numeric (Measurement)
+ 
+Visibility:
+ 
+Never
+
+
+
+_M:DX
+
+Specifies the Material's Width.
+
+
+Applies To:
+ 
+Laminate, Panel Stock, Composite
+ 
+
+Valid Range:
+ 
+Unlimited
+ 
+
+Values:
+ 
+Numeric (Measurement)
+ 
+Visibility:
+ 
+Never
+
+
+
+
+_M:DY
+
+Specifies the Material's Length.
+
+
+Applies To:
+ 
+Laminate, Panel Stock, Composite
+ 
+
+Valid Range:
+ 
+Unlimited
+ 
+
+Values:
+ 
+Numeric (Measurement)
+ 
+Visibility:
+ 
+Never
+
+
+
+
+_M:MNTDADOOFF
+
+Specifies the Sliding Door Roller Dado offset.
+
+
+Applies To:
+ 
+Sliding Door Roller
+ 
+
+Valid Range:
+ 
+Unlimited
+ 
+
+Values:
+ 
+Numeric (Measurement)
+ 
+Visibility:
+ 
+Never
+
+
+
+
+_M:MNTDADOREF
+
+Specifies the Sliding Door Roller Dado reference.
+
+
+Applies To:
+ 
+Sliding Door Roller
+ 
+
+Valid Range: 1 = Back, 2 = Center, 3 = Front
+ 
+
+Values:
+ 
+Numeric (Integer)
+ 
+Visibility:
+ 
+Never
+
+
+
+
+_M:MNTPLTPOSSIDE
+
+Specifies the Sliding Door Roller Edge Inset.
+
+
+Applies To:
+ 
+Sliding Door Roller
+ 
+
+Valid Range:
+ 
+Unlimited
+ 
+
+Values:
+ 
+Numeric (Measurement)
+ 
+Visibility:
+ 
+Never
+
+
+
+
+_M:MNTPLTPOSTOP
+
+Specifies the Sliding Door Roller End Inset.
+
+
+Applies To:
+ 
+Sliding Door Roller
+ 
+
+Valid Range:
+ 
+Unlimited
+ 
+
+Values:
+ 
+Numeric (Measurement)
+ 
+Visibility:
+ 
+Never
+
+
+
+
+_M:MNTPLTONBACK
+
+Specifies if the Sliding Door Roller Mounts on the Back.
+
+
+Applies To:
+ 
+Sliding Door Roller
+ 
+
+Valid Range:
+ 
+0 = No, 1 = Yes
+ 
+
+Values:
+ 
+Boolean
+ 
+Visibility:
+ 
+Never
+
+
+
+_M:MNTPLTSTL
+
+Specifies the Sliding Door Roller Type.
+
+
+Applies To:
+ 
+Sliding Door Roller
+ 
+
+Valid Range:
+ 
+1 = Roller, 2 = Slot
+ 
+
+Values:
+ 
+Numeric (Integer)
+ 
+
+Visibility:
+ 
+Never

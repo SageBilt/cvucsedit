@@ -1,5 +1,30 @@
 {
-    "keywords": ["Exit", "Part", "Delete", "If", "Then", "Else", "End"],
-    "variables": ["SysVar1", "SysVar2", "CurrentUser"],
-    "methods": ["GetData()", "SetValue()", "ProcessItem()"]
-  }
+  "keywords": [
+    "If", "Then", "Else", "End", "While", "Do", "Exit", "Delete", "For", "Each",
+    "Dim", "as", "New", "this", "null"
+  ],
+  "variables": [
+    {
+      "name": "_3DHDIR",
+      "description": "Specifies the default 3d horizontal view direction",
+      "type": "System and/or User Definable",
+      "validRange": "Unlimited",
+      "appliesTo": "Room",
+      "values": "Numeric (Degrees)",
+      "visibility": "Always"
+    },
+    {
+      "name": "_3DHPAN",
+      "description": "Specifies the default 3d horizontal pan distance",
+      "type": "System and/or User Definable",
+      "validRange": "Unlimited",
+      "appliesTo": "Room",
+      "values": "Numeric (Measurement)",
+      "visibility": "Always"
+    }
+  ],
+  "methods": [
+    "ABS", "ACOS", "ASIN", "ATAN", "COS", "COSH", "EXP", "IMP", "LOG", "LOG10",
+    "ROUND", "RPREC", "SIN", "SINH", "SQR", "SQRT", "TAN", "TANH", "TRUNC"
+  ]
+}

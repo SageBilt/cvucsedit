@@ -1,0 +1,157 @@
+{
+    "If Then": {
+      "prefix": "IfThen",
+      "body": ["IF THEN\n\t$1\nEND IF"],
+      "description": "If Then block"
+    },
+    "If Then Else": {
+        "prefix": "IfThenElse",
+        "body": ["IF THEN\n\t$1\nELSE\n\t$2\nEND IF"],
+        "description": "If Then Else block"
+    },
+    "While Do": {
+        "prefix": "WhileDo",
+        "body": ["WWHILE $1 DO\n\t$2\nEND WHILE"],
+        "description": "While Do block"
+    },
+    "For Each ACAMDwg": {
+      "prefix": "ForEachACAMDwg",
+      "body": ["FOR EACH $1 ACAMDwg"],
+      "description": "For Each ACAMDwg Declaration"
+    },
+    "For Each Arc": {
+      "prefix": "ForEachArc",
+      "body": ["FOR EACH $1 Arc"],
+      "description": "For Each Arc Declaration"
+    },
+    "For Each Assembly": {
+      "prefix": "ForEachAssembly",
+      "body": ["FOR EACH $1 Assembly"],
+      "description": "For Each Assembly Declaration"
+    },
+    "For Each Connection": {
+      "prefix": "ForEachConnection",
+      "body": ["FOR EACH $1 Connection"],
+      "description": "For Each Connection Declaration"
+    },
+    "For Each Dado": {
+      "prefix": "ForEachDado",
+      "body": ["FOR EACH $1 Dado"],
+      "description": "For Each Dado Declaration"
+    },
+    "For Each DadoEx": {
+      "prefix": "ForEachDadoEx",
+      "body": ["FOR EACH $1 DadoEx"],
+      "description": "For Each DadoEx Declaration"
+    },
+    "For Each Door": {
+      "prefix": "ForEachDoor",
+      "body": ["FOR EACH $1 Door"],
+      "description": "For Each Door Declaration"
+    },
+    "For Each DoveTail": {
+      "prefix": "ForEachDoveTail",
+      "body": ["FOR EACH $1 DoveTail"],
+      "description": "For Each DoveTail Declaration"
+    },
+    "For Each DrwFront": {
+      "prefix": "ForEachDrwFront",
+      "body": ["FOR EACH $1 DrwFront"],
+      "description": "For Each DrwFront Declaration"
+    },
+    "For Each Guide": {
+      "prefix": "ForEachGuide",
+      "body": ["FOR EACH $1 Guide"],
+      "description": "For Each Guide Declaration"
+    },
+    "For Each Hardware": {
+      "prefix": "ForEachHardware",
+      "body": ["FOR EACH $1 Hardware"],
+      "description": "For Each Hardware Declaration"
+    },
+    "For Each Hinge": {
+      "prefix": "ForEachHinge",
+      "body": ["FOR EACH $1 Hinge"],
+      "description": "For Each Hinge Declaration"
+    },
+    "For Each HingePlate": {
+      "prefix": "ForEachHingePlate",
+      "body": ["FOR EACH $1 HingePlate"],
+      "description": "For Each HingePlate Declaration"
+    },
+    "For Each Hole": {
+      "prefix": "ForEachHole",
+      "body": ["FOR EACH $1 Hole"],
+      "description": "For Each Hole Declaration"
+    },
+    "For Each IJoint": {
+      "prefix": "ForEachIJoint",
+      "body": ["FOR EACH $1 IJoint"],
+      "description": "For Each IJoint Declaration"
+    },
+    "For Each Line": {
+      "prefix": "ForEachLine",
+      "body": ["FOR EACH $1 Line"],
+      "description": "For Each Line Declaration"
+    },
+    "For Each Linebore": {
+      "prefix": "ForEachLinebore",
+      "body": ["FOR EACH $1 Linebore"],
+      "description": "For Each Linebore Declaration"
+    },
+    "For Each MDado": {
+      "prefix": "ForEachMDado",
+      "body": ["FOR EACH $1 MDado"],
+      "description": "For Each MDado Declaration"
+    },
+    "For Each MDadoEx": {
+      "prefix": "ForEachMDadoEx",
+      "body": ["FOR EACH $1 MDadoEx"],
+      "description": "For Each MDadoEx Declaration"
+    },
+    "For Each MHole": {
+      "prefix": "ForEachMHole",
+      "body": ["FOR EACH $1 MHole"],
+      "description": "For Each MHole Declaration"
+    },
+    "For Each MLineBore": {
+      "prefix": "ForEachMLineBore",
+      "body": ["FOR EACH $1 MLineBore"],
+      "description": "For Each MLineBore Declaration"
+    },
+    "For Each Molding": {
+      "prefix": "ForEachMolding",
+      "body": ["FOR EACH $1 Molding"],
+      "description": "For Each Molding Declaration"
+    },
+    "For Each NGAcsry": {
+      "prefix": "ForEachNGAcsry",
+      "body": ["FOR EACH $1 NGAcsry"],
+      "description": "For Each NGAcsry Declaration"
+    },
+    "For Each Opening": {
+      "prefix": "ForEachOpening",
+      "body": ["FOR EACH $1 Opening"],
+      "description": "For Each Opening Declaration"
+    },
+    "For Each Operation": {
+      "prefix": "ForEachOperation",
+      "body": ["FOR EACH $1 Operation"],
+      "description": "For Each Operation Declaration"
+    },
+    "For Each Pull": {
+      "prefix": "ForEachPull",
+      "body": ["FOR EACH $1 Pull"],
+      "description": "For Each Pull Declaration"
+    },
+    "For Each Route": {
+      "prefix": "ForEachRoute",
+      "body": ["FOR EACH $1 Route"],
+      "description": "For Each Route Declaration"
+    },
+    "For Each Part": {
+        "prefix": "ForEachPart",
+        "body": ["FOR EACH $1 PART"],
+        "description": "For Each Part Declaration"
+    }
+}

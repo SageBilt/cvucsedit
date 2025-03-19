@@ -1,0 +1,13 @@
+{
+    "valueTypes": ["crncy", "meas", "deg", "int", "bool", "dec", "text", "style", "desc"],
+    "dimTypes": [
+      "ACAMDwg", "Arc", "Connection", "Dado", "DadoEx", "Door", "DoveTail", "DrwFront", "Guide",
+      "Hardware", "Hinge", "HingePlate", "Hole", "IJoint", "Line", "Linebore", "MBlindDado",
+      "MDado", "MDadoEx", "MHole", "MLinebore", "Molding", "NGAcsry", "Part", "Pull", "Route"
+    ],
+    "forEachTypes": [
+      "ACAMDwg", "Arc", "Assembly", "Connection", "Dado", "DadoEx", "Door", "DoveTail", "DrwFront",
+      "Guide", "Hardware", "Hinge", "HingePlate", "Hole", "IJoint", "Line", "Linebore", "MDado",
+      "MDadoEx", "MHole", "MLineBore", "Molding", "NGAcsry", "Opening", "Operation", "Part", "Pull", "Route"
+    ]
+  }

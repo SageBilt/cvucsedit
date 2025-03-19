@@ -4,20 +4,21 @@ import * as path from 'path';
 interface UCSFileType {
   FileTypeName: string,
   Extension: string,
-  IconName : string 
+  IconName : string, 
+  //languageId : string
 }
 
 const UCSFileTypes: UCSFileType[] = [
   {FileTypeName: "None",Extension: "",IconName: ""},
   {FileTypeName: "Divider",Extension: "",IconName: "Divider.png"},
-  {FileTypeName: "UCSJS",Extension: "js",IconName: "UCSJS.png"},
+  {FileTypeName: "UCSJS",Extension: "ucsjs",IconName: "UCSJS.png"},
   {FileTypeName: "UCSM",Extension: "ucsm",IconName: "UCSM.png"},
-  {FileTypeName: "UCSJS-Disabled",Extension: "js",IconName: "UCSJS-disabled.png"},
+  {FileTypeName: "UCSJS-Disabled",Extension: "ucsjs",IconName: "UCSJS-disabled.png"},
   {FileTypeName: "UCSM-Disabled",Extension: "ucsm",IconName: "UCSM-disabled.png"}
 
 ]
 
-function GetFileTypeByName(FileTypeName: String): UCSFileType {
+export function GetFileTypeByName(FileTypeName: String): UCSFileType {
   const FileType = UCSFileTypes.find(filetype => filetype.FileTypeName === FileTypeName);
   return FileType ? FileType : UCSFileTypes[0];
 }

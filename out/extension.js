@@ -45,19 +45,66 @@ const SQLScriptProvider_1 = require("./SQLScriptProvider");
 const client_1 = require("./client/client");
 let clients = [];
 async function activate(context) {
-    // Instantiate a client for languages
+    //initializeSystemJson();
     const UCSMClient = new client_1.LanguageClientWrapper({
         languageId: 'ucsm',
         serverModulePath: path.join('out', 'server', 'server.js'),
         fileExtension: '.ucsm'
     }, context);
-    clients.push(UCSMClient);
+    UCSMClient.start(context);
+    const UCSJSClient = new client_1.LanguageClientWrapper({
+        languageId: 'javascript',
+        serverModulePath: path.join('out', 'server', 'server.js'),
+        fileExtension: '.js'
+    }, context);
+    UCSJSClient.start(context);
     //UCS Text editors
     const SQLConn = new SQLConnection_1.SQLConnection();
     const provider = new SQLScriptProvider_1.SQLScriptProvider(SQLConn, context);
     const textProvider = new DFSProvider.DatabaseFileSystemProvider();
     await provider.loadSideBarMenus();
-    vscode.workspace.registerFileSystemProvider('cvucs', textProvider, { isCaseSensitive: true });
+    // const DocFilter: vscode.DocumentFilter;
+    // DocFilter.scheme = 'cvucs';
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider('javascript', {
+        provideCompletionItems(document, position) {
+            const item1 = new vscode.CompletionItem('cab', vscode.CompletionItemKind.Constant);
+            item1.detail = 'Inserts a cabinet';
+            item1.insertText = '_cab';
+            // const item2 = new vscode.CompletionItem('myVar', vscode.CompletionItemKind.Method);
+            // item2.insertText = 'myVar';
+            // Return the list of suggestions
+            return [item1];
+        }
+    }, '.' // Trigger on dot
+    ));
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider('javascript', {
+        provideCompletionItems(document, position) {
+            const linePrefix = document.lineAt(position).text.substr(0, position.character);
+            if (!linePrefix.endsWith('_cab.'))
+                return undefined;
+            const completion = new vscode.CompletionItem('SetParameter', vscode.CompletionItemKind.Method);
+            completion.insertText = new vscode.SnippetString('SetParameter("${1:arg}",${2:arg});');
+            completion.documentation = new vscode.MarkdownString('Set a parameter with a value');
+            return [completion];
+        }
+    }, '.' // Trigger on dot
+    ));
+    //{ scheme: "file", language: "javascript" }
+    //   context.subscriptions.push(
+    //     vscode.languages.registerInlineCompletionItemProvider(
+    //        'javascript' ,
+    //       {
+    //         provideInlineCompletionItems(document: vscode.TextDocument, position: vscode.Position, context: vscode.InlineCompletionContext, token: vscode.CancellationToken) {
+    //             const linePrefix = document.lineAt(position).text.substr(0, position.character);
+    //             if (!linePrefix.endsWith('cab')) return undefined;
+    //             const suggestion = new vscode.InlineCompletionItem('_cab.');
+    //             suggestion.insertText = '_cab.Method';
+    //             return [suggestion];
+    //         }
+    //       }
+    //     )
+    //   );     
+    vscode.workspace.registerFileSystemProvider('cvucs', textProvider, { isCaseSensitive: false });
     context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.showUCSList', provider.loadSideBarMenus.bind(provider)));
     context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.onUCSItemClick', async (item) => {
         // Action when an item is clicked
@@ -67,7 +114,11 @@ async function activate(context) {
         else {
             const uri = vscode.Uri.parse(`cvucs:/${item.label}.${item.FileType.Extension}`);
             textProvider.writeFile(uri, Buffer.from(item.Code, 'utf8'), { create: true, overwrite: true });
+            //await vscode.workspace.fs.writeFile(uri, Buffer.from(item.Code, 'utf8'));
             const document = await vscode.workspace.openTextDocument(uri);
+            const LangId = ["UCSJS", "UCSJS-Disabled"].includes(item.FileType.FileTypeName) ? 'javascript' : 'ucsm';
+            await vscode.languages.setTextDocumentLanguage(document, LangId);
+            console.log('Opened document URI:', document.uri.toString());
             const editor = await vscode.window.showTextDocument(document, {
                 preview: false // Ensures it stays open as a full editor
             });

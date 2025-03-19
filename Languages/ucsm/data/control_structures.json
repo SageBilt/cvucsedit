@@ -1,0 +1,28 @@
+{
+  "controlStructures": [
+    {
+      "openingKeyword": "If",
+      "requiredSuffix": "Then",
+      "closingKeyword": "End If",
+      "supportsElse": true
+    },
+    {
+      "openingKeyword": "While",
+      "requiredSuffix": "Do",
+      "closingKeyword": "End While",
+      "supportsElse": false
+    },
+    {
+      "openingKeyword": "For Each",
+      "requiredSuffix": null,
+      "closingKeyword": "End For",
+      "supportsElse": false,
+      "customValidation": "forEachValidation"
+    }
+  ],
+  "conditionRules": {
+    "comparisonOperators": ["=", "<", ">", "<=", ">=", "!=", "=="],
+    "logicalOperators": ["And", "Or", "&", "|"],
+    "validOperands": ["variable", "number", "boolean", "string"]
+  }
+}
