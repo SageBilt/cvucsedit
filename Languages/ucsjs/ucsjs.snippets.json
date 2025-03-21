@@ -1,0 +1,14 @@
+{
+    "CreateChild": {
+      "prefix": "CreateChild",
+      "body": ["CreateChild(${1:long type},${2:string name}${3:, string description[optional]})"],
+      "description": "Returns a new object as a child of the current _this object. Creates a child of the object it is called on, not always _this."
+    },
+    "Evaluate": {
+      "prefix": "Evaluate",
+      "body": ["Evaluate(${1:string name})"],
+      "description": "Evaluate a CV equation utilizing object parameters"
+    }
+}
+
+

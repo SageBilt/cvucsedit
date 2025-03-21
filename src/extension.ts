@@ -10,6 +10,7 @@ import { SQLScriptProvider } from './SQLScriptProvider';
 import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient/node';
 import { LanguageClientWrapper } from './client/client';
 import { initializeSystemJson } from './jsonDocCreator';
+import { CustomLanguageFoldingProvider } from './ucsmFoldingProvider';
 
 
 let clients: LanguageClientWrapper[] = [];
@@ -45,48 +46,56 @@ export async function activate(context: vscode.ExtensionContext) {
     const textProvider = new DFSProvider.DatabaseFileSystemProvider();
     await provider.loadSideBarMenus();
 
-    // const DocFilter: vscode.DocumentFilter;
-    // DocFilter.scheme = 'cvucs';
-
     context.subscriptions.push(
-        vscode.languages.registerCompletionItemProvider(
-            'javascript',
-          {
-            provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
-
-            const item1 = new vscode.CompletionItem('cab', vscode.CompletionItemKind.Constant);
-            item1.detail = 'Inserts a cabinet';
-            item1.insertText = '_cab';
-
-            // const item2 = new vscode.CompletionItem('myVar', vscode.CompletionItemKind.Method);
-            // item2.insertText = 'myVar';
-
-            // Return the list of suggestions
-            return [item1];
-            }
-          },
-          '.' // Trigger on dot
+        vscode.languages.registerFoldingRangeProvider(
+            'ucsm', // Replace with your language ID
+            new CustomLanguageFoldingProvider()
         )
     );
 
+    vscode.languages.registerFoldingRangeProvider
+    // const DocFilter: vscode.DocumentFilter;
+    // DocFilter.scheme = 'cvucs';
 
-    context.subscriptions.push(
-        vscode.languages.registerCompletionItemProvider(
-            'javascript',
-          {
-            provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
-              const linePrefix = document.lineAt(position).text.substr(0, position.character);
-              if (!linePrefix.endsWith('_cab.')) return undefined;
+    // context.subscriptions.push(
+    //     vscode.languages.registerCompletionItemProvider(
+    //         'javascript',
+    //       {
+    //         provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
+
+    //         const item1 = new vscode.CompletionItem('cab', vscode.CompletionItemKind.Constant);
+    //         item1.detail = 'Inserts a cabinet';
+    //         item1.insertText = '_cab';
+
+    //         // const item2 = new vscode.CompletionItem('myVar', vscode.CompletionItemKind.Method);
+    //         // item2.insertText = 'myVar';
+
+    //         // Return the list of suggestions
+    //         return [item1];
+    //         }
+    //       },
+    //       '.' // Trigger on dot
+    //     )
+    // );
+
+
+    // context.subscriptions.push(
+    //     vscode.languages.registerCompletionItemProvider(
+    //         'javascript',
+    //       {
+    //         provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
+    //           const linePrefix = document.lineAt(position).text.substr(0, position.character);
+    //           if (!linePrefix.endsWith('_cab.')) return undefined;
     
-              const completion = new vscode.CompletionItem('SetParameter', vscode.CompletionItemKind.Method);
-              completion.insertText = new vscode.SnippetString('SetParameter("${1:arg}",${2:arg});');
-              completion.documentation = new vscode.MarkdownString('Set a parameter with a value');
-              return [completion];
-            }
-          },
-          '.' // Trigger on dot
-        )
-    );   
+    //           const completion = new vscode.CompletionItem('SetParameter', vscode.CompletionItemKind.Method);
+    //           completion.insertText = new vscode.SnippetString('SetParameter("${1:arg}",${2:arg});');
+    //           completion.documentation = new vscode.MarkdownString('Set a parameter with a value');
+    //           return [completion];
+    //         }
+    //       },
+    //       '.' // Trigger on dot
+    //     )
+    // );   
       //{ scheme: "file", language: "javascript" }
 
     //   context.subscriptions.push(

@@ -1,0 +1,681 @@
+{
+    "objects": [
+        "_this",
+        "_cab",
+        "_cvMath"
+    ],
+    "constants": {
+        "AssemblyTypes": [
+            "OBJ_ASSEMBLY",
+            "OBJ_OPENING",
+            "OBJ_PART",
+            "OBJ_DOOR",
+            "OBJ_DRWFRONT",
+            "OBJ_MOLDING",
+            "OBJ_NGACSRY",
+            "OBJ_HARDWARE",
+            "OBJ_PULL",
+            "OBJ_GUIDE",
+            "OBJ_HINGE",
+            "OBJ_HINGEPLATE",
+            "OBJ_OPERATION",
+            "OBJ_HOLE",
+            "OBJ_HOLEMASTER",
+            "OBJ_DEPDADO",
+            "OBJ_DEPDADOMASTER",
+            "OBJ_DADO",
+            "OBJ_DADOMASTER",
+            "OBJ_LINEBORE",
+            "OBJ_LBOREMASTER",
+            "OBJ_BLINDDADO",
+            "OBJ_DOVETAIL",
+            "OBJ_IJOINT",
+            "OBJ_CONNECTION",
+            "OBJ_ROUTE",
+            "OBJ_ACAMDWG",
+            "OBJ_LINE",
+            "OBJ_ARC"
+        ],
+        "parameterModTypes": [
+            "PARMOD_DESC",
+            "PARMOD_TYPE",
+            "PARMOD_STYLE"
+        ],
+        "parameterModStyles": [
+            "PARSTYLE_DEFAULT",
+            "PARSTYLE_ATTRIBUTE",
+            "PARSTYLE_NOTE"
+        ],
+        "databaseIDTypes": [
+            "ID_ASSEMBLYCONSTRUCTION",
+            "ID_ASEMBLYESCHEDULE",
+            "ID_CLOSETRODSCHEDULE",
+            "ID_COLORSCHEDULE",
+            "ID_CONNECTION",
+            "ID_DOORSCHEDULE",
+            "ID_DOORSTYLE",
+            "ID_DRAWERCONSTRUCTION",
+            "ID_DRAWERSCHEDULE",
+            "ID_FINISH",
+            "ID_GUIDESCHEDULE",
+            "ID_HINGESCHEDULE",
+            "ID_IJOINT",
+            "ID_MATERIAL",
+            "ID_MOLDINGSCHEDULE",
+            "ID_PULLSCHEDULE",
+            "ID_ROLLOUTCONSTRUCTION",
+            "ID_ROLLOUTSCHEDULE",
+            "ID_ROOMSCHEDULE",
+            "ID_SLIDERAILSCHEDULE",
+            "ID_TEXTURE",
+            "ID_TOPCONSTRUTION",
+            "ID_TOPSCHEDULE",
+            "ID_WIREBASKETSCHEDULE"
+        ],
+        "parameterTypes": [
+            "VAL_MEASUREMENT",
+            "VAL_DEGREES",
+            "VAL_RADIANS",
+            "VAL_INTEGER",
+            "VAL_BOOL",
+            "VAL_DECIMAL",
+            "VAL_PARTID",
+            "VAL_TEXT",
+            "VAL_CURRENCY"
+        ],
+        "objectClass": [
+            "ASM_CLASS_BASE",
+            "ASM_CLASS_UPPER",
+            "ASM_CLASS_TALL",
+            "ASM_CLASS_VANITY",
+            "ASM_CLASS_APPL",
+            "ASM_CLASS_ACSRY",
+            "ASM_CLASS_DECORATIVE",
+            "ASM_CLASS_TOP",
+            "ASM_CLASS_MOLDING",
+            "ASM_CLASS_WALL",
+            "ASM_CLASS_WALLFACE",
+            "ASM_CLASS_FLOOR",
+            "ASM_CLASS_CEILING",
+            "ASM_CLASS_DOOR",
+            "ASM_CLASS_NG_ACSRY",
+            "ASM_CLASS_SPLASH",
+            "ASM_CLASS_USER_LIGHT",
+            "ASM_CLASS_FIXTURE",
+            "ASM_CLASS_BATH",
+            "ASM_CLASS_CLOSET",
+            "ASM_CLASS_CLOSETBASE",
+            "ASM_CLASS_CLOSETUPPER"
+        ],
+        "objectTypes": [
+            "ASM_TYPE_STANDARD",
+            "ASM_TYPE_BLINDR",
+            "ASM_TYPE_BLINDL",
+            "ASM_TYPE_CORNER45",
+            "ASM_TYPE_CORNER90",
+            "ASM_TYPE_FILLER",
+            "ASM_TYPE_DESK",
+            "ASM_TYPE_HOOD",
+            "ASM_TYPE_REFER",
+            "ASM_TYPE_VALANCE",
+            "ASM_TYPE_UCVALANCE",
+            "ASM_TYPE_APPLGARAGE",
+            "ASM_TYPE_DISHWASHER",
+            "ASM_TYPE_TRASHCOMP",
+            "ASM_TYPE_RANGE",
+            "ASM_TYPE_COOKTOP",
+            "ASM_TYPE_SINK",
+            "ASM_TYPE_MICRO",
+            "ASM_TYPE_WINDOW",
+            "ASM_TYPE_EDOOR",
+            "ASM_TYPE_PICTURE",
+            "ASM_TYPE_TOEASSEMBLY",
+            "ASM_TYPE_MISC",
+            "ASM_TYPE_CLOSET",
+            "ASM_TYPE_PART",
+            "ASM_TYPE_OPENING",
+            "ASM_TYPE_TWALL",
+            "ASM_TYPE_CONTAINER",
+            "ASM_TYPE_ELECTRICAL",
+            "ASM_TYPE_PLUMBING",
+            "ASM_TYPE_OVEN",
+            "ASM_TYPE_WASHDRY",
+            "ASM_TYPE_TUB",
+            "ASM_TYPE_SHOWER",
+            "ASM_TYPE_TOILET",
+            "ASM_TYPE_BATHSINK",
+            "ASM_TYPE_SPLASH",
+            "ASM_TYPE_TOP",
+            "ASM_TYPE_CLOSET_VERT",
+            "ASM_TYPE_CLOSET_HORZ",
+            "ASM_TYPE_CLOSET_DOOR_DWR"
+        ],
+        "assemblyEndTypes": [
+            "ASM_END_FINISHED",
+            "ASM_END_UNFINISHED",
+            "ASM_END_EXTENDED",
+            "ASM_END_RETURN",
+            "ASM_END_APPL_FE",
+            "ASM_END_APPL_DOOR",
+            "ASM_END_PANELIZED",
+            "ASM_END_CLIPPED",
+            "ASM_END_RADIUSED",
+            "ASM_END_ANGLED"
+        ]
+    },
+    "functions": [
+        {
+          "name": "Imperial",
+          "definition": "Imperial(double value)",
+          "value": "Imperial(${1:value})",
+          "description": "Convert a value to imperial (value / 25.4)",
+          "example": "var result = Imperial(32);"
+        },
+        {
+            "name": "Metric",
+            "definition": "Metric(double value)",
+            "value": "Metric(${1:value})",
+            "description": "Convert a value to metric (value * 25.4)",
+            "example": "var result = Metric(1);"
+        }
+    ],
+    "properties": [
+        {
+            "name": "NAME",
+            "parentObject": ["_this", "_cab"],
+            "value": "NAME",
+            "description": "Name",
+            "Type": "VAL_TEXT"
+        },
+        {
+            "name": "DESC",
+            "parentObject": ["_this", "_cab"],
+            "value": "DESC",
+            "description": "Description",
+            "Type": "VAL_TEXT"
+        },
+        {
+            "name": "COMMENT",
+            "parentObject": ["_this", "_cab"],
+            "value": "COMMENT",
+            "description": "Comment",
+            "Type": "VAL_TEXT"
+        },
+        {
+            "name": "CLASS",
+            "parentObject": ["_this", "_cab"],
+            "value": "CLASS",
+            "description": "Object class represented by one of the Object Class constants",
+            "Type": "VAL_INTEGER"
+        },
+        {
+            "name": "TYPE",
+            "parentObject": ["_this", "_cab"],
+            "value": "TYPE",
+            "description": "Object type represented by one of the Object Type constants",
+            "Type": "VAL_INTEGER"
+        },
+        {
+            "name": "X",
+            "parentObject": ["_this", "_cab"],
+            "value": "X",
+            "description": "X position",
+            "Type": "VAL_MEASUREMENT"
+        },
+        {
+            "name": "Y",
+            "parentObject": ["_this", "_cab"],
+            "value": "Y",
+            "description": "Y position",
+            "Type": "VAL_MEASUREMENT"
+        },
+        {
+            "name": "Z",
+            "parentObject": ["_this", "_cab"],
+            "value": "Z",
+            "description": "Z position",
+            "Type": "VAL_MEASUREMENT"
+        },
+        {
+            "name": "DX",
+            "parentObject": ["_this", "_cab"],
+            "value": "DX",
+            "description": "Width",
+            "Type": "VAL_MEASUREMENT"
+        },
+        {
+            "name": "DY",
+            "parentObject": ["_this", "_cab"],
+            "value": "DY",
+            "description": "Height/length",
+            "Type": "VAL_MEASUREMENT"
+        },
+        {
+            "name": "DZ",
+            "parentObject": ["_this", "_cab"],
+            "value": "DZ",
+            "description": "Depth/thickness",
+            "Type": "VAL_MEASUREMENT"
+        },
+        {
+            "name": "AX",
+            "parentObject": ["_this", "_cab"],
+            "value": "AX",
+            "description": "X rotation",
+            "Type": "VAL_DEGREES"
+        },
+        {
+            "name": "AY",
+            "parentObject": ["_this", "_cab"],
+            "value": "AY",
+            "description": "Y rotation",
+            "Type": "VAL_DEGREES"
+        },
+        {
+            "name": "AZ",
+            "parentObject": ["_this", "_cab"],
+            "value": "AZ",
+            "description": "Z rotation",
+            "Type": "VAL_DEGREES"
+        },
+        {
+            "name": "QTY",
+            "parentObject": ["_this", "_cab"],
+            "value": "QTY",
+            "description": "Quantity",
+            "Type": "VAL_INTEGER"
+        },
+        {
+            "name": "VISIBLE",
+            "parentObject": ["_this", "_cab"],
+            "value": "VISIBLE",
+            "description": "Object visible",
+            "Type": "VAL_BOOL"
+        },
+        {
+            "name": "BAND",
+            "parentObject": "_this",
+            "value": "BAND",
+            "description": "Part banding definition",
+            "Type": "VAL_TEXT"
+        },
+        {
+            "name": "REPT",
+            "parentObject": "_this",
+            "value": "REPT",
+            "description": "Line bor repeat count",
+            "Type": "VAL_INTEGER"
+        },
+        {
+            "name": "SPCNG",
+            "parentObject": "_this",
+            "value": "SPCNG",
+            "description": "Line bore spacing",
+            "Type": "VAL_MEASUREMENT"
+        },
+        {
+            "name": "_EDGWP",
+            "parentObject": "_this",
+            "value": "_EDGWP",
+            "description": "Edge work plane",
+            "Type": "VAL_INTEGER"
+        },
+        {
+            "name": "TOOLID",
+            "parentObject": "_this",
+            "value": "TOOLID",
+            "description": "Operation tool ID",
+            "Type": "VAL_INTEGER"
+        },
+        {
+            "name": "IJNT",
+            "parentObject": "_this",
+            "value": "IJNT",
+            "description": "Intelli-Joint ID",
+            "Type": "VAL_INTEGER"
+        },
+        {
+            "name": "IJLOCAL",
+            "parentObject": "_this",
+            "value": "IJLOCAL",
+            "description": "Intelli-Joint local scope",
+            "Type": "VAL_BOOL"
+        },
+        {
+            "name": "_CONNID",
+            "parentObject": "_this",
+            "value": "_CONNID",
+            "description": "Connection ID",
+            "Type": "VAL_INTEGER"
+        }
+    ],
+    "methods": [
+        {
+            "name": "isEQ",
+            "parentObject": ["_cvMath"],
+            "definition": "isEQ(double value1, double value2)",
+            "value": "isEQ(${1:value}, ${2:value})",
+            "description": "Determines if the 2 values are equal within the Epsilon tolerance.",
+            "example": "var isequal = _cvMath.isEQ(5.12, 5.12);",
+            "returnType": "bool"
+        },
+        {
+            "name": "isGT",
+            "parentObject": ["_cvMath"],
+            "definition": "isGT(double value1, double value2)",
+            "value": "isGT(${1:value}, ${2:value})",
+            "description": "Determines if value1 is greater than value2 within an Epsilon tolerance.",
+            "example": "var isgt = _cvMath.isGT(5.12, 5.15);",
+            "returnType": "bool"
+        },
+        {
+            "name": "isGTE",
+            "parentObject": ["_cvMath"],
+            "definition": "isGTE(double value1, double value2)",
+            "value": "isGTE(${1:value}, ${2:value})",
+            "description": "Determines if value1 is greater or equal to value2 within an Epsilon tolerance.",
+            "example": "var isgte = _cvMath.isGTE(5.12, 5.13);",
+            "returnType": "bool"
+        },
+        {
+            "name": "isLT",
+            "parentObject": ["_cvMath"],
+            "definition": "isLT(double value1, double value2)",
+            "value": "isLT(${1:value}, ${2:value})",
+            "description": "Determines if value1 is less than value2 within an Epsilon tolerance.",
+            "example": "var islt = _cvMath.isLT(5.12, 5.15);",
+            "returnType": "bool"
+        },
+        {
+            "name": "isLTE",
+            "parentObject": ["_cvMath"],
+            "definition": "isLTE(double value1, double value2)",
+            "value": "isLTE(${1:value}, ${2:value})",
+            "description": "Determines if value1 is less or equal to value2 within an Epsilon tolerance.",
+            "example": "var islte = _cvMath.isLTE(5.12, 5.13);",
+            "returnType": "bool"
+        },
+        {
+            "name": "isZero",
+            "parentObject": ["_cvMath"],
+            "definition": "isZero(double value)",
+            "value": "isZero(${1:value})",
+            "description": "Determines if value is equal to 0 within an Epsilon tolerance.",
+            "example": "var zero = _cvMath.isZero(0.01);",
+            "returnType": "bool"
+        },
+        {
+            "name": "CreateChild",
+            "parentObject": ["_this", "_cab"],
+            "definition": "CreateChild(long type, string name)…[optional]string description)",
+            "value": "CreateChild(${1:OBJ_}, '${2:objectName}'${3:, 'description[optional]'})",
+            "description": "Returns a new object as a child of the current _this object. Creates a child of the object it is called on, not always _this.",
+            "example": "var FS = _this.CreateChild(OBJ_PART, 'FS', 'JS Fixed Shelf');",
+            "returnType": "CVAsmManaged object. the return object is the newly created child, rather than the object that the method was called on.",
+            "parameterDef": [
+                {
+                    "ParamName": "Assembly type",
+                    "ParamValue": "Assembly type defined by one of the following constants\n\n1.OBJ_ASSEMBLY\n2.OBJ_OPENING\n3.OBJ_PART\n4.OBJ_DOOR\n5.OBJ_DRWFRONT\n6.OBJ_MOLDING\n7.OBJ_NGACSRY\n8.OBJ_HARDWARE\n9.OBJ_PULL\n10.OBJ_GUIDE\n11.OBJ_HINGE\n12.OBJ_HINGEPLATE\n13.OBJ_OPERATION\n14.OBJ_HOLE\n15.OBJ_HOLEMASTER\n16.OBJ_DEPDADO\n17.OBJ_DEPDADOMASTER\n18.OBJ_DADO\n19.OBJ_DADOMASTER\n20.OBJ_LINEBORE\n21.OBJ_LBOREMASTER\n22.OBJ_BLINDDADO\n23.OBJ_DOVETAIL\n24.OBJ_IJOINT\n25.OBJ_CONNECTION\n26.OBJ_ROUTE\n27.OBJ_ACAMDWG\n28.OBJ_LINE\n29.OBJ_ARC",
+                    "DataType": "constants.AssemblyTypes"
+
+                },
+                {"ParamName": "string name", "ParamValue": "Name for the object","DataType": "string"},
+                {"ParamName": "string description[optional]", "ParamValue": "Optional description for the object","DataType": "string"}
+            ]
+        },
+        {
+            "name": "CreateChoiceList",
+            "parentObject": ["_this", "_cab"],
+            "definition": "CreateChoiceList(string name, string choicelist, WORD type)",
+            "value": "CreateChoiceList('${1:listName}', '${2:choicelist}', ${3:VAL_})",
+            "description": "Creates a choice list for the given parameter",
+            "example": "_this.CreateChoiceList('PAR_CHOICE', 'Medium=50|Big=99|Small=1', VAL_INTEGER);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "string name", "ParamValue": "Parameter name","DataType": "string"},
+                {"ParamName": "string choicelist", "ParamValue": "Pipe separated list of (description | value) pairs","DataType": "string"},
+                {"ParamName": "WORD type", "ParamValue": "Parameter type represented by the Parameter Type constants","DataType": "constants.parameterTypes"}
+            ]
+        },
+        {
+            "name": "Evaluate",
+            "parentObject": ["_this", "_cab"],
+            "definition": "Evaluate(string equation);",
+            "value": "Evaluate('${1:equation}')",
+            "description": "Evaluate a CV equation utilizing object parameters",
+            "example": "var volume = _this.Evaluate('DX * DY * DZ');",
+            "returnType": "variant - result of equation (default to null on error)",
+            "parameterDef": [
+                {"ParamName": "string equation", "ParamValue": "CV equation formula","DataType": "ucsmSyntax"}
+            ]
+        },
+        {
+            "name": "EvaluateCondition",
+            "parentObject": ["_this", "_cab"],
+            "definition": "EvaluateCondition(string condition)",
+            "value": "EvaluateCondition('${1:condition}')",
+            "description": "Evaluate a CV condition utilizing object parameters",
+            "example": "var result = _this.EvaluateCondition('DY > 5');",
+            "returnType": "bool - evaluation true or false",
+            "parameterDef": [
+                {"ParamName": "string condition", "ParamValue": "CV condition formula","DataType": "ucsmSyntax"}
+            ]
+        },
+        {
+            "name": "FindAssembly",
+            "parentObject": ["_this", "_cab"],
+            "definition": "FindAssembly(string path)",
+            "value": "FindAssembly('${1:path}')",
+            "description": "Locate an assembly utilizing the CV object path",
+            "example": "var result = _this.FindAssembly(':AS@3');",
+            "returnType": "CVAsmManaged - reference to the located object else null",
+            "parameterDef": [
+                {"ParamName": "string path", "ParamValue": "CV relative object path","DataType": "ucsmSyntax"}
+            ]
+        },
+        {
+            "name": "FormatText",
+            "parentObject": ["_this", "_cab"],
+            "definition": "FormatText(string format)",
+            "value": "FormatText('${1:format}')",
+            "description": "Format text utilizing the CV text variable parameter substitution mechanism",
+            "example": "var result = _this.FormatText('WIDTH{DX}');",
+            "returnType": "string",
+            "parameterDef": [
+                {"ParamName": "string format", "ParamValue": "CV text parameter format definition","DataType": "ucsmSyntax"}
+            ]
+        },
+        {
+            "name": "GetFirstChild",
+            "parentObject": ["_this", "_cab"],
+            "definition": "GetFirstChild()",
+            "value": "GetFirstChild()",
+            "description": "Return the first object tree child of the current object",
+            "example": "var result = _this.GetFirstChild();",
+            "returnType": "CVAsmManaged - reference to the first child object else null",
+            "parameterDef": []
+        },
+        {
+            "name": "GetNextSibling",
+            "parentObject": ["_this", "_cab"],
+            "definition": "GetNextSibling()",
+            "value": "GetNextSibling()",
+            "description": "Return the next sibling in the object tree from the given object",
+            "example": "var result= _this.GetNextSibling();",
+            "returnType": "CVAsmManaged - reference to the sibling object else null",
+            "parameterDef": []
+        },
+        {
+            "name": "GetParameterValue",
+            "parentObject": ["_this", "_cab"],
+            "definition": "GetParameterValue(string name)",
+            "value": "GetParameterValue('${1:paramName}')",
+            "description": "Return the value of the given parameter",
+            "example": "var result = _this.GetParameterValue('DX');",
+            "returnType": "variant - value of parameter else null on invalid parameter",
+            "parameterDef": [
+                {"ParamName": "string name", "ParamValue": "Parameter name","DataType": "ucsmSyntax"}
+            ]
+        },
+        {
+            "name": "GetParent",
+            "parentObject": ["_this", "_cab"],
+            "definition": "GetParent()",
+            "value": "GetParent()",
+            "description": "Return the parent of the current object",
+            "example": "var result = _this.GetParent();",
+            "returnType": "CVAsmManaged - reference to the parent else null",
+            "parameterDef": []
+        },
+        {
+            "name": "HasParameter",
+            "parentObject": ["_this", "_cab"],
+            "definition": "HasParameter(string name)",
+            "value": "HasParameter('${1:paramName}')",
+            "description": "Determine if the given parameter exists on the current object",
+            "example": "var result = _this.HasParameter('DX');",
+            "returnType": "bool - true if it exists else false",
+            "parameterDef": [
+                {"ParamName": "string name", "ParamValue": "Parameter name","DataType": "ucsmSyntax"}
+            ]
+        },
+        {
+            "name": "ModifyParameter",
+            "parentObject": ["_this", "_cab"],
+            "definition": "ModifyParameter(string name, WORD action, Object value)",
+            "value": "ModifyParameter('${1:paramName}', ${2:PARMOD_}, ${3:PARSTYLE_})",
+            "description": "Modify a parameter style or description.",
+            "example": "_this.ModifyParameter('MYPARM', PARMOD_STYLE, PARSTYLE_ATTRIBUTE);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "string name", "ParamValue": "Parameter name","DataType": "string"},
+                {
+                    "ParamName": "WORD action",
+                    "ParamValue": "Modification type defined by one of the following constants\n\n1.PARMOD_DESC\n2.PARMOD_TYPE\n3.PARMOD_STYLE"
+                    ,"DataType": "constants.parameterModTypes"
+                },
+                {
+                    "ParamName": "Object value",
+                    "ParamValue": "If action is equal to PARMOD_DESC then value represents text for the new description.\nIf action is equal to PARMOD_TYPE then value represents one of the data type enumeration values.\nIf action is equal to PARMOD_STYLE then value represents one of the following parameter style constants.\n\n1.PARSTYLE_DEFAULT\n2.PARSTYLE_ATTRIBUTE\n3.PARSTYLE_NOTE"
+                    ,"DataType": "constants.parameterModStyles"
+                }
+            ]
+        },
+        {
+            "name": "QueryID",
+            "parentObject": ["_this", "_cab"],
+            "definition": "QueryID(WORD type, string name)",
+            "value": "QueryID(${1:ID_}, '${2:value}')",
+            "description": "Query the database ID for the given resource type and name",
+            "example": "var result = _this.QueryID(key, value)",
+            "returnType": "long - ID of the requested resource. Returns 0 if nothing was found.",
+            "parameterDef": [
+                {
+                    "ParamName": "WORD type",
+                    "ParamValue": "ID query type defined by one of the following constants\n\n1.ID_ASSEMBLYCONSTRUCTION\n2.ID_ASEMBLYESCHEDULE\n3.ID_CLOSETRODSCHEDULE\n4.ID_COLORSCHEDULE\n5.ID_CONNECTION\n6.ID_DOORSCHEDULE\n7.ID_DOORSTYLE\n8.ID_DRAWERCONSTRUCTION\n9.ID_DRAWERSCHEDULE\n10.ID_FINISH\n11.ID_GUIDESCHEDULE\n12.ID_HINGESCHEDULE\n13.ID_IJOINT\n14.ID_MATERIAL\n15.ID_MOLDINGSCHEDULE\n16.ID_PULLSCHEDULE\n17.ID_ROLLOUTCONSTRUCTION\n18.ID_ROLLOUTSCHEDULE\n19.ID_ROOMSCHEDULE\n20.ID_SLIDERAILSCHEDULE\n21.ID_TEXTURE\n22.ID_TOPCONSTRUTION\n23.ID_TOPSCHEDULE\n24.ID_WIREBASKETSCHEDULE"
+                    ,"DataType": "constants.databaseIDTypes"
+                },
+                {"ParamName": "string name", "ParamValue": "Name of the requested resource","DataType": "string"}
+            ]
+        },
+        {
+            "name": "RemoveParameter",
+            "parentObject": ["_this", "_cab"],
+            "definition": "RemoveParameter(string name)",
+            "value": "RemoveParameter('${1:paramName}')",
+            "description": "Remove the given parameter from the current object.",
+            "example": "_this.RemoveParameter('PAR_MY');",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "string name", "ParamValue": "Parameter name","DataType": "ucsmSyntax"}
+            ]
+        },
+        {
+            "name": "ReplacePart",
+            "parentObject": ["_this", "_cab"],
+            "definition": "ReplacePart(string librarypart)",
+            "value": "ReplacePart('${1:librarypart}')",
+            "description": "Replace the current object with a library object",
+            "example": "_this.ReplacePart('Custom Cabinets\\Special End');",
+            "returnType": "bool - true on success else false",
+            "parameterDef": [
+                {"ParamName": "string librarypart", "ParamValue": "Path of the desired library part, “catalog+part path”","DataType": "string"}
+            ]
+        },
+        {
+            "name": "SetChoiceValue",
+            "parentObject": ["_this", "_cab"],
+            "definition": "SetChoiceValue(string name, variant value)",
+            "value": "SetChoiceValue('${1:listName}', ${2:value})",
+            "description": "Set the value on a choice parameter. Defaults to the first item in the list if the value doesn't match.",
+            "example": "_this.SetChoiceValue('PAR_CHOICE', 99);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "string name", "ParamValue": "Parameter name","DataType": "string"},
+                {"ParamName": "variant value", "ParamValue": "Parameter choice value","DataType": "any"}
+            ]
+        },
+        {
+            "name": "SetMaterial",
+            "parentObject": ["_this", "_cab"],
+            "definition": "SetMaterial(variant value)",
+            "value": "SetMaterial(${1:value})",
+            "description": "Set the material on the current object.",
+            "example": "_this.SetMaterial('3/4 Oak Ply');",
+            "returnType": "bool - true on success else false",
+            "parameterDef": [
+                {"ParamName": "variant value", "ParamValue": "Desired material defined by name or ID","DataType": "any"}
+            ]
+
+        },
+        {
+            "name": "SetParameter",
+            "parentObject": ["_this", "_cab"],
+            "definition": "SetParameter(string name, variant value)…[optional]WORD type)",
+            "value": "SetParameter('${1:paramName}', ${2:value}${3:, VAL_[optional]})",
+            "description": "Set a parameter with a value",
+            "example": "_this.SetParameter('PAR_MY', 23.5);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "string sParameter", "ParamValue": "Parameter name","DataType": "string"},
+                {"ParamName": "variant pValue", "ParamValue": "Parameter value","DataType": "any"},
+                {
+                    "ParamName": "WORD nType[optional]", 
+                    "ParamValue": "Parameter type represented by the Parameter Type constants (defaults to VAL_MEASUREMENT if not specified)",
+                    "DataType": "constants.parameterTypes"
+                }
+            ]
+        },
+        {
+            "name": "SetParameter",
+            "parentObject": ["_this", "_cab"],
+            "definition": "SetParameter(string name, string equation)…[optional]string condition)…[optional]WORD type)",
+            "value": "SetParameter('${1:paramName}', '${2:equation}', '${3: condition[optional]}'${4:, VAL_[optional]})",
+            "description": "Set a parameter with an equation",
+            "example": "_this.SetParameter('MY-PAR', ‘DX / 2’);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "string name", "ParamValue": "Parameter name","DataType": "string"},
+                {"ParamName": "string equation", "ParamValue": "Parameter equation","DataType": "ucsmSyntax"},
+                {"ParamName": "string condition[optional]", "ParamValue": "Parameter condition (defaults to '1' if not specified)","DataType": "ucsmSyntax"},
+                {
+                    "ParamName": "WORD nType[optional]",
+                    "ParamValue": "Parameter type represented by the Parameter Type constants (defaults to VAL_MEASUREMENT if not specified)",
+                    "DataType": "constants.parameterTypes"
+                }
+            ]
+        },
+        {
+            "name": "SetParent",
+            "parentObject": ["_this", "_cab"],
+            "definition": "SetParent(CVAsmManaged parent)",
+            "value": "SetParent(${1:parent})",
+            "description": "Set a new parent for the current object",
+            "example": "_this.SetParent(_cab);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "CVAsmManaged parent", "ParamValue": "CV object representing the new parent","DataType": "any"}
+            ]
+        }
+    ]
+}

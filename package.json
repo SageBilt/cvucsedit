@@ -49,7 +49,12 @@
       {
         "language": "ucsm",
         "path": "./Languages/ucsm/ucsm.snippets.json"
+      },
+      {
+        "language": "javascript",
+        "path": "./Languages/ucsjs/ucsjs.snippets.json"
       }
+
     ],
     "configuration": {
       "title": "CVUCS Editor Database Configuration",

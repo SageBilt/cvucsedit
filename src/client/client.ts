@@ -30,7 +30,7 @@ export class LanguageClientWrapper {
           synchronize: {
               fileEvents: workspace.createFileSystemWatcher(`**/*${config.fileExtension}`)
           },
-          outputChannel: window.createOutputChannel('UCSM Language Server')
+          outputChannel: window.createOutputChannel(`${this.languageId} Language Server`)
       };
   
       // Create and start the client

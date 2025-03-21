@@ -6397,5 +6397,49 @@
       "value": "<desc>",
       "description": "Description allows you to display a user prompt for Attribute and Note Parameters."
     }
+  ],
+  "specialObjects": [
+    {
+      "prefix": "_M:",
+      "propertyPattern": "[A-Za-z0-9_]*",
+      "allowsSubProperties": false,
+      "description": "Material Parameters"
+    },
+    {
+      "prefix": "_CS:",
+      "propertyPattern": "[A-Za-z0-9_]*",
+      "allowsSubProperties": false,
+      "description": "Construction Method Parameters"
+    },
+    {
+      "prefix": "_MS:",
+      "propertyPattern": "[A-Za-z0-9_]*",
+      "allowsSubProperties": false,
+      "description": "Material Schedule Parameters"
+    },  
+    {
+      "prefix": "_CV:",
+      "propertyPattern": "\\d+",
+      "allowsSubProperties": true,
+      "description": "Derives the value/measurement entered for a standard in the Construction Method"
+    },
+    {
+      "prefix": "_CB:",
+      "propertyPattern": "\\d+",
+      "allowsSubProperties": true,
+      "description": "Derives the button/choice selected for a standard in a Construction Method"
+    },
+    {
+      "prefix": "_CBM:",
+      "propertyPattern": "\\d+",
+      "allowsSubProperties": true,
+      "description": "Derives the banding Material ID from the Construction Method"
+    },
+    {
+      "prefix": "_CBN:",
+      "propertyPattern": "\\d+",
+      "allowsSubProperties": true,
+      "description": "Derives the banding number from the Construction Method"
+    }
   ]
 }

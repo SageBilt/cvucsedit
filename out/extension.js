@@ -43,6 +43,7 @@ const DFSProvider = __importStar(require("./DatabaseFileSystemProvider"));
 const SQLConnection_1 = require("./SQLConnection");
 const SQLScriptProvider_1 = require("./SQLScriptProvider");
 const client_1 = require("./client/client");
+const ucsmFoldingProvider_1 = require("./ucsmFoldingProvider");
 let clients = [];
 async function activate(context) {
     //initializeSystemJson();
@@ -63,32 +64,44 @@ async function activate(context) {
     const provider = new SQLScriptProvider_1.SQLScriptProvider(SQLConn, context);
     const textProvider = new DFSProvider.DatabaseFileSystemProvider();
     await provider.loadSideBarMenus();
+    context.subscriptions.push(vscode.languages.registerFoldingRangeProvider('ucsm', // Replace with your language ID
+    new ucsmFoldingProvider_1.CustomLanguageFoldingProvider()));
+    vscode.languages.registerFoldingRangeProvider;
     // const DocFilter: vscode.DocumentFilter;
     // DocFilter.scheme = 'cvucs';
-    context.subscriptions.push(vscode.languages.registerCompletionItemProvider('javascript', {
-        provideCompletionItems(document, position) {
-            const item1 = new vscode.CompletionItem('cab', vscode.CompletionItemKind.Constant);
-            item1.detail = 'Inserts a cabinet';
-            item1.insertText = '_cab';
-            // const item2 = new vscode.CompletionItem('myVar', vscode.CompletionItemKind.Method);
-            // item2.insertText = 'myVar';
-            // Return the list of suggestions
-            return [item1];
-        }
-    }, '.' // Trigger on dot
-    ));
-    context.subscriptions.push(vscode.languages.registerCompletionItemProvider('javascript', {
-        provideCompletionItems(document, position) {
-            const linePrefix = document.lineAt(position).text.substr(0, position.character);
-            if (!linePrefix.endsWith('_cab.'))
-                return undefined;
-            const completion = new vscode.CompletionItem('SetParameter', vscode.CompletionItemKind.Method);
-            completion.insertText = new vscode.SnippetString('SetParameter("${1:arg}",${2:arg});');
-            completion.documentation = new vscode.MarkdownString('Set a parameter with a value');
-            return [completion];
-        }
-    }, '.' // Trigger on dot
-    ));
+    // context.subscriptions.push(
+    //     vscode.languages.registerCompletionItemProvider(
+    //         'javascript',
+    //       {
+    //         provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
+    //         const item1 = new vscode.CompletionItem('cab', vscode.CompletionItemKind.Constant);
+    //         item1.detail = 'Inserts a cabinet';
+    //         item1.insertText = '_cab';
+    //         // const item2 = new vscode.CompletionItem('myVar', vscode.CompletionItemKind.Method);
+    //         // item2.insertText = 'myVar';
+    //         // Return the list of suggestions
+    //         return [item1];
+    //         }
+    //       },
+    //       '.' // Trigger on dot
+    //     )
+    // );
+    // context.subscriptions.push(
+    //     vscode.languages.registerCompletionItemProvider(
+    //         'javascript',
+    //       {
+    //         provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
+    //           const linePrefix = document.lineAt(position).text.substr(0, position.character);
+    //           if (!linePrefix.endsWith('_cab.')) return undefined;
+    //           const completion = new vscode.CompletionItem('SetParameter', vscode.CompletionItemKind.Method);
+    //           completion.insertText = new vscode.SnippetString('SetParameter("${1:arg}",${2:arg});');
+    //           completion.documentation = new vscode.MarkdownString('Set a parameter with a value');
+    //           return [completion];
+    //         }
+    //       },
+    //       '.' // Trigger on dot
+    //     )
+    // );   
     //{ scheme: "file", language: "javascript" }
     //   context.subscriptions.push(
     //     vscode.languages.registerInlineCompletionItemProvider(

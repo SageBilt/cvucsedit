@@ -1,10 +1,10 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { SystemVariable, ControlStructure, SpecialObject, SystemData , SyntaxData  } from './interfaces';
+import { UCSMSystemVariable, ControlStructure, UCSMSpecialObject, UCSMSystemData , UCSMSyntaxData  } from './interfaces';
 
 const specialObjectsJsonPath = path.join(__dirname, '../Languages/ucsm/data/special_objects.json');
 const parsedData = JSON.parse(fs.readFileSync(specialObjectsJsonPath, 'utf8'));
-const specialObjectsData: SpecialObject[] = parsedData.specialObjects;
+const specialObjectsData: UCSMSpecialObject[] = parsedData.specialObjects;
 
 function isSpecObjectMethod(VarName: string): string | null {
     try {
@@ -19,10 +19,10 @@ function isSpecObjectMethod(VarName: string): string | null {
     return null;
 }
 
-function generateSystemVariables(documentText: string): SystemVariable[] {
+function generateSystemVariables(documentText: string): UCSMSystemVariable[] {
     const lines = documentText.split('\n').map(line => line.trim());
-    const variables: SystemVariable[] = [];
-    let currentVariable: Partial<SystemVariable> = {};
+    const variables: UCSMSystemVariable[] = [];
+    let currentVariable: Partial<UCSMSystemVariable> = {};
     let currentField: string | null = null;
 
     function NextFieldIsRemark(CurrentIndex:number): boolean {
@@ -50,7 +50,7 @@ function generateSystemVariables(documentText: string): SystemVariable[] {
       if ((line.startsWith('_') || /^[A-Z]/.test(line)) && !currentField) {
         // If we have a partially built variable with at least a name, reset and start new
         if (currentVariable.name) {   
-            variables.push(currentVariable as SystemVariable);
+            variables.push(currentVariable as UCSMSystemVariable);
         }
         currentVariable = { name: line };
         currentField = 'description';
@@ -80,16 +80,16 @@ function generateSystemVariables(documentText: string): SystemVariable[] {
       } else if (currentField) {
         // Append the line to the current field (multi-line support)
         if (currentField in currentVariable) {
-          currentVariable[currentField as keyof SystemVariable] += `\n${line}`;
+          currentVariable[currentField as keyof UCSMSystemVariable] += `\n${line}`;
         } else {
-          currentVariable[currentField as keyof SystemVariable] = line;
+          currentVariable[currentField as keyof UCSMSystemVariable] = line;
         }
       }
   
       // Reset after collecting Visibility (7th field)
       if (currentField === 'visibility' && currentVariable.visibility || currentField === 'Remarks' && currentVariable.Remarks) {
         if (!NextFieldIsRemark(index) || currentField === 'Remarks') {
-        variables.push(currentVariable as SystemVariable);
+        variables.push(currentVariable as UCSMSystemVariable);
         currentVariable = {};
         currentField = null;
         }
@@ -98,19 +98,19 @@ function generateSystemVariables(documentText: string): SystemVariable[] {
   
     // Add the last variable if it’s complete
     if (currentVariable.name && currentVariable.visibility) {
-      variables.push(currentVariable as SystemVariable);
+      variables.push(currentVariable as UCSMSystemVariable);
     }
   
     return variables;
   }
 
 
-export function generateSystemJson(documentText: string, outputPath?: string): SystemData {
+export function generateSystemJson(documentText: string, outputPath?: string): UCSMSystemData {
 
     const variables = generateSystemVariables(documentText);
   
     // Define the full system.json structure
-    const systemJson: SystemData = {
+    const systemJson: UCSMSystemData = {
       keywords: [
         'If', 'Then', 'Else', 'End', 'While', 'Do', 'Exit', 'Delete', 'For', 'Each',
         'Dim', 'as', 'New', 'this', 'null'
@@ -149,7 +149,51 @@ export function generateSystemJson(documentText: string, outputPath?: string): S
             {name:'Text', value:'<text>', description:'You can also build strings of Text in CABINET VISION from the results of existing Parameters or AutoText Values. Such as the three examples below: NAME = w{DX}h{DY}d{DZ}, PARTMAT = {material}, COMMENT = {name} ({job.name})'},
             {name:'Style', value:'<style>', description:'There are three possible settings for the <style> value: 0 = Value (Values act as previous Parameter definitions, only displayed in the Object Tree and hard set by the UCS), 1 = Attribute (Attributes act as triggers that can be user prompted from the sidebar for the Object or via Job/Room Parameters tabs. Use <desc> to set the prompt description), 2 = Note (Notes are a user defined Note which will be displayed on the Notes pages for the Object and available as CAD text look-ups. The text entered for Notes are default values which can be edited from the prompt. Use <desc> to set the prompt description)'},
             {name:'Description', value:'<desc>', description:'Description allows you to display a user prompt for Attribute and Note Parameters.'}
-        ]
+        ],
+       specialObjects: [
+            {
+                "prefix": "_M:",
+                "propertyPattern": "[A-Za-z0-9_]*",
+                "allowsSubProperties": false,
+                "description": "Material Parameters"
+            },
+            {
+                "prefix": "_CS:",
+                "propertyPattern": "[A-Za-z0-9_]*",
+                "allowsSubProperties": false,
+                "description": "Construction Method Parameters"
+            },
+            {
+                "prefix": "_MS:",
+                "propertyPattern": "[A-Za-z0-9_]*",
+                "allowsSubProperties": false,
+                "description": "Material Schedule Parameters"
+            },  
+            {
+                "prefix": "_CV:",
+                "propertyPattern": "\\d+",
+                "allowsSubProperties": true,
+                "description": "Derives the value/measurement entered for a standard in the Construction Method"
+            },
+            {
+                "prefix": "_CB:",
+                "propertyPattern": "\\d+",
+                "allowsSubProperties": true,
+                "description": "Derives the button/choice selected for a standard in a Construction Method"
+            },
+            {
+                "prefix": "_CBM:",
+                "propertyPattern": "\\d+",
+                "allowsSubProperties": true,
+                "description": "Derives the banding Material ID from the Construction Method"
+            },
+            {
+                "prefix": "_CBN:",
+                "propertyPattern": "\\d+",
+                "allowsSubProperties": true,
+                "description": "Derives the banding number from the Construction Method"
+            }
+        ] 
     };
   
     // Optionally write to a file if outputPath is provided

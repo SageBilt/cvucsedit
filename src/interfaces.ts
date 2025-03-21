@@ -1,17 +1,25 @@
-export interface SpecialObject {  
+// Define an interface for the language configuration
+export interface LanguageConfig {
+  languageId: string;
+  systemJsonPath: string;
+  syntaxJsonPath: string;
+  controlStructuresJsonPath: string;
+}
+
+export interface UCSMSpecialObject {  
   prefix: string;
   propertyPattern: string;
   allowsSubProperties: boolean;
   description: string;
 }
 
-export interface VariableTypes {
+export interface UCSMVariableTypes {
     name: string;
     value: string;
     description: string;
 }
 
-export interface SystemFunctions {
+export interface UCSMSystemFunctions {
     name: string;
     value: string;
     description: string;
@@ -23,7 +31,6 @@ export interface ConditionRules {
   validOperands: string[];
 }
 
-// Define the shape of the control structure JSON data
 export interface ControlStructure {
   openingKeyword: string;
   requiredSuffix: string | null;
@@ -31,9 +38,7 @@ export interface ControlStructure {
   supportsElse: boolean;
   customValidation?: string;
 }
-
-// Define the shape of a variable in system JSON
-export interface SystemVariable {
+export interface UCSMSystemVariable {
   name: string;
   description: string;
   type: string;
@@ -44,23 +49,69 @@ export interface SystemVariable {
   Remarks: string;
   parentObject: string;
 }
-
-// export interface SystemObjects {
-//     name: string;
-//     description: string;
-//   }
-
-// Define the shape of the system JSON data
-export interface SystemData {
+export interface UCSMSystemData {
   keywords: string[];
-  variables: SystemVariable[];
-  functions: SystemFunctions[];
-  types: VariableTypes[];
+  variables: UCSMSystemVariable[];
+  functions: UCSMSystemFunctions[];
+  types: UCSMVariableTypes[];
+  specialObjects: UCSMSpecialObject[];
 }
 
-// Define the shape of the syntax JSON data
-export interface SyntaxData {
+export interface UCSMSyntaxData {
   valueTypes: string[];
   dimTypes: string[];
   forEachTypes: string[];
 }
+
+/*----------------- UCS JS -------------------*/
+
+export interface UCSJSSystemFunction {
+    name: string;
+    definition: string;
+    value: string;
+    description: string;
+    example: string;
+}
+
+export interface UCSJSSystemPropertie {
+    name: string;
+    parentObject: string[],
+    value: string;
+    description: string;
+    Type: string;
+}
+
+export interface UCSJSParameterDef {
+    ParamName: string;
+    ParamValue: string;
+    DataType: string;
+}
+export interface UCSJSSystemMethod {
+    name: string;
+    parentObject: string[],
+    definition: string;
+    value: string;
+    description: string;
+    example: string;
+    returnType: string;
+    parameterDef: UCSJSParameterDef[];
+}
+
+export interface UCSJSSystemConstants {
+    AssemblyTypes: string[];
+    parameterModTypes: string[];
+    parameterModStyles: string[];
+    databaseIDTypes: string[];
+    parameterTypes: string[];
+    objectClass: string[];
+    objectTypes: string[];
+    assemblyEndTypes: string[];
+}
+
+export interface UCSJSSystemData {
+    objects: string[];
+    constants: UCSJSSystemConstants;
+    properties: UCSJSSystemPropertie[];
+    functions: UCSJSSystemFunction[];
+    methods: UCSJSSystemMethod[];
+  }

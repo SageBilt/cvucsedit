@@ -22,7 +22,7 @@ class LanguageClientWrapper {
             synchronize: {
                 fileEvents: vscode_1.workspace.createFileSystemWatcher(`**/*${config.fileExtension}`)
             },
-            outputChannel: vscode_1.window.createOutputChannel('UCSM Language Server')
+            outputChannel: vscode_1.window.createOutputChannel(`${this.languageId} Language Server`)
         };
         // Create and start the client
         this.client = new node_1.LanguageClient(`${this.languageId}LanguageServer`, `${this.languageId} Language Server`, serverOptions, clientOptions);

@@ -176,6 +176,50 @@ function generateSystemJson(documentText, outputPath) {
             { name: 'Text', value: '<text>', description: 'You can also build strings of Text in CABINET VISION from the results of existing Parameters or AutoText Values. Such as the three examples below: NAME = w{DX}h{DY}d{DZ}, PARTMAT = {material}, COMMENT = {name} ({job.name})' },
             { name: 'Style', value: '<style>', description: 'There are three possible settings for the <style> value: 0 = Value (Values act as previous Parameter definitions, only displayed in the Object Tree and hard set by the UCS), 1 = Attribute (Attributes act as triggers that can be user prompted from the sidebar for the Object or via Job/Room Parameters tabs. Use <desc> to set the prompt description), 2 = Note (Notes are a user defined Note which will be displayed on the Notes pages for the Object and available as CAD text look-ups. The text entered for Notes are default values which can be edited from the prompt. Use <desc> to set the prompt description)' },
             { name: 'Description', value: '<desc>', description: 'Description allows you to display a user prompt for Attribute and Note Parameters.' }
+        ],
+        specialObjects: [
+            {
+                "prefix": "_M:",
+                "propertyPattern": "[A-Za-z0-9_]*",
+                "allowsSubProperties": false,
+                "description": "Material Parameters"
+            },
+            {
+                "prefix": "_CS:",
+                "propertyPattern": "[A-Za-z0-9_]*",
+                "allowsSubProperties": false,
+                "description": "Construction Method Parameters"
+            },
+            {
+                "prefix": "_MS:",
+                "propertyPattern": "[A-Za-z0-9_]*",
+                "allowsSubProperties": false,
+                "description": "Material Schedule Parameters"
+            },
+            {
+                "prefix": "_CV:",
+                "propertyPattern": "\\d+",
+                "allowsSubProperties": true,
+                "description": "Derives the value/measurement entered for a standard in the Construction Method"
+            },
+            {
+                "prefix": "_CB:",
+                "propertyPattern": "\\d+",
+                "allowsSubProperties": true,
+                "description": "Derives the button/choice selected for a standard in a Construction Method"
+            },
+            {
+                "prefix": "_CBM:",
+                "propertyPattern": "\\d+",
+                "allowsSubProperties": true,
+                "description": "Derives the banding Material ID from the Construction Method"
+            },
+            {
+                "prefix": "_CBN:",
+                "propertyPattern": "\\d+",
+                "allowsSubProperties": true,
+                "description": "Derives the banding number from the Construction Method"
+            }
         ]
     };
     // Optionally write to a file if outputPath is provided
