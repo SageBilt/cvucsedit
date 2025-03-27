@@ -46,6 +46,8 @@ class ucsmCompletion {
     variables = [];
     functions = [];
     specialObjects = [];
+    dynamicData = {};
+    symbolTable = new Map();
     constructor(LangID, conn) {
         //super();
         this.connection = conn;
@@ -63,6 +65,47 @@ class ucsmCompletion {
             this.connection.console.log(err.message);
         }
     }
+    updateSymbolTable(doc) {
+        this.symbolTable.clear(); // For simplicity; optimize later with incremental updates
+        const text = doc.getText();
+        // Example: Naive parsing for variables like "let x = ..."
+        const lines = text.split('\n');
+        lines.forEach((line, lineNum) => {
+            const pattern = /^\s*(?<![If|While]\s+)([A-Za-z_{}:][A-Za-z0-9_{}@\\.:]*)(?:<(crncy|meas|deg|int|bool|dec|text|style|desc)?>)?\s*:?=\s*/i;
+            const match = line.match(pattern);
+            if (match) {
+                const varName = match[1];
+                const range = {
+                    start: { line: lineNum, character: line.indexOf(varName) },
+                    end: { line: lineNum, character: line.indexOf(varName) + varName.length }
+                };
+                console.log(varName, match[2]);
+                this.symbolTable.set(varName.toUpperCase(), [{
+                        name: varName, uri: doc.uri, range, dataType: match[2]
+                    }]);
+            }
+        });
+    }
+    Addsymbols(items) {
+        this.symbolTable.forEach((Symbols, key) => {
+            const groupedSymbols = new Map();
+            Symbols.forEach((symbol) => {
+                const dataTypeUC = symbol.dataType?.toUpperCase();
+                if (!groupedSymbols.has(dataTypeUC))
+                    groupedSymbols.set(dataTypeUC, symbol);
+            });
+            groupedSymbols.forEach(sym => {
+                items.push({
+                    label: sym.name,
+                    kind: node_1.CompletionItemKind.Variable,
+                    documentation: {
+                        kind: 'markdown',
+                        value: `**${sym.name}** (**Type** ${sym.dataType})`
+                    }
+                });
+            });
+        });
+    }
     AddSpecialObjects(items) {
         this.specialObjects.forEach(spObj => {
             items.push({
@@ -77,7 +120,58 @@ class ucsmCompletion {
             items.push({
                 label: kw,
                 kind: node_1.CompletionItemKind.Keyword,
-                detail: `${kw} (${this.languageId} keyword)`
+                documentation: {
+                    kind: 'markdown',
+                    value: `**${kw}** (${this.languageId} keyword)`
+                }
+            });
+        });
+    }
+    AddPartDefs(items) {
+        this.dynamicData.partDefs.forEach(part => {
+            items.push({
+                label: part.partName,
+                kind: node_1.CompletionItemKind.Class,
+                documentation: {
+                    kind: 'markdown',
+                    value: `**${part.partName}**\n\n${part.description}\n\n- **class**: ${part.className}\n- **Sub Class**: ${part.subClassName}`
+                }
+            });
+        });
+    }
+    AddMaterialParams(items) {
+        this.dynamicData.materialParams.forEach(param => {
+            items.push({
+                label: param.paramName,
+                kind: node_1.CompletionItemKind.Property,
+                documentation: {
+                    kind: 'markdown',
+                    value: `**${param.paramName}** (Material Parameter)\n\n${param.paramDesc}\n\n- **Type**: ${param.paramTypeName}`
+                }
+            });
+        });
+    }
+    AddConstructionParams(items) {
+        this.dynamicData.constructionParams.forEach(param => {
+            items.push({
+                label: param.paramName,
+                kind: node_1.CompletionItemKind.Property,
+                documentation: {
+                    kind: 'markdown',
+                    value: `**${param.paramName}** (Construction Parameter)\n\n${param.paramDesc}\n\n- **Type**: ${param.paramTypeName}`
+                }
+            });
+        });
+    }
+    AddScheduleParams(items) {
+        this.dynamicData.scheduleParams.forEach(param => {
+            items.push({
+                label: param.paramName,
+                kind: node_1.CompletionItemKind.Property,
+                documentation: {
+                    kind: 'markdown',
+                    value: `**${param.paramName}** (Material Schedule Parameter)\n\n${param.paramDesc}\n\n- **Type**: ${param.paramTypeName}`
+                }
             });
         });
     }
@@ -126,10 +220,20 @@ class ucsmCompletion {
             });
         });
     }
-    hoverFunction() {
+    FilterVariableNameForWorkPlan(word) {
+        if (word.substring(0, 4) == '_EDG') {
+            const splitParts = word.split(/[0-9]/);
+            if (splitParts.length > 1)
+                return `${splitParts[0]}N${splitParts[1]}`;
+        }
+        return word;
     }
     getHoverWord(word, wordRange) {
-        const func = this.functions.find(f => f.name === word);
+        // this.symbolTable.forEach((Symbols: SymbolInfo[], key: string) => {
+        //   console.log(` this is the ${key}`);
+        // });
+        //console.log(` this is the ${this.symbolTable.}`);
+        const func = this.functions.find(f => f.name.toUpperCase() === word);
         if (func) {
             return {
                 contents: {
@@ -139,7 +243,7 @@ class ucsmCompletion {
                 range: wordRange // Optional: Highlight the word
             };
         }
-        const keyw = this.keywords.find(k => k === word);
+        const keyw = this.keywords.find(k => k.toUpperCase() === word);
         if (keyw) {
             return {
                 contents: {
@@ -149,7 +253,7 @@ class ucsmCompletion {
                 range: wordRange // Optional: Highlight the word
             };
         }
-        const specOjb = this.specialObjects.find(so => so.prefix === word);
+        const specOjb = this.specialObjects.find(so => so.prefix.toUpperCase() === word);
         if (specOjb) {
             return {
                 contents: {
@@ -159,7 +263,53 @@ class ucsmCompletion {
                 range: wordRange
             };
         }
-        const variable = this.variables.find(v => v.name === word);
+        const MatParams = this.dynamicData.materialParams.find(param => param.paramName.toUpperCase() === word);
+        if (MatParams) {
+            return {
+                contents: {
+                    kind: 'markdown',
+                    value: `**${MatParams.paramName}** (Material Parameter)\n\n${MatParams.paramDesc}\n\n- **Type**: ${MatParams.paramTypeName}`
+                },
+                range: wordRange
+            };
+        }
+        const ConstParams = this.dynamicData.constructionParams.find(param => param.paramName.toUpperCase() === word);
+        if (ConstParams) {
+            return {
+                contents: {
+                    kind: 'markdown',
+                    value: `**${ConstParams.paramName}** (Construction Parameter)\n\n${ConstParams.paramDesc}\n\n- **Type**: ${ConstParams.paramTypeName}`
+                },
+                range: wordRange
+            };
+        }
+        const SchedParams = this.dynamicData.scheduleParams.find(param => param.paramName.toUpperCase() === word);
+        if (SchedParams) {
+            return {
+                contents: {
+                    kind: 'markdown',
+                    value: `**${SchedParams.paramName}** (Material Schedule Parameter)\n\n${SchedParams.paramDesc}\n\n- **Type**: ${SchedParams.paramTypeName}`
+                },
+                range: wordRange
+            };
+        }
+        const PartDefs = this.dynamicData.partDefs.find(part => part.partName.toUpperCase() === word);
+        if (PartDefs) {
+            return {
+                contents: {
+                    kind: 'markdown',
+                    value: `**${PartDefs.partName}**\n\n${PartDefs.description}\n\n- **class**: ${PartDefs.className}\n- **Sub Class**: ${PartDefs.subClassName}`
+                },
+                range: wordRange
+            };
+        }
+        const filtForWorkPlan = this.FilterVariableNameForWorkPlan(word);
+        const variable = this.variables.find(v => {
+            //if (v.name.substring(0,4) == '_EDG') console.log(`"${filtForWorkPlan}" "${v.name.toUpperCase()}"`);
+            if (v.name.toUpperCase() == filtForWorkPlan) {
+                return v;
+            }
+        });
         if (variable) {
             return {
                 contents: {
@@ -169,7 +319,7 @@ class ucsmCompletion {
                 range: wordRange
             };
         }
-        const dTypes = this.datatypes.find(dt => dt.name === word);
+        const dTypes = this.datatypes.find(dt => dt.name.toUpperCase() === word);
         if (dTypes) {
             return {
                 contents: {
@@ -179,8 +329,31 @@ class ucsmCompletion {
                 range: wordRange // Optional: Highlight the word
             };
         }
+        const Symbols = this.symbolTable.get(word);
+        if (Symbols) {
+            console.log(` this is the ${Symbols.length}`);
+            const sym = Symbols[0];
+            if (sym) {
+                return {
+                    contents: {
+                        kind: 'markdown',
+                        value: `**${sym.name}** (***Type*** ${sym.dataType})`
+                    },
+                    range: wordRange // Optional: Highlight the word
+                };
+            }
+        }
         // Return undefined if no hover info is available
         return undefined;
+    }
+    getDefinition(symbol, uri) {
+        const Symbols = this.symbolTable.get(symbol.toUpperCase());
+        if (Symbols) {
+            const sym = Symbols[0];
+            if (sym) {
+                return { uri: sym.uri, range: sym.range };
+            }
+        }
     }
 }
 exports.ucsmCompletion = ucsmCompletion;

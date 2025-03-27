@@ -1,9 +1,20 @@
+import { Position } from 'vscode';
+import { Range, CompletionItemKind } from 'vscode-languageserver/node';
+
 // Define an interface for the language configuration
 export interface LanguageConfig {
   languageId: string;
   systemJsonPath: string;
   syntaxJsonPath: string;
   controlStructuresJsonPath: string;
+}
+
+export interface SymbolInfo {
+  name: string;
+  uri: string; // Document URI where it’s defined
+  range: Range; // Location of the declaration
+  dataType: string;
+  scope?: string; // Optional: e.g., "global", "functionName"
 }
 
 export interface UCSMSpecialObject {  
@@ -23,12 +34,8 @@ export interface UCSMSystemFunctions {
     name: string;
     value: string;
     description: string;
-}
-
-export interface ConditionRules {
-  comparisonOperators: string[];
-  logicalOperators: string[];
-  validOperands: string[];
+    inputType?: string;
+    returnType?: string;
 }
 
 export interface ControlStructure {
@@ -38,6 +45,12 @@ export interface ControlStructure {
   supportsElse: boolean;
   customValidation?: string;
 }
+export interface ClosingPairs {
+  opening: string;
+  closing: string;
+  name: string;
+}
+
 export interface UCSMSystemVariable {
   name: string;
   description: string;
@@ -115,3 +128,38 @@ export interface UCSJSSystemData {
     functions: UCSJSSystemFunction[];
     methods: UCSJSSystemMethod[];
   }
+
+  //----------------- Dynamic data ------------------
+  export interface PartDefs {
+    partName: string;
+    description: string;
+    className: string;
+    subClassName: string;
+  }
+
+  export interface Parameters {
+    paramName: string;
+    paramDesc: string;
+    paramTypeName:string;
+  }
+
+  export interface DynamicData {
+    partDefs : PartDefs[];
+    materialParams: Parameters[];
+    constructionParams: Parameters[];
+    scheduleParams: Parameters[];
+  }
+
+  export interface classElement {
+    name: string;
+    compKind: CompletionItemKind;
+    params?: any;
+    type: string;
+    range: Range;
+}
+  export interface docClassRef {
+      name: string;
+      uri: string;
+      classElements: classElement[];
+  }
+

@@ -17109,7 +17109,7 @@ Visibility:
 Visible with user override
  
 
-Note:
+Remarks:
  
 The value can be user defined. Adding LCLIP manually however does not actually Clip and End.
  
@@ -17335,6 +17335,44 @@ Visibility:
  
 Visible with user override
  
+
+LIBPART
+
+Replaces the part with a library part defined by the location given.
+
+
+
+
+
+Type:
+ 
+System and/or User Definable
+ 
+
+Valid Range:
+ 
+Text
+ 
+
+Applies To:
+ 
+Part
+ 
+
+Values:
+ 
+Text
+ 
+
+Visibility:
+ 
+Visible with user override
+
+
+Remarks:
+
+Format : {catalog name}\{any number of optional subfolders seperated by '\'}\{library part name}
+
 
 LKH
 

@@ -80,10 +80,16 @@ export class SQLConnection {
         return this.ConnPool;
     }
 
+    async OpenPool(): Promise<void> {
+        if (this.ConnPool) {
+          await this.ConnPool.connect();
+        }
+    }
+
     async closePool(): Promise<void> {
         if (this.ConnPool) {
           await this.ConnPool.close();
-          this.ConnPool = undefined;
+          //this.ConnPool = undefined;
         }
     }
 

@@ -16,6 +16,14 @@ For example if there is an image subfolder under your extension project workspac
 
 If you have any requirements or dependencies, add a section describing those and how to install and configure them.
 
+## dependencies
+- vscode-languageclient
+- vscode-languageserver
+- vscode-languageserver-protocol
+- mssql
+- npm install @babel/parser
+- npm install @babel/traverse
+
 ## Extension Settings
 
 Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.

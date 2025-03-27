@@ -57,12 +57,19 @@ class LanguageServer {
         this.initialize();
         this.setupCompletion();
         this.setupHover();
+        this.setDefinitionProvider();
         this.setupDocumentValidation();
+        this.setupClientNotification();
         this.documents.listen(this.connection);
         this.connection.listen();
     }
     initialize() {
         this.connection.onInitialize((params) => {
+            const dynamicData = params.initializationOptions || {};
+            this.ucsmComp.dynamicData = dynamicData;
+            this.ucsjsComp.dynamicData = dynamicData;
+            this.ucsmValid.dynamicData = dynamicData;
+            console.log(`partDefs.length ${dynamicData.partDefs.length}`);
             return {
                 capabilities: {
                     textDocumentSync: node_1.TextDocumentSyncKind.Incremental,
@@ -70,7 +77,8 @@ class LanguageServer {
                         //resolveProvider: true
                         triggerCharacters: ['.', ':', '=']
                     },
-                    hoverProvider: true
+                    hoverProvider: true,
+                    definitionProvider: true
                 }
             };
         });
@@ -169,7 +177,7 @@ class LanguageServer {
                 ? this.getMethodParamType(this.ucsjsComp.ucsjsMethods, linePrefix, fullLine, cursorPosition)
                 : 'all';
             if (showDataType) {
-                //this.connection.console.log(`method parameter data type "${showDataType}"`);
+                this.connection.console.log(`method parameter data type "${showDataType}"`);
                 if (showDataType == 'ucsmSyntax' || this.languageId == 'ucsm') {
                     /*Check show only properties for special objects like _M: and _CV: */
                     for (const spObj of this.ucsmComp.specialObjects) {
@@ -177,6 +185,12 @@ class LanguageServer {
                         //if (linePrefix.endsWith(spObj.prefix)) {
                         if (wordRegex.test(linePrefix)) {
                             this.ucsmComp.AddVariables(items, spObj.prefix);
+                            if (spObj.prefix == '_M:')
+                                this.ucsmComp.AddMaterialParams(items);
+                            if (spObj.prefix == '_CS:')
+                                this.ucsmComp.AddConstructionParams(items);
+                            if (spObj.prefix == '_MS:')
+                                this.ucsmComp.AddScheduleParams(items);
                             FilterObjProps = true;
                             break;
                         }
@@ -184,10 +198,13 @@ class LanguageServer {
                     if (!FilterObjProps) {
                         this.ucsmComp.AddFunction(items);
                         this.ucsmComp.AddVariables(items);
-                        if (this.languageId == 'ucsm')
+                        if (this.languageId == 'ucsm') {
                             this.ucsmComp.AddKeywords(items); //Only add keywords in ucsm
+                        }
+                        this, this.ucsmComp.AddPartDefs(items);
                         this.ucsmComp.AddSpecialObjects(items);
                         this.ucsmComp.AddDatTypes(items);
+                        this.ucsmComp.Addsymbols(items);
                     }
                 }
                 else {
@@ -210,10 +227,13 @@ class LanguageServer {
             else if (this.languageId == 'javascript') {
                 if (this.ucsjsComp.isObject(items, linePrefix))
                     return items;
+                if (this.ucsjsComp.isLibraryClassInstances(items, linePrefix))
+                    return items;
                 this.ucsjsComp.AddMethods(items);
                 this.ucsjsComp.AddAllConstants(items);
                 this.ucsjsComp.AddObjects(items);
                 this.ucsjsComp.AddFunctions(items);
+                this.ucsjsComp.AddLibraryClassInstances(items);
             }
             return items;
         });
@@ -247,23 +267,65 @@ class LanguageServer {
             const wordRange = this.getWordRangeAtPosition(document, position); // Helper to get word under cursor
             if (!wordRange)
                 return undefined;
-            const word = document.getText(wordRange);
-            //console.log(`Hover text "${word}"`);
+            const word = document.getText(wordRange).toUpperCase();
+            console.log(`Hover text "${word}"`);
             const cursorPosition = this.getCursorPosition(position);
             const [linePrefix, fullLine] = this.getLineTextToCursor(document, position, cursorPosition);
             const showDataType = this.languageId == 'javascript'
                 ? this.getMethodParamType(this.ucsjsComp.ucsjsMethods, linePrefix, fullLine, cursorPosition)
                 : 'all';
             if (showDataType) {
-                this.connection.console.log(`Hover parameter data type "${showDataType}"`);
+                this.connection.console.log(`Hover parameter "${word}" -> data type "${showDataType}"`);
                 if (showDataType == 'ucsmSyntax' || this.languageId == 'ucsm') {
-                    const ucsmhover = this.ucsmComp.getHoverWord(word.toUpperCase(), wordRange);
+                    const ucsmhover = this.ucsmComp.getHoverWord(word, wordRange);
                     if (ucsmhover)
                         return ucsmhover;
                 }
             }
-            return this.ucsjsComp.getHoverWord(word, wordRange);
-            //return undefined;
+            else
+                return this.ucsjsComp.getHoverWord(word, wordRange);
+        });
+    }
+    findSymbolAtPosition(doc, pos) {
+        const line = doc.getText({ start: { line: pos.line, character: 0 }, end: { line: pos.line + 1, character: 0 } });
+        const offset = doc.offsetAt(pos);
+        //const wordRegex = /^\s*(?<![If|While]\s+)[A-Za-z_{}:][A-Za-z0-9_{}@\\.:]*?(?:<(crncy|meas|deg|int|bool|dec|text|style|desc)?>)?\s*:?=\s*/i;
+        const wordRegex = /\w+/g;
+        let match;
+        //console.log(`Line "${line}" character "${pos.character}"`);
+        while ((match = wordRegex.exec(line)) !== null) {
+            if (match.index <= pos.character && pos.character <= match.index + match[0].length) {
+                return match[0];
+            }
+        }
+        return null;
+    }
+    setDefinitionProvider() {
+        this.connection.onDefinition((params) => {
+            const uri = params.textDocument.uri;
+            const position = params.position;
+            // Get the document text (assumes you’re tracking open documents)
+            const document = this.documents.get(uri);
+            if (!document)
+                return null;
+            // Identify the symbol at the position
+            const symbol = this.findSymbolAtPosition(document, position);
+            if (!symbol)
+                return null;
+            // Look up its definition in your symbol table or AST
+            //console.log(`symbol "${symbol}"`);
+            const definition = this.ucsmComp.getDefinition(symbol, uri);
+            if (!definition)
+                return null;
+            // console.log(`uri "${definition.uri}" uri "${params.textDocument.uri}"`);
+            // console.log(`StartLine "${definition.range.start.line}" StartChar "${definition.range.start.character}"`); 
+            // console.log(`EndLine "${definition.range.end.line}" EndChar "${definition.range.end.character}"`);  
+            //Return the location
+            return {
+                uri: definition.uri,
+                range: definition.range
+            };
+            return null;
         });
     }
     setupDocumentValidation() {
@@ -277,14 +339,24 @@ class LanguageServer {
     validateTextDocument(document) {
         let diagnostics = [];
         const text = document.getText();
-        // if (this.languageId == 'javascript')
-        // else  
-        diagnostics = this.ucsmValid.validateUCSM(text, this.languageId);
+        if (this.languageId == 'javascript')
+            diagnostics = this.ucsmValid.validateUCSJS(text, this.languageId);
+        else {
+            this.ucsmComp.updateSymbolTable(document);
+            diagnostics = this.ucsmValid.validateUCSM(text, this.languageId);
+        }
+        //console.log(diagnostics);
         const normalizedUri = decodeURIComponent(document.uri);
         this.connection.sendDiagnostics({ uri: normalizedUri, diagnostics });
     }
+    setupClientNotification() {
+        this.connection.onNotification('updateJSLibraryReferences', (params) => {
+            this.ucsjsComp.classLibraries = params;
+            console.log(`Received data updated references for libraries`);
+        });
+    }
 }
-console.log("🌍 Language server is starting...");
+//console.log("🌍 Language server is starting...");
 const languageId = process.argv[2]; // Get language ID from command-line argument
 if (!languageId) {
     console.error("No language ID provided. Usage: node server.js <languageId>");

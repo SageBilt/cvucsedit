@@ -36,7 +36,9 @@
       {
         "path": "./Languages/ucsjs/ucsjs.tmLanguage.json",
         "scopeName": "source.ucsjs",
-        "injectTo": ["source.js"]
+        "injectTo": [
+          "source.js"
+        ]
       }
     ],
     "typescriptServerPlugins": [
@@ -54,7 +56,6 @@
         "language": "javascript",
         "path": "./Languages/ucsjs/ucsjs.snippets.json"
       }
-
     ],
     "configuration": {
       "title": "CVUCS Editor Database Configuration",
@@ -75,7 +76,7 @@
       "activitybar": [
         {
           "id": "cvucs-container",
-          "title": "CVUCS",
+          "title": "Cabinet Vision UCS Editor",
           "icon": "./icons/UCSM.svg"
         }
       ]
@@ -85,25 +86,89 @@
         {
           "icon": "",
           "id": "CVUCSList",
-          "name": "Cabinet Vision UCS List"
+          "name": "User Created Standards"
         },
         {
           "icon": "",
           "id": "CVUCSLibList",
-          "name": "Cabinet Vision JavaScript Library List"
+          "name": "JavaScript Libraries"
         }
       ]
     },
     "commands": [
       {
-        "command": "cvucsedit.showUCSList",
-        "title": "Show Cabinet Vision UCS list"
+        "command": "cvucsedit.loadUCSLists",
+        "title": "Reload Cabinet Vision UCS & Library list"
       },
       {
         "command": "cvucsedit.onUCSItemClick",
         "title": "UCS list Item Click"
+      },
+      {
+        "command": "cvucsedit.searchUCSList",
+        "title": "Search UCS List",
+        "icon": "$(search)"
+      },
+      {
+        "command": "cvucsedit.clearSearchUCSList",
+        "title": "Clear UCS Search ",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "cvucsedit.refreshUCSList",
+        "title": "Refresh UCS List",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "cvucsedit.searchUCSLibList",
+        "title": "Search UCS List",
+        "icon": "$(search)"
+      },
+      {
+        "command": "cvucsedit.clearSearchUCSLibList",
+        "title": "Clear UCS Search ",
+        "icon": "$(clear-all)"
+      },
+      {
+        "command": "cvucsedit.refreshUCSLibList",
+        "title": "Refresh library List",
+        "icon": "$(refresh)"
       }
-    ]
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "cvucsedit.searchUCSList",
+          "when": "view == CVUCSList",
+          "group": "navigation"
+        },
+        {
+          "command": "cvucsedit.clearSearchUCSList",
+          "when": "view == CVUCSList",
+          "group": "navigation"
+        },
+        {
+          "command": "cvucsedit.refreshUCSList",
+          "when": "view == CVUCSList",
+          "group": "navigation"
+        },
+        {
+          "command": "cvucsedit.searchUCSLibList",
+          "when": "view == CVUCSLibList",
+          "group": "navigation"
+        },
+        {
+          "command": "cvucsedit.clearSearchUCSLibList",
+          "when": "view == CVUCSLibList",
+          "group": "navigation"
+        },
+        {
+          "command": "cvucsedit.refreshUCSLibList",
+          "when": "view == CVUCSLibList",
+          "group": "navigation"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -127,6 +192,8 @@
     "vscode-languageserver": "^9.0.1"
   },
   "dependencies": {
+    "@babel/parser": "^7.27.0",
+    "@babel/traverse": "^7.27.0",
     "express": "^4.21.2",
     "msnodesqlv8": "^4.5.0",
     "mssql": "^11.0.1",

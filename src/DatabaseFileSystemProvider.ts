@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as CLT from './CustomLookupTree';
 
 export class DatabaseFileSystemProvider implements vscode.FileSystemProvider {
     private files = new Map<string, Uint8Array>();

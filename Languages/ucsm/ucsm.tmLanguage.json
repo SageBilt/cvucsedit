@@ -10,13 +10,13 @@
     { "include": "#operators" },
     { "include": "#numbersWithUnits" },
     { "include": "#functions" },
-    { "include": "#variables" },
     { "include": "#objectPaths" },
     { "include": "#booleanLiterals" },
     { "include": "#controlStructures" },
     { "include": "#dimStatements" },
     { "include": "#forEachTypes" },
-    { "include": "#objectClasses" }
+    { "include": "#objectClasses" },
+    { "include": "#variables" }
   ],
   "repository": {
     "comments": {
@@ -40,10 +40,7 @@
         {
           "name": "string.quoted.single.ucsm",
           "begin": "'",
-          "end": "'",
-          "patterns": [
-            { "name": "constant.character.escape.ucsm", "match": "\\\\." }
-          ]
+          "end": "'"
         }
       ]
     },

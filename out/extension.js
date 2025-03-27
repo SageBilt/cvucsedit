@@ -39,124 +39,61 @@ exports.deactivate = deactivate;
 // Import the module and reference it with the alias vscode in your code below
 const path = __importStar(require("path"));
 const vscode = __importStar(require("vscode"));
-const DFSProvider = __importStar(require("./DatabaseFileSystemProvider"));
-const SQLConnection_1 = require("./SQLConnection");
+const DatabaseFileSystemProvider_1 = require("./DatabaseFileSystemProvider");
+const CLT = __importStar(require("./CustomLookupTree"));
 const SQLScriptProvider_1 = require("./SQLScriptProvider");
 const client_1 = require("./client/client");
 const ucsmFoldingProvider_1 = require("./ucsmFoldingProvider");
 let clients = [];
 async function activate(context) {
     //initializeSystemJson();
+    //UCS Text editors
+    //const SQLConn = new SQLConnection();
+    const SQLProvider = new SQLScriptProvider_1.SQLScriptProvider(context);
+    const textProvider = new DatabaseFileSystemProvider_1.DatabaseFileSystemProvider();
+    await SQLProvider.loadSideBarMenus();
+    const dynamicData = await SQLProvider.loadDBVariables();
     const UCSMClient = new client_1.LanguageClientWrapper({
         languageId: 'ucsm',
         serverModulePath: path.join('out', 'server', 'server.js'),
         fileExtension: '.ucsm'
-    }, context);
+    }, context, SQLProvider, dynamicData);
     UCSMClient.start(context);
     const UCSJSClient = new client_1.LanguageClientWrapper({
         languageId: 'javascript',
         serverModulePath: path.join('out', 'server', 'server.js'),
         fileExtension: '.js'
-    }, context);
+    }, context, SQLProvider, dynamicData);
     UCSJSClient.start(context);
-    //UCS Text editors
-    const SQLConn = new SQLConnection_1.SQLConnection();
-    const provider = new SQLScriptProvider_1.SQLScriptProvider(SQLConn, context);
-    const textProvider = new DFSProvider.DatabaseFileSystemProvider();
-    await provider.loadSideBarMenus();
     context.subscriptions.push(vscode.languages.registerFoldingRangeProvider('ucsm', // Replace with your language ID
     new ucsmFoldingProvider_1.CustomLanguageFoldingProvider()));
-    vscode.languages.registerFoldingRangeProvider;
-    // const DocFilter: vscode.DocumentFilter;
-    // DocFilter.scheme = 'cvucs';
+    const lookupProvider = new CLT.LookupTreeDataProvider(context);
+    // Register the TreeView
+    // vscode.window.createTreeView('CVUCSList', {
+    //     treeDataProvider: lookupProvider,
+    // });
+    // // Register a command for search
     // context.subscriptions.push(
-    //     vscode.languages.registerCompletionItemProvider(
-    //         'javascript',
-    //       {
-    //         provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
-    //         const item1 = new vscode.CompletionItem('cab', vscode.CompletionItemKind.Constant);
-    //         item1.detail = 'Inserts a cabinet';
-    //         item1.insertText = '_cab';
-    //         // const item2 = new vscode.CompletionItem('myVar', vscode.CompletionItemKind.Method);
-    //         // item2.insertText = 'myVar';
-    //         // Return the list of suggestions
-    //         return [item1];
+    //     vscode.commands.registerCommand('cvucs.search', async () => {
+    //         const searchTerm = await vscode.window.showInputBox({
+    //         placeHolder: 'Search by name or code...',
+    //         prompt: 'Enter a search term to filter the UCS list',
+    //         });
+    //         if (searchTerm !== undefined) {
+    //         lookupProvider.filter(searchTerm); // Pass the search term to the provider
     //         }
-    //       },
-    //       '.' // Trigger on dot
-    //     )
+    //     })
     // );
-    // context.subscriptions.push(
-    //     vscode.languages.registerCompletionItemProvider(
-    //         'javascript',
-    //       {
-    //         provideCompletionItems(document: vscode.TextDocument, position: vscode.Position) {
-    //           const linePrefix = document.lineAt(position).text.substr(0, position.character);
-    //           if (!linePrefix.endsWith('_cab.')) return undefined;
-    //           const completion = new vscode.CompletionItem('SetParameter', vscode.CompletionItemKind.Method);
-    //           completion.insertText = new vscode.SnippetString('SetParameter("${1:arg}",${2:arg});');
-    //           completion.documentation = new vscode.MarkdownString('Set a parameter with a value');
-    //           return [completion];
-    //         }
-    //       },
-    //       '.' // Trigger on dot
-    //     )
-    // );   
-    //{ scheme: "file", language: "javascript" }
-    //   context.subscriptions.push(
-    //     vscode.languages.registerInlineCompletionItemProvider(
-    //        'javascript' ,
-    //       {
-    //         provideInlineCompletionItems(document: vscode.TextDocument, position: vscode.Position, context: vscode.InlineCompletionContext, token: vscode.CancellationToken) {
-    //             const linePrefix = document.lineAt(position).text.substr(0, position.character);
-    //             if (!linePrefix.endsWith('cab')) return undefined;
-    //             const suggestion = new vscode.InlineCompletionItem('_cab.');
-    //             suggestion.insertText = '_cab.Method';
-    //             return [suggestion];
-    //         }
-    //       }
-    //     )
-    //   );     
     vscode.workspace.registerFileSystemProvider('cvucs', textProvider, { isCaseSensitive: false });
-    context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.showUCSList', provider.loadSideBarMenus.bind(provider)));
-    context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.onUCSItemClick', async (item) => {
-        // Action when an item is clicked
-        if (item.FileType.FileTypeName == "Divider") {
-            vscode.window.showWarningMessage('This is a divider. There is no code associate with this!');
-        }
-        else {
-            const uri = vscode.Uri.parse(`cvucs:/${item.label}.${item.FileType.Extension}`);
-            textProvider.writeFile(uri, Buffer.from(item.Code, 'utf8'), { create: true, overwrite: true });
-            //await vscode.workspace.fs.writeFile(uri, Buffer.from(item.Code, 'utf8'));
-            const document = await vscode.workspace.openTextDocument(uri);
-            const LangId = ["UCSJS", "UCSJS-Disabled"].includes(item.FileType.FileTypeName) ? 'javascript' : 'ucsm';
-            await vscode.languages.setTextDocumentLanguage(document, LangId);
-            console.log('Opened document URI:', document.uri.toString());
-            const editor = await vscode.window.showTextDocument(document, {
-                preview: false // Ensures it stays open as a full editor
-            });
-            // context.workspaceState.update(`treeItem:${document.uri.toString()}`,{
-            //     ID: item.UCSID,
-            //   }) ; 
-            provider.UCSListlookupProvider.storeTreeItem(document.uri.toString(), item);
-            //   editor.edit(editBuilder => {editBuilder.insert(new vscode.Position(0, 0),item.Code)});
-        }
-    }));
-    vscode.workspace.onDidSaveTextDocument(async (document) => {
-        if (document.uri.scheme === 'cvucs') {
-            const key = `treeItem:${document.uri.toString()}`;
-            let treeItem = provider.UCSListlookupProvider.getTreeItemByDocumentUri(document.uri.toString());
-            if (!treeItem)
-                treeItem = provider.UCSLibListlookupProvider.getTreeItemByDocumentUri(document.uri.toString());
-            if (treeItem) {
-                const scriptId = treeItem.UCSID;
-                const content = document.getText();
-                SQLConn.ExecuteStatment(`Update UCS Set Code = @Code Where ID = @ID`, [{ "Name": "ID", "Value": scriptId }, { "Name": "Code", "Value": content }]);
-                treeItem.Code = content;
-                vscode.window.showInformationMessage(`Updated UCS ${treeItem.label} in Cabinet Vision SQL Server Database.`);
-            }
-        }
-    });
+    context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.loadUCSLists', async () => SQLProvider.loadSideBarMenus()));
+    context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.refreshUCSList', async () => SQLProvider.loadUCSListSideBarMenu()));
+    context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.refreshUCSLibList', async () => SQLProvider.loadUCSLibraryListSideBarMenu()));
+    context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.onUCSItemClick', async (item) => SQLProvider.openUCS(item, textProvider)));
+    context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.searchUCSList', async () => SQLProvider.filterUCSList(false)));
+    context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.clearSearchUCSList', async () => SQLProvider.clearFilterUCSList(false)));
+    context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.searchUCSLibList', async () => SQLProvider.filterUCSList(true)));
+    context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.clearSearchUCSLibList', async () => SQLProvider.clearFilterUCSList(true)));
+    vscode.workspace.onDidSaveTextDocument(async (document) => SQLProvider.saveUCS(document));
     //Clean up document on close
     context.subscriptions.push(vscode.workspace.onDidCloseTextDocument((document) => {
         const key = `treeItem:${document.uri.toString()}`;

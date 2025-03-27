@@ -1,19 +1,24 @@
 {
     "If Then": {
       "prefix": "IfThen",
-      "body": ["IF THEN\n\t$1\nEND IF"],
+      "body": ["IF $1 THEN\n\t$2\nEND IF"],
       "description": "If Then block"
     },
     "If Then Else": {
         "prefix": "IfThenElse",
-        "body": ["IF THEN\n\t$1\nELSE\n\t$2\nEND IF"],
+        "body": ["IF $1 THEN\n\t$2\nELSE\n\t$3\nEND IF"],
         "description": "If Then Else block"
     },
     "While Do": {
         "prefix": "WhileDo",
-        "body": ["WWHILE $1 DO\n\t$2\nEND WHILE"],
+        "body": ["WHILE $1 DO\n\t$2\nEND WHILE"],
         "description": "While Do block"
     },
+    "While Do With Count": {
+      "prefix": "WhileDoWithCount",
+      "body": ["_Count<int> = 1\nWHILE _Count < $1 DO\n\t$2\n\t_Count<int> += 1\nEND WHILE\nDELETE _Count"],
+      "description": "While Do block"
+  },
     "For Each ACAMDwg": {
       "prefix": "ForEachACAMDwg",
       "body": ["FOR EACH $1 ACAMDwg"],
@@ -153,5 +158,118 @@
         "prefix": "ForEachPart",
         "body": ["FOR EACH $1 PART"],
         "description": "For Each Part Declaration"
-    }
+    },
+    "Dim as new part": {
+        "prefix": "DimAsNewPart",
+        "body": [
+            "\tDim ${1:PANEL} as New Part",
+            "",
+            "\t${1:PANEL}.Visible<bool> = True",
+            "\t${1:PANEL}.DX<meas> = ${2:0}",
+            "\t${1:PANEL}.DY<meas> = ${3:0}",
+            "\t${1:PANEL}.DZ<meas> = ${4:_M:DZ}",
+            "\t${1:PANEL}.X<meas> = ${5:0}",
+            "\t${1:PANEL}.Y<meas> = ${6:0}",
+            "\t${1:PANEL}.Z<meas> = ${7:0}",
+            "\t${1:PANEL}.AX<deg> = ${8:0}",
+            "\t${1:PANEL}.AY<deg> = ${9:0}",
+            "\t${1:PANEL}.AZ<deg> = ${10:0}"
+        ],
+        "description": "Creates a new Part with customizable name"
+    },
+    "Dim as new Route": {
+      "prefix": "DimAsNewRoute",
+      "body": [
+          "\tDim ${1:NewRoute} as New Route",
+          "",
+          "\t${1:NewRoute}.Visible<bool> = True",
+          "\t${1:NewRoute}.DX<meas> = ${2:0}",
+          "\t${1:NewRoute}.DY<meas> = ${3:0}",
+          "\t${1:NewRoute}.DZ<meas> = ${4::DZ}",
+          "\t${1:NewRoute}.X<meas> = ${5:0}",
+          "\t${1:NewRoute}.Y<meas> = ${6:0}",
+          "\t${1:NewRoute}.Z<meas> = ${7:0}",
+          "\t${1:NewRoute}.AX<deg> = ${8:0}",
+          "\t${1:NewRoute}.AY<deg> = ${9:0}",
+          "\t${1:NewRoute}.AZ<deg> = ${10:0}",
+          "\t${1:NewRoute}._FACEWP<int> = ${11:1}",
+          "\t${1:NewRoute}._POCKET<int> = ${12:1}"
+      ],
+      "description": "Creates a new Route with customizable name"
+  },
+  "Dim as new Dado": {
+      "prefix": "DimAsNewDado",
+      "body": [
+          "\tDim ${1:NewDado} as New Dado",
+          "",
+          "\t${1:NewDado}.Visible<bool> = True",
+          "\t${1:NewDado}.DX<meas> = ${2:0}",
+          "\t${1:NewDado}.DY<meas> = ${3:0}",
+          "\t${1:NewDado}.DZ<meas> = ${4::DZ}",
+          "\t${1:NewDado}.X<meas> = ${5:0}",
+          "\t${1:NewDado}.Y<meas> = ${6:0}",
+          "\t${1:NewDado}.Z<meas> = ${7:0}",
+          "\t${1:NewDado}.AX<deg> = ${8:0}",
+          "\t${1:NewDado}.AY<deg> = ${9:0}",
+          "\t${1:NewDado}.AZ<deg> = ${10:0}",
+          "\t${1:NewDado}._FACEWP<int> = ${11:1}"
+      ],
+      "description": "Creates a new Dado with customizable name"
+  },
+  "Dim as new Hole": {
+      "prefix": "DimAsNewHole",
+      "body": [
+          "\tDim ${1:NewHole} as New Hole",
+          "",
+          "\t${1:NewHole}.Visible<bool> = True",
+          "\t${1:NewHole}.DX<meas> = ${2:0}",
+          "\t${1:NewHole}.DY<meas> = ${3:0}",
+          "\t${1:NewHole}.DZ<meas> = ${4::DZ}",
+          "\t${1:NewHole}.X<meas> = ${5:0}",
+          "\t${1:NewHole}.Y<meas> = ${6:0}",
+          "\t${1:NewHole}.Z<meas> = ${7:0}",
+          "\t${1:NewHole}.AX<deg> = ${8:0}",
+          "\t${1:NewHole}.AY<deg> = ${9:0}",
+          "\t${1:NewHole}.AZ<deg> = ${10:0}",
+          "\t${1:NewHole}._FACEWP<int> = ${11:1}"
+      ],
+      "description": "Creates a new Hole with customizable name"
+  },
+  "Dim as new Linebore": {
+      "prefix": "DimAsNewLinebore",
+      "body": [
+          "\tDim ${1:NewLinebore} as New Linebore",
+          "",
+          "\t${1:NewLinebore}.Visible<bool> = True",
+          "\t${1:NewLinebore}.DX<meas> = ${2:0}",
+          "\t${1:NewLinebore}.DY<meas> = ${3:0}",
+          "\t${1:NewLinebore}.DZ<meas> = ${4::DZ}",
+          "\t${1:NewLinebore}.X<meas> = ${5:0}",
+          "\t${1:NewLinebore}.Y<meas> = ${6:0}",
+          "\t${1:NewLinebore}.Z<meas> = ${7:0}",
+          "\t${1:NewLinebore}.AX<deg> = ${8:0}",
+          "\t${1:NewLinebore}.AY<deg> = ${9:0}",
+          "\t${1:NewLinebore}.AZ<deg> = ${10:0}",
+          "\t${1:NewLinebore}._FACEWP<int> = ${11:1}",
+          "\t${1:NewLinebore}.REPT<int> = ${11:2}",
+          "\t${1:NewLinebore}.SPCNG<meas> = ${11:32}"
+      ],
+      "description": "Creates a new Linebore with customizable name"
+  },
+  "Dim as new Connection": {
+      "prefix": "DimAsNewConnection",
+      "body": [
+          "\tDim ${1:NewConnection} as New Connection",
+          "",
+          "\t${1:NewConnection}.Visible<bool> = True",
+          "\t${1:NewConnection}._EDGWP<int> = ${2:1}",
+          "\t${1:NewConnection}.DX<meas> = :DZ",
+          "\t${1:NewConnection}.DY<meas> = _EDG${2:1}DY",
+          "\t${1:NewConnection}.DZ<meas> = 0",
+          "\t${1:NewConnection}._CONNID<int> = ${3:0}",
+          "\t${1:NewConnection}._CONNFLIP<bool> = ${4:false}",
+          "\t${1:NewConnection}._CONNREV<bool> = ${5:false}"
+      ],
+      "description": "Creates a new Linebore with customizable name"
+  }
 }

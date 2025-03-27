@@ -46,6 +46,8 @@ class ucsjsCompletion {
     ucsjsProperties = [];
     ucsjsFunctions = [];
     ucsjsMethods = [];
+    dynamicData = {};
+    classLibraries = [];
     // private AssemblyTypes: string[] = [];
     // private parameterModTypes: string[] = [];
     // private parameterModStyles: string[] = [];
@@ -82,6 +84,49 @@ class ucsjsCompletion {
                 detail: `${obj} (CV object)`
             });
         });
+    }
+    AddLibraryClassInstances(items) {
+        this.classLibraries.forEach((docRef) => {
+            //console.log(docRef.name);
+            items.push({
+                label: docRef.name,
+                kind: node_1.CompletionItemKind.Class,
+                detail: `${docRef.name} (CV JavaScript library class instance)`
+            });
+        });
+    }
+    isLibraryClassInstances(items, lineText) {
+        for (const libInst of this.classLibraries) {
+            const wordRegex = new RegExp(`${libInst.name}[^\\s]*$`, 'i');
+            if (wordRegex.test(lineText)) {
+                this.AddLibraryClassElements(items, libInst.name);
+                return true;
+            }
+        }
+        return false;
+    }
+    AddLibraryClassElements(items, className) {
+        const classLibrary = this.classLibraries.find(docRef => docRef.name == className);
+        if (classLibrary) {
+            console.log(typeof classLibrary.classElements);
+            classLibrary.classElements.forEach(elem => {
+                items.push({
+                    label: elem.name,
+                    kind: elem.compKind,
+                    detail: `**parameters** ${elem.params.toString}`
+                });
+            });
+            // const Elements = classLibrary.classElements.get(classLibrary.name);
+            // if (Elements) {
+            //     Elements.forEach(elem => {
+            //         items.push({
+            //             label: elem.name,
+            //             kind: elem.compKind,
+            //             detail: `${elem.params.toString} (CV object)`
+            //         }); 
+            //     });
+            // }
+        }
     }
     buildMethodParams(parameterDef) {
         if (!parameterDef)
@@ -171,7 +216,7 @@ class ucsjsCompletion {
         });
     }
     getHoverWord(word, wordRange) {
-        const object = this.ucsjsObjects.find(obj => obj === word);
+        const object = this.ucsjsObjects.find(obj => obj.toUpperCase() === word);
         if (object) {
             return {
                 contents: {
@@ -181,7 +226,7 @@ class ucsjsCompletion {
                 range: wordRange // Optional: Highlight the word
             };
         }
-        const func = this.ucsjsFunctions.find(f => f.name === word);
+        const func = this.ucsjsFunctions.find(f => f.name.toUpperCase() === word);
         if (func) {
             return {
                 contents: {
@@ -191,7 +236,7 @@ class ucsjsCompletion {
                 range: wordRange // Optional: Highlight the word
             };
         }
-        const property = this.ucsjsProperties.find(prop => prop.name === word);
+        const property = this.ucsjsProperties.find(prop => prop.name.toUpperCase() === word);
         if (property) {
             return {
                 contents: {
@@ -201,7 +246,7 @@ class ucsjsCompletion {
                 range: wordRange
             };
         }
-        const method = this.ucsjsMethods.find(method => method.name === word);
+        const method = this.ucsjsMethods.find(method => method.name.toUpperCase() === word);
         if (method) {
             const paramDefs = this.buildMethodParams(method.parameterDef);
             const paramDefStr = paramDefs != '' ? `\n- **Parameters**: \n\n- ${paramDefs}` : '';
@@ -216,7 +261,7 @@ class ucsjsCompletion {
         }
         for (const key of Object.keys(this.ucsjsConstants)) {
             const KeyName = key;
-            const cons = this.ucsjsConstants[KeyName].find(con => con === word);
+            const cons = this.ucsjsConstants[KeyName].find(con => con.toUpperCase() === word);
             if (cons) {
                 return {
                     contents: {

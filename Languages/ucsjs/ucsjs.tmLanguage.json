@@ -1,49 +1,49 @@
 {
   "scopeName": "source.ucsjs",
-  "injectionSelector": "L:source.js",
+  "injectionSelector": "L:source.js -comment",
   "patterns": [
     { "include": "#constants" }
   ],
   "repository": {
     "constants": {
-      "patterns": [
-        {
-          "match": "_(cab|this|cvMath)",
-          "name": "variable.other.constant.object.js"
-        },
-        {
-          "match": "VAL_(MEASUREMENT|DEGREES|RADIANS|INTEGER|BOOL|DECIMAL|PARTID|TEXT|CURRENCY)",
-          "name": "variable.other.constant.object.js"
-        },
-        {
-          "match": "ASM_CLASS_(BASE|UPPER|TALL|VANITY|APPL|ACSRY|DECORATIVE|TOP|MOLDING|WALL|WALLFACE|FLOOR|CEILING|DOOR|NG_ACSRY|SPLASH|USER_LIGHT|FIXTURE|BATH|CLOSET|CLOSETBASE|CLOSETUPPER)",
-          "name": "variable.other.constant.object.js"
-        },
-        {
-          "match": "ASM_TYPE_(STANDARD|BLINDR|BLINDL|CORNER45|CORNER90|FILLER|DESK|HOOD|REFER|VALANCE|UCVALANCE|APPLGARAGE|DISHWASHER|TRASHCOMP|RANGE|COOKTOP|SINK|MICRO|WINDOW|EDOOR|PICTURE|TOEASSEMBLY|MISC|CLOSET|PART|OPENING|TWALL|CONTAINER|ELECTRICAL|PLUMBING|OVEN|WASHDRY|TUB|SHOWER|TOILET|BATHSINK|SPLASH|TOP|CLOSET_VERT|CLOSET_HORZ|CLOSET_DOOR_DWR)",
-          "name": "variable.other.constant.object.js"
-        },
-        {
-          "match": "ASM_END_(FINISHED|UNFINISHED|EXTENDED|RETURN|APPL_FE|APPL_DOOR|PANELIZED|CLIPPED|RADIUSED|ANGLED)",
-          "name": "variable.other.constant.object.js"
-        },
-        {
-          "match": "OBJ_(ASSEMBLY|OPENING|PART|DOOR|DRWFRONT|MOLDING|NGACSRY|HARDWARE|PULL|GUIDE|HINGE|HINGEPLATE|OPERATION|HOLE|HOLEMASTER|DEPDADO|DEPDADOMASTER|DADO|DADOMASTER|LINEBORE|LBOREMASTER|BLINDDADO|DOVETAIL|IJOINT|CONNECTION|ROUTE|ACAMDWG|LINE|ARC)",
-          "name": "variable.other.constant.object.js"
-        },
-        {
-          "match": "PARMOD_(DESC|TYPE|STYLE)",
-          "name": "variable.other.constant.object.js"
-        },
-        {
-          "match": "PARSTYLE_(DEFAULT|ATTRIBUTE|NOTE)",
-          "name": "variable.other.constant.object.js"
-        },
-        {
-          "match": "ID_(ASSEMBLYCONSTRUCTION|ASEMBLYESCHEDULE|CLOSETRODSCHEDULE|COLORSCHEDULE|CONNECTION|DOORSCHEDULE|DOORSTYLE|DRAWERCONSTRUCTION|DRAWERSCHEDULE|FINISH|GUIDESCHEDULE|HINGESCHEDULE|IJOINT|MATERIAL|MOLDINGSCHEDULE|PULLSCHEDULE|ROLLOUTCONSTRUCTION|ROLLOUTSCHEDULE|ROOMSCHEDULE|SLIDERAILSCHEDULE|TEXTURE|TOPCONSTRUTION|TOPSCHEDULE|WIREBASKETSCHEDULE)",
-          "name": "variable.other.constant.object.js"
-        }
-      ]
+        "patterns": [
+          {
+            "match": "_(cab|this|cvMath)",
+            "name": "variable.other.constant.object.js"
+          },
+          {
+            "match": "VAL_(MEASUREMENT|DEGREES|RADIANS|INTEGER|BOOL|DECIMAL|PARTID|TEXT|CURRENCY)",
+            "name": "variable.other.constant.object.js"
+          },
+          {
+            "match": "ASM_CLASS_(BASE|UPPER|TALL|VANITY|APPL|ACSRY|DECORATIVE|TOP|MOLDING|WALL|WALLFACE|FLOOR|CEILING|DOOR|NG_ACSRY|SPLASH|USER_LIGHT|FIXTURE|BATH|CLOSET|CLOSETBASE|CLOSETUPPER)",
+            "name": "variable.other.constant.object.js"
+          },
+          {
+            "match": "ASM_TYPE_(STANDARD|BLINDR|BLINDL|CORNER45|CORNER90|FILLER|DESK|HOOD|REFER|VALANCE|UCVALANCE|APPLGARAGE|DISHWASHER|TRASHCOMP|RANGE|COOKTOP|SINK|MICRO|WINDOW|EDOOR|PICTURE|TOEASSEMBLY|MISC|CLOSET|PART|OPENING|TWALL|CONTAINER|ELECTRICAL|PLUMBING|OVEN|WASHDRY|TUB|SHOWER|TOILET|BATHSINK|SPLASH|TOP|CLOSET_VERT|CLOSET_HORZ|CLOSET_DOOR_DWR)",
+            "name": "variable.other.constant.object.js"
+          },
+          {
+            "match": "ASM_END_(FINISHED|UNFINISHED|EXTENDED|RETURN|APPL_FE|APPL_DOOR|PANELIZED|CLIPPED|RADIUSED|ANGLED)",
+            "name": "variable.other.constant.object.js"
+          },
+          {
+            "match": "OBJ_(ASSEMBLY|OPENING|PART|DOOR|DRWFRONT|MOLDING|NGACSRY|HARDWARE|PULL|GUIDE|HINGE|HINGEPLATE|OPERATION|HOLE|HOLEMASTER|DEPDADO|DEPDADOMASTER|DADO|DADOMASTER|LINEBORE|LBOREMASTER|BLINDDADO|DOVETAIL|IJOINT|CONNECTION|ROUTE|ACAMDWG|LINE|ARC)",
+            "name": "variable.other.constant.object.js"
+          },
+          {
+            "match": "PARMOD_(DESC|TYPE|STYLE)",
+            "name": "variable.other.constant.object.js"
+          },
+          {
+            "match": "PARSTYLE_(DEFAULT|ATTRIBUTE|NOTE)",
+            "name": "variable.other.constant.object.js"
+          },
+          {
+            "match": "ID_(ASSEMBLYCONSTRUCTION|ASEMBLYESCHEDULE|CLOSETRODSCHEDULE|COLORSCHEDULE|CONNECTION|DOORSCHEDULE|DOORSTYLE|DRAWERCONSTRUCTION|DRAWERSCHEDULE|FINISH|GUIDESCHEDULE|HINGESCHEDULE|IJOINT|MATERIAL|MOLDINGSCHEDULE|PULLSCHEDULE|ROLLOUTCONSTRUCTION|ROLLOUTSCHEDULE|ROOMSCHEDULE|SLIDERAILSCHEDULE|TEXTURE|TOPCONSTRUTION|TOPSCHEDULE|WIREBASKETSCHEDULE)",
+            "name": "variable.other.constant.object.js"
+          }
+        ]
     }
   }
 }

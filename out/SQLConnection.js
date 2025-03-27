@@ -97,10 +97,15 @@ class SQLConnection {
         }
         return this.ConnPool;
     }
+    async OpenPool() {
+        if (this.ConnPool) {
+            await this.ConnPool.connect();
+        }
+    }
     async closePool() {
         if (this.ConnPool) {
             await this.ConnPool.close();
-            this.ConnPool = undefined;
+            //this.ConnPool = undefined;
         }
     }
     GetParamType(value) {

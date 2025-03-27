@@ -9,7 +9,7 @@ import {
    } from 'vscode-languageserver/node';
    
    import * as fs from 'fs';
-import { UCSJSSystemConstants, UCSJSSystemPropertie, UCSJSSystemFunction, UCSJSSystemData,UCSJSSystemMethod, UCSJSParameterDef } from '.././interfaces';
+import { UCSJSSystemConstants, UCSJSSystemPropertie, UCSJSSystemFunction, UCSJSSystemData,UCSJSSystemMethod, UCSJSParameterDef, DynamicData, docClassRef, classElement } from '.././interfaces';
 import * as CONSTANTS from '.././constants';
 
 
@@ -23,6 +23,9 @@ export class ucsjsCompletion {
     private ucsjsProperties: UCSJSSystemPropertie[] = [];
     private ucsjsFunctions: UCSJSSystemFunction[] = [];
     public ucsjsMethods: UCSJSSystemMethod[] = [];
+    public dynamicData: DynamicData = {} as DynamicData;
+
+    public classLibraries: docClassRef[] = [];
 
 
     // private AssemblyTypes: string[] = [];
@@ -68,6 +71,55 @@ export class ucsjsCompletion {
           });
         });
       }
+
+    AddLibraryClassInstances(items: CompletionItem[]) {
+        this.classLibraries.forEach((docRef: docClassRef) => {
+            //console.log(docRef.name);
+            items.push({
+                label: docRef.name,
+                kind: CompletionItemKind.Class,
+                detail: `${docRef.name} (CV JavaScript library class instance)`
+            }); 
+        });
+    }
+
+    isLibraryClassInstances(items: CompletionItem[],lineText: string)  : boolean {
+        for (const libInst of this.classLibraries) {
+            const wordRegex = new RegExp(`${libInst.name}[^\\s]*$`, 'i');
+            if (wordRegex.test(lineText)) {
+                this.AddLibraryClassElements(items,libInst.name);
+                return true;
+            } 
+        }
+        return false;
+    }
+
+    AddLibraryClassElements(items: CompletionItem[],className : string) {
+        
+        const classLibrary = this.classLibraries.find(docRef => docRef.name == className);
+
+        if (classLibrary) { 
+            console.log(typeof classLibrary.classElements);      
+            classLibrary.classElements.forEach(elem => {
+                items.push({
+                    label: elem.name,
+                    kind: elem.compKind,
+                    detail: `**parameters** ${elem.params.toString}`
+                }); 
+            });
+
+            // const Elements = classLibrary.classElements.get(classLibrary.name);
+            // if (Elements) {
+            //     Elements.forEach(elem => {
+            //         items.push({
+            //             label: elem.name,
+            //             kind: elem.compKind,
+            //             detail: `${elem.params.toString} (CV object)`
+            //         }); 
+            //     });
+            // }
+        }
+    }
 
     buildMethodParams(parameterDef: UCSJSParameterDef[]): string {
         if (!parameterDef) return '';
@@ -173,7 +225,7 @@ export class ucsjsCompletion {
 
     getHoverWord(word: string,wordRange: Range) : Hover | undefined {
 
-        const object = this.ucsjsObjects.find(obj => obj === word);
+        const object = this.ucsjsObjects.find(obj => obj.toUpperCase() === word);
         if (object) {
             return {
             contents: {
@@ -184,7 +236,7 @@ export class ucsjsCompletion {
             };
         }
       
-        const func = this.ucsjsFunctions.find(f => f.name === word);
+        const func = this.ucsjsFunctions.find(f => f.name.toUpperCase() === word);
         if (func) {
             return {
             contents: {
@@ -195,7 +247,7 @@ export class ucsjsCompletion {
             };
         }
 
-        const property = this.ucsjsProperties.find(prop => prop.name === word);
+        const property = this.ucsjsProperties.find(prop => prop.name.toUpperCase() === word);
         if (property) {
             return {
             contents: {
@@ -206,7 +258,7 @@ export class ucsjsCompletion {
             };
         }
 
-        const method = this.ucsjsMethods.find(method => method.name === word);
+        const method = this.ucsjsMethods.find(method => method.name.toUpperCase() === word);
         if (method) {
             const paramDefs = this.buildMethodParams(method.parameterDef); 
             const paramDefStr = paramDefs != '' ? `\n- **Parameters**: \n\n- ${paramDefs}` : '';
@@ -222,7 +274,7 @@ export class ucsjsCompletion {
     
         for (const key of Object.keys( this.ucsjsConstants )) {
             const KeyName = key as keyof UCSJSSystemConstants;
-            const cons = this.ucsjsConstants[KeyName].find(con => con === word);
+            const cons = this.ucsjsConstants[KeyName].find(con => con.toUpperCase() === word);
             if (cons) {
                 return {
                 contents: {

@@ -76,19 +76,25 @@ class CustomTreeItem extends vscode.TreeItem {
     UCSID;
     label;
     FileType;
+    isJSLibrary;
     Code;
-    constructor(UCSID, label, FileType, Code, collapsibleState, context // Pass context to access extension path
+    searchCodeLine;
+    constructor(UCSID, label, FileType, isJSLibrary, Code, searchCodeLine, collapsibleState, context // Pass context to access extension path
     ) {
         super(label, collapsibleState);
         this.UCSID = UCSID;
         this.label = label;
         this.FileType = FileType;
+        this.isJSLibrary = isJSLibrary;
         this.Code = Code;
+        this.searchCodeLine = searchCodeLine;
         // Optional: Add a tooltip or description
-        this.tooltip = Code.split("\n")[0]; //`Type: ${this.extensionType}`;
-        this.description = Code.split("\n")[0]; // Displays next to the label
-        // Set custom icon path
-        this.iconPath = this.getCustomIconPath(FileType.IconName, context);
+        if (this.searchCodeLine == -1) {
+            this.tooltip = Code.split("\n")[0]; //`Type: ${this.extensionType}`;
+            this.description = Code.split("\n")[0]; // Displays next to the label
+            // Set custom icon path
+            this.iconPath = this.getCustomIconPath(FileType.IconName, context);
+        }
     }
     getCustomIconPath(IconName, context) {
         const iconFolder = path.join(context.extensionPath, 'icons');
@@ -103,6 +109,8 @@ class LookupTreeDataProvider {
     results = [];
     context;
     documentToTreeItem = new Map();
+    searchTerm = ''; // Store the current search term
+    filteredResults = []; // Store filtered items
     constructor(context) {
         this.context = context;
     }
@@ -112,28 +120,77 @@ class LookupTreeDataProvider {
     // }
     clearItems() {
         this.results = []; // Reset the data to an empty array
+        this.filteredResults = [];
+        this.searchTerm = '';
         this._onDidChangeTreeData.fire(); // Notify VS Code of the change
+    }
+    clearFilter() {
+        this.filter('');
+        this.refresh;
     }
     updateResults(newResults) {
         this.results = newResults;
+        this.filteredResults = newResults; // Initially, no filter applied
         this._onDidChangeTreeData.fire(); // Refresh the tree
+    }
+    // New filter method
+    filter(searchTerm) {
+        this.searchTerm = searchTerm.toLowerCase();
+        if (!this.searchTerm) {
+            this.filteredResults = [...this.results]; // Reset to all items if search is cleared
+        }
+        else {
+            this.filteredResults = this.results.filter(item => {
+                const matchesLabel = item.label.toLowerCase().includes(this.searchTerm);
+                const matchesCode = item.Code.toLowerCase().includes(this.searchTerm);
+                return matchesLabel || matchesCode;
+            });
+        }
+        this._onDidChangeTreeData.fire();
     }
     getTreeItem(element) {
         return element;
     }
     getChildren(element) {
-        if (element) {
+        if (!element) {
+            // Root level: return filtered items
+            return Promise.resolve(this.filteredResults.map(result => {
+                const treeItem = new CustomTreeItem(result.UCSID, result.label, result.FileType, result.isJSLibrary, result.Code, -1, this.searchTerm && result.Code.toLowerCase().includes(this.searchTerm)
+                    ? vscode.TreeItemCollapsibleState.Expanded
+                    : vscode.TreeItemCollapsibleState.None, this.context);
+                treeItem.command = {
+                    command: 'cvucsedit.onUCSItemClick',
+                    title: 'Item Clicked',
+                    arguments: [treeItem],
+                };
+                return treeItem;
+            }));
+        }
+        else {
+            // Child level: return matching code lines with clickable behavior
+            if (this.searchTerm && element.Code.toLowerCase().includes(this.searchTerm)) {
+                const codeLines = element.Code.split('\n');
+                const childItems = codeLines.map((line, index) => {
+                    if (line.toLowerCase().includes(this.searchTerm)) {
+                        const childItem = new CustomTreeItem(element.UCSID, // Unique ID
+                        line.trim(), element.FileType, element.isJSLibrary, element.Code, // Pass the full code so it can be opened
+                        index, vscode.TreeItemCollapsibleState.None, this.context);
+                        // Store the line number in contextValue or another property
+                        childItem.contextValue = line;
+                        childItem.command = {
+                            command: 'cvucsedit.onUCSItemClick',
+                            title: 'Open Line',
+                            arguments: [childItem],
+                        };
+                        //element.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;  
+                        return childItem;
+                    }
+                    return null;
+                }).filter(line => line !== null);
+                return Promise.resolve(childItems);
+            }
             return Promise.resolve([]);
         }
-        return Promise.resolve(this.results.map(result => {
-            const treeItem = new CustomTreeItem(result.UCSID, result.label, result.FileType, result.Code, vscode.TreeItemCollapsibleState.None, this.context);
-            treeItem.command = {
-                command: 'cvucsedit.onUCSItemClick',
-                title: 'Item Clicked',
-                arguments: [treeItem]
-            };
-            return treeItem;
-        }));
     }
     getTreeItemByDocumentUri(uri) {
         return this.documentToTreeItem.get(uri);
