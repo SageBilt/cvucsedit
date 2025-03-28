@@ -81,7 +81,11 @@ class ucsjsCompletion {
             items.push({
                 label: obj,
                 kind: node_1.CompletionItemKind.Keyword,
-                detail: `${obj} (CV object)`
+                //detail: `**${obj}**\n\n (CV object)`
+                documentation: {
+                    kind: 'markdown',
+                    value: `**${obj}**\n\n (CV object)`
+                }
             });
         });
     }
@@ -91,7 +95,11 @@ class ucsjsCompletion {
             items.push({
                 label: docRef.name,
                 kind: node_1.CompletionItemKind.Class,
-                detail: `${docRef.name} (CV JavaScript library class instance)`
+                //detail: `**${docRef.name}**\n\n (CV JavaScript library class instance)`
+                documentation: {
+                    kind: 'markdown',
+                    value: `**${docRef.name}**\n\n (CV JavaScript library class instance)`
+                }
             });
         });
     }
@@ -105,47 +113,69 @@ class ucsjsCompletion {
         }
         return false;
     }
+    buildLibraryClassParams(params) {
+        if (!params)
+            return '';
+        let Result = '';
+        params.forEach(param => {
+            const Optional = param.optional ? '?' : '';
+            Result += `${param.name}${Optional}\n\n`;
+        });
+        return Result;
+    }
+    buildLibraryClassSnippet(elem) {
+        if (!elem)
+            return '';
+        const funcBegin = elem.type.includes('Property') ? '' : '(';
+        const funcEnd = elem.type.includes('Property') ? '' : ')';
+        let Result = elem.name + funcBegin;
+        elem.params?.forEach((param, index) => {
+            const Optional = param.optional ? '?' : '';
+            if (index > 0)
+                Result += ',';
+            Result += '${' + index + 1 + ':' + param.name + Optional + '}';
+        });
+        return Result + funcEnd;
+    }
     AddLibraryClassElements(items, className) {
         const classLibrary = this.classLibraries.find(docRef => docRef.name == className);
         if (classLibrary) {
-            console.log(typeof classLibrary.classElements);
             classLibrary.classElements.forEach(elem => {
+                const paramDefs = elem.params ? this.buildLibraryClassParams(elem.params) : undefined;
+                const paramsStr = paramDefs ? `\n- **Parameters**: \n\n ${paramDefs}` : '';
+                console.log(paramsStr);
                 items.push({
                     label: elem.name,
+                    insertTextFormat: node_1.InsertTextFormat.Snippet,
                     kind: elem.compKind,
-                    detail: `**parameters** ${elem.params.toString}`
+                    //detail: `${elem.name} ${elem.type}`,
+                    insertText: this.buildLibraryClassSnippet(elem),
+                    documentation: {
+                        kind: 'markdown',
+                        value: `**${elem.name}**\n\n **Library**: ${classLibrary.name}\n\n **Type**: ${elem.type}${paramsStr}`
+                    }
                 });
             });
-            // const Elements = classLibrary.classElements.get(classLibrary.name);
-            // if (Elements) {
-            //     Elements.forEach(elem => {
-            //         items.push({
-            //             label: elem.name,
-            //             kind: elem.compKind,
-            //             detail: `${elem.params.toString} (CV object)`
-            //         }); 
-            //     });
-            // }
         }
     }
     buildMethodParams(parameterDef) {
         if (!parameterDef)
             return '';
         let Result = '';
-        parameterDef.forEach(param => Result += `*Type*: ${param.ParamName}\n- *Description*: ${param.ParamValue}`);
+        parameterDef.forEach(param => Result += `Type: ${param.ParamName}\n\n Description: ${param.ParamValue}\n\n`);
         return Result;
     }
     AddMethods(items, parentObject) {
         this.ucsjsMethods.forEach(method => {
             const pObj = parentObject ? parentObject : '';
             const paramDefs = this.buildMethodParams(method.parameterDef);
-            const paramDefStr = paramDefs != '' ? `\n- **Parameters**: \n\n- ${paramDefs}` : '';
+            const paramDefStr = paramDefs != '' ? `\n- **Parameters**: \n\n ${paramDefs}` : '';
             if (!parentObject && !method.parentObject || method.parentObject.includes(pObj)) {
                 items.push({
                     label: method.name,
                     kind: node_1.CompletionItemKind.Method,
                     insertTextFormat: node_1.InsertTextFormat.Snippet,
-                    detail: `${method.name} (${method.description} variable)`,
+                    //detail: `${method.name} (${method.description} variable)`,
                     insertText: method.value,
                     documentation: {
                         kind: 'markdown',
@@ -162,7 +192,7 @@ class ucsjsCompletion {
                 items.push({
                     label: prop.name,
                     kind: node_1.CompletionItemKind.Property,
-                    detail: `${prop.name} (${prop.Type} type)`,
+                    detail: `**${prop.name}**\n\n (${prop.Type} type)`,
                     //   documentation: {
                     //     kind: 'markdown',
                     //     value: `**${prop.name}**\n\n- **Description**: ${prop.description}\n- **Value**: ${prop.value}\n- **Example**: ${prop.example}\n- **ReturnType**: ${prop.returnType}$`
@@ -221,7 +251,7 @@ class ucsjsCompletion {
             return {
                 contents: {
                     kind: 'markdown',
-                    value: `${object} (CV object)`
+                    value: `**${object}**\n\n (CV object)`
                 },
                 range: wordRange // Optional: Highlight the word
             };
@@ -241,7 +271,7 @@ class ucsjsCompletion {
             return {
                 contents: {
                     kind: 'markdown',
-                    value: `${property.name} (${property.Type} type)`
+                    value: `**${property.name}**\n\n (${property.Type} type)`
                 },
                 range: wordRange
             };
@@ -259,6 +289,30 @@ class ucsjsCompletion {
                 range: wordRange
             };
         }
+        const classLib = this.classLibraries.find(item => item.name.toUpperCase() === word);
+        if (classLib) {
+            return {
+                contents: {
+                    kind: 'markdown',
+                    value: `**${classLib.name}**\n\n (CV JavaScript library class instance)`
+                },
+                range: wordRange // Optional: Highlight the word
+            };
+        }
+        for (const classLibrary of this.classLibraries) {
+            const element = classLibrary.classElements.find(elem => elem.name.toUpperCase() === word);
+            if (element) {
+                const paramDefs = element.params ? this.buildLibraryClassParams(element.params) : undefined;
+                const paramsStr = paramDefs ? `\n- **Parameters**: \n\n ${paramDefs}` : '';
+                return {
+                    contents: {
+                        kind: 'markdown',
+                        value: `**${element.name}**\n\n **Library**: ${classLibrary.name}\n\n **Type**: ${element.type}${paramsStr}`
+                    },
+                    range: wordRange // Optional: Highlight the word
+                };
+            }
+        }
         for (const key of Object.keys(this.ucsjsConstants)) {
             const KeyName = key;
             const cons = this.ucsjsConstants[KeyName].find(con => con.toUpperCase() === word);
@@ -266,7 +320,7 @@ class ucsjsCompletion {
                 return {
                     contents: {
                         kind: 'markdown',
-                        value: `${cons}  (${key} constant)`
+                        value: `**${cons}**\n\n (${key} constant)`
                     },
                     range: wordRange // Optional: Highlight the word
                 };

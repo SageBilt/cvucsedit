@@ -205,6 +205,8 @@ class LanguageServer {
                         this.ucsmComp.AddSpecialObjects(items);
                         this.ucsmComp.AddDatTypes(items);
                         this.ucsmComp.Addsymbols(items);
+                        this.ucsmComp.AddObjectClass(items);
+                        this.ucsmComp.AddObjectType(items);
                     }
                 }
                 else {

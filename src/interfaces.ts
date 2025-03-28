@@ -68,6 +68,8 @@ export interface UCSMSystemData {
   functions: UCSMSystemFunctions[];
   types: UCSMVariableTypes[];
   specialObjects: UCSMSpecialObject[];
+  objectClass: string[];
+  objectTypes: string[];
 }
 
 export interface UCSMSyntaxData {
@@ -150,10 +152,15 @@ export interface UCSJSSystemData {
     scheduleParams: Parameters[];
   }
 
+  export interface ElementParam {
+    name: string;
+    optional?: boolean | null;
+  }
+
   export interface classElement {
     name: string;
     compKind: CompletionItemKind;
-    params?: any;
+    params?: ElementParam[] | undefined;
     type: string;
     range: Range;
 }

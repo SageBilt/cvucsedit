@@ -117,11 +117,11 @@ class SQLScriptProvider {
     }
     addClassRefs(list) {
         list.forEach(item => {
-            if (item.FileType.FileTypeName == "UCSJS") { //only pass enabled ones for now
-                const docURI = this.parseURI(item);
-                const wrappedCode = this.addClassDefToLibraryCode(item);
-                this.UCSJSLibRefParser.updateDocRefs(item.label, docURI.toString(), wrappedCode);
-            }
+            //if (item.FileType.FileTypeName == "UCSJS") { //only pass enabled ones for now
+            const docURI = this.parseURI(item);
+            const wrappedCode = this.addClassDefToLibraryCode(item);
+            this.UCSJSLibRefParser.updateDocRefs(item.label, docURI.toString(), wrappedCode);
+            //}
         });
     }
     updateClassRefsForDoc(document) {

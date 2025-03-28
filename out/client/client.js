@@ -29,11 +29,13 @@ class LanguageClientWrapper {
         };
         // Create and start the client
         this.client = new node_1.LanguageClient(`${this.languageId}LanguageServer`, `${this.languageId} Language Server`, serverOptions, clientOptions);
-        context.subscriptions.push(vscode_1.workspace.onDidChangeTextDocument((event) => {
-            if (this.isRelevantDocument(event.document)) {
-                this.updateReferences(event.document);
-            }
-        }));
+        if (this.languageId == 'javascript') {
+            context.subscriptions.push(vscode_1.workspace.onDidChangeTextDocument((event) => {
+                if (this.isRelevantDocument(event.document)) {
+                    this.updateReferences(event.document);
+                }
+            }));
+        }
     }
     async start(context) {
         try {
@@ -41,7 +43,8 @@ class LanguageClientWrapper {
                 console.log('Test Language Server started');
             });
             context.subscriptions.push(this.client);
-            this.sendDynamicData();
+            if (this.languageId == 'javascript')
+                this.sendDynamicData();
         }
         catch (error) {
             console.error(`Failed to start ${this.languageId} client:`, error);

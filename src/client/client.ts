@@ -44,13 +44,15 @@ export class LanguageClientWrapper {
           clientOptions
       );  
 
-      context.subscriptions.push(
-        workspace.onDidChangeTextDocument((event: TextDocumentChangeEvent) => {
-          if (this.isRelevantDocument(event.document)) {
-            this.updateReferences(event.document);
-          }
-        })
-      );
+      if (this.languageId == 'javascript') {
+        context.subscriptions.push(
+          workspace.onDidChangeTextDocument((event: TextDocumentChangeEvent) => {
+            if (this.isRelevantDocument(event.document)) {
+              this.updateReferences(event.document);
+            }
+          })
+        );
+      }
     }
 
     public async start(context: ExtensionContext): Promise<void> {
@@ -60,7 +62,9 @@ export class LanguageClientWrapper {
         });
     
         context.subscriptions.push(this.client);
-        this.sendDynamicData();
+        
+        if (this.languageId == 'javascript') 
+            this.sendDynamicData();
   
       } catch (error) {
         console.error(`Failed to start ${this.languageId} client:`, error);

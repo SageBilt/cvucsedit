@@ -42,6 +42,8 @@ class ucsmCompletion {
     connection;
     languageId;
     keywords = [];
+    objectClass = [];
+    objectTypes = [];
     datatypes = [];
     variables = [];
     functions = [];
@@ -55,6 +57,8 @@ class ucsmCompletion {
         try {
             const ucsmSystemData = JSON.parse(fs.readFileSync(CONSTANTS.UCSMSYSTEMJSONPATH, 'utf8'));
             this.keywords = ucsmSystemData.keywords || [];
+            this.objectClass = ucsmSystemData.objectClass || [];
+            this.objectTypes = ucsmSystemData.objectTypes || [];
             this.variables = ucsmSystemData.variables || [];
             this.functions = ucsmSystemData.functions || [];
             this.datatypes = ucsmSystemData.types || [];
@@ -122,7 +126,31 @@ class ucsmCompletion {
                 kind: node_1.CompletionItemKind.Keyword,
                 documentation: {
                     kind: 'markdown',
-                    value: `**${kw}** (${this.languageId} keyword)`
+                    value: `**${kw}**\n\n (${this.languageId} keyword)`
+                }
+            });
+        });
+    }
+    AddObjectClass(items) {
+        this.objectClass.forEach(cls => {
+            items.push({
+                label: cls,
+                kind: node_1.CompletionItemKind.Constant,
+                documentation: {
+                    kind: 'markdown',
+                    value: `**${cls}**\n\n (${this.languageId} Object class)`
+                }
+            });
+        });
+    }
+    AddObjectType(items) {
+        this.objectTypes.forEach(type => {
+            items.push({
+                label: type,
+                kind: node_1.CompletionItemKind.Constant,
+                documentation: {
+                    kind: 'markdown',
+                    value: `**${type}**\n\n (${this.languageId} Object type)`
                 }
             });
         });
@@ -248,7 +276,7 @@ class ucsmCompletion {
             return {
                 contents: {
                     kind: 'markdown',
-                    value: `${keyw} (${this.languageId} keyword)`
+                    value: `**${keyw}**\n\n(${this.languageId} keyword)`
                 },
                 range: wordRange // Optional: Highlight the word
             };
@@ -258,9 +286,29 @@ class ucsmCompletion {
             return {
                 contents: {
                     kind: 'markdown',
-                    value: `${specOjb.prefix} (${specOjb.description})`
+                    value: `**${specOjb.prefix}**\n\n(${specOjb.description})`
                 },
                 range: wordRange
+            };
+        }
+        const objClass = this.objectClass.find(cls => cls.toUpperCase() === word);
+        if (objClass) {
+            return {
+                contents: {
+                    kind: 'markdown',
+                    value: `**${objClass}**\n\n(${this.languageId} Object class)`
+                },
+                range: wordRange // Optional: Highlight the word
+            };
+        }
+        const objType = this.objectTypes.find(type => type.toUpperCase() === word);
+        if (objType) {
+            return {
+                contents: {
+                    kind: 'markdown',
+                    value: `**${objType}**\n\n(${this.languageId} Object type)`
+                },
+                range: wordRange // Optional: Highlight the word
             };
         }
         const MatParams = this.dynamicData.materialParams.find(param => param.paramName.toUpperCase() === word);
@@ -337,7 +385,7 @@ class ucsmCompletion {
                 return {
                     contents: {
                         kind: 'markdown',
-                        value: `**${sym.name}** (***Type*** ${sym.dataType})`
+                        value: `**${sym.name}**\n\n(***Type*** ${sym.dataType})`
                     },
                     range: wordRange // Optional: Highlight the word
                 };
