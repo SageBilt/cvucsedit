@@ -38,8 +38,9 @@ class referenceParser {
         //const text = document.getText();
         try {
             const ast = (0, parser_1.parse)(fullDocText, {
-                sourceType: 'unambiguous', // Supports ES6 modules
+                sourceType: 'script', // Supports ES6 modules
                 plugins: ['classProperties', 'jsx'], // Add plugins for specific JS features
+                errorRecovery: true, // Continue parsing despite errors
             });
             return ast;
         }

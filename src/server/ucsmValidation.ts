@@ -204,47 +204,55 @@ export class ucsmValidation {
         //this.connection.console.log(`line "${line}" startChar "${startChar}" endChar "${endChar}"`);
     }
 
+    public getUCSJSLineWithoutComment(line:string,inMultiLineComment: boolean) : {newLine:string,start:number,inMultiLineComment:boolean} | false {
+        let trimStart = 0;
+        const singlelinePos = line.indexOf('//');
+        if (singlelinePos > -1) {
+            line = line.substring(0,singlelinePos);
+        } else {
+            const multiLineStartPos = line.indexOf('/*');
+            const multiLineEndPos = line.lastIndexOf('*/');
+            if (!inMultiLineComment && multiLineStartPos > -1) {
+
+                //this.connection.console.log(`multiLineStartPos "${multiLineStartPos} multiLineEndPos "${multiLineEndPos}"`);
+                if (multiLineEndPos > -1) {
+                    trimStart += (multiLineEndPos - multiLineStartPos) + 2;
+                    line = line.substring(0,multiLineStartPos) + line.substring(multiLineEndPos+2);  
+                } else {
+                    inMultiLineComment = true;
+                    line = line.substring(0,multiLineStartPos);  
+                }
+
+            } else if (inMultiLineComment && multiLineEndPos > -1) {
+                inMultiLineComment = false;
+                trimStart += multiLineEndPos;
+                line = line.substring(multiLineStartPos);  
+            } else if (inMultiLineComment) return false;
+        }
+
+        return {newLine:line,start:trimStart,inMultiLineComment:inMultiLineComment};
+    }
 
     public validateUCSJS(text: string,langID: string): Diagnostic[] {
         const diagnostics: Diagnostic[] = [];
         const lines = text.split('\n');  
-        const commentSplitRegex = /\s*[\/\/.*?$|\/\*[\s\S]*?\*\/]/m;
-        const commentPattern = new RegExp(commentSplitRegex);
+        // const commentSplitRegex = /\s*[\/\/.*?$|\/\*[\s\S]*?\*\/]/m;
+        // const commentPattern = new RegExp(commentSplitRegex);
         let inMultiLineComment = false;
 
         for (let i = 0; i < lines.length; i++) {
 
-            let lineWithoutComments = '';
-            let trimStart = 0;
-            lineWithoutComments = lines[i];
+            //let lineWithoutComments = '';
+            
+            //lineWithoutComments = lines[i];
 
-            const singlelinePos = lineWithoutComments.indexOf('//');
-            if (singlelinePos > -1) {
-                lineWithoutComments = lineWithoutComments.substring(0,singlelinePos);
-            } else {
-                const multiLineStartPos = lineWithoutComments.indexOf('/*');
-                const multiLineEndPos = lineWithoutComments.lastIndexOf('*/');
-                if (!inMultiLineComment && multiLineStartPos > -1) {
+            const filteredLine = this.getUCSJSLineWithoutComment(lines[i],inMultiLineComment);
+            if (filteredLine === false) continue
+            const lineWithoutComments = filteredLine.newLine;
+            inMultiLineComment = filteredLine.inMultiLineComment;
+            let trimStart = filteredLine.start;
 
-                    //this.connection.console.log(`multiLineStartPos "${multiLineStartPos} multiLineEndPos "${multiLineEndPos}"`);
-                    if (multiLineEndPos > -1) {
-                        trimStart += (multiLineEndPos - multiLineStartPos) + 2;
-                        lineWithoutComments = lineWithoutComments.substring(0,multiLineStartPos) + lineWithoutComments.substring(multiLineEndPos+2);  
-                    } else {
-                        inMultiLineComment = true;
-                        lineWithoutComments = lineWithoutComments.substring(0,multiLineStartPos);  
-                    }
 
-                } else if (inMultiLineComment && multiLineEndPos > -1) {
-                    inMultiLineComment = false;
-                    trimStart += multiLineEndPos;
-                    lineWithoutComments = lineWithoutComments.substring(multiLineStartPos);  
-                } else if (inMultiLineComment) continue;
-            }
-
-            //this.connection.console.log(`line "${i} inMultiLineComment "${inMultiLineComment}"`);
-
-            //const lineWithoutComments = this.filterUCSJSLineForComments(lines[i]); //lines[i].split(commentPattern)[0];
             const trimStartText = lineWithoutComments.match(/^\s*/);
             trimStart += trimStartText ? trimStartText[0].length : 0;
             const lineWithoutCommentsTrim = lineWithoutComments.trim();
@@ -379,8 +387,8 @@ export class ucsmValidation {
                     }
                 }
             }
-                
-                if (lineToEval.match(/^[A-Za-z_:][A-Za-z0-9_:<>{}\.]*\s*(?:=|\:=|=[\+\-\*\/]=)/i)) {
+            
+                if (lineToEval.match(/^[A-Za-z_{}:][A-Za-z0-9_:<>{}@\.]*\s*(?:=|\:=|=[\+\-\*\/]=)/i)) {
                 const assignmentMatch = lineToEval.match(/^(.+?)\s*$/i);
                 if (assignmentMatch) {
                     const assignment = assignmentMatch[1].trim();

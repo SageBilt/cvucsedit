@@ -230,6 +230,19 @@ class ucsmCompletion {
             });
         });
     }
+    AddMaterials(items, compAsStr) {
+        this.dynamicData.materials.forEach(mat => {
+            items.push({
+                label: mat.name,
+                insertText: compAsStr ? mat.name : mat.id.toString(),
+                kind: node_1.CompletionItemKind.Constant,
+                documentation: {
+                    kind: 'markdown',
+                    value: `**${mat.name}** (CV Material)\n\n${mat.description}\n\n- **Material Type**: ${mat.typeName}`
+                }
+            });
+        });
+    }
     AddVariables(items, parentObject) {
         this.variables.forEach(variable => {
             if (!parentObject && !variable.parentObject || variable.parentObject == parentObject) {
@@ -282,6 +295,21 @@ class ucsmCompletion {
                 return `${splitParts[0]}N${splitParts[1]}`;
         }
         return word;
+    }
+    getHoverMaterialFromID(word) {
+        const matID = Number(word);
+        if (!isNaN(matID)) {
+            const mat = this.dynamicData.materials.find(m => m.id == matID);
+            if (mat) {
+                console.log(`mat ${mat.name}`);
+                return {
+                    contents: {
+                        kind: 'markdown',
+                        value: `**${mat.name}** (CV Material)\n\n${mat.description}\n\n- **Material Type**: ${mat.typeName}`
+                    },
+                };
+            }
+        }
     }
     getHoverWord(word, wordRange, prefixWord) {
         // this.symbolTable.forEach((Symbols: SymbolInfo[], key: string) => {

@@ -55,7 +55,7 @@ class DatabaseFileSystemProvider {
         return this.files.get(uri.toString()) || new Uint8Array();
     }
     writeFile(uri, content, options) {
-        console.log('Writing to URI:', uri.toString());
+        //console.log('Writing to URI:', uri.toString());
         this.files.set(uri.toString(), content);
         this._onDidChangeFile.fire([{ type: vscode.FileChangeType.Changed, uri }]);
     }

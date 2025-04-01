@@ -7,6 +7,11 @@ import { SQLScriptProvider } from './SQLScriptProvider';
 import { LanguageClientWrapper } from './client/client';
 import { CustomLanguageFoldingProvider } from './ucsmFoldingProvider';
 
+interface SemanticTokenColorCustomizations {
+    enabled?: boolean;
+    rules?: { [key: string]: string | { foreground?: string; bold?: boolean; italic?: boolean } };
+  }
+
 
 let clients: LanguageClientWrapper[] = [];
 
@@ -93,7 +98,28 @@ export async function activate(context: vscode.ExtensionContext) {
           const key = `treeItem:${document.uri.toString()}`;
           context.workspaceState.update(key, undefined); // Clear the entry
         })
-      );
+    );
+
+
+    /*Below modifies the users semanticTokenColorCustomizations for JS UCS Libraries*/
+    const config = vscode.workspace.getConfiguration('editor');
+    const current: SemanticTokenColorCustomizations = config.get('semanticTokenColorCustomizations') || {};
+  
+    config.update(
+            'semanticTokenColorCustomizations',
+            {
+            ...current,
+            enabled: true,
+            rules: {
+                ...(current.rules || {}), // Now TypeScript knows rules is optional
+                'UCSJSLibrary': '#d19404'
+            }
+            },
+            vscode.ConfigurationTarget.Global
+        ).then(
+            () => console.log('Semantic token colors updated'),
+            (err) => console.error('Failed to update semantic token colors:', err)
+    );
 
 }
 

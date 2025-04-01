@@ -1,0 +1,7 @@
+{
+    "name": "UCSJS custom theme",
+    "tokenColors": [
+      { "scope": "customKeyword", "settings": { "foreground": "#FF5555", "fontStyle": "bold" } },
+      { "scope": "specialObject", "settings": { "foreground": "#FFFF55", "fontStyle": "italic" } }
+    ]
+  }

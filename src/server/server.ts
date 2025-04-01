@@ -15,6 +15,9 @@ import { createConnection,
         DefinitionParams,
         Location,
         ReferenceParams,
+        SemanticTokensBuilder, // Add this
+        SemanticTokensLegend,  // Add this
+        SemanticTokensParams,  // Add this
        } from 'vscode-languageserver/node';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 import { docClassRef, LanguageConfig, UCSJSSystemMethod, UCSJSSystemConstants } from '.././interfaces';
@@ -31,6 +34,16 @@ class LanguageServer {
   private ucsmComp: ucsmCompletion;
   private ucsjsComp: ucsjsCompletion;
   private ucsmValid: ucsmValidation;
+  private semanticTokensLegend: SemanticTokensLegend = {
+    tokenTypes: [
+      'UCSJSLibrary', // Custom variable for your language
+      'specialObject',  // For special objects like _M:, _CV:
+    ],
+    tokenModifiers: [
+      'declaration',    // e.g., where a variable is defined
+      'readonly',       // e.g., constants
+    ]
+  };
 
 
   constructor(config: LanguageConfig) {
@@ -52,6 +65,7 @@ class LanguageServer {
     this.setReferenceProvider();
     this.setupDocumentValidation();
     this.setupClientNotification();
+    this.setupSemanticTokens(); // Add this
 
     this.documents.listen(this.connection);
     this.connection.listen();
@@ -71,20 +85,24 @@ class LanguageServer {
         capabilities: {
           textDocumentSync: TextDocumentSyncKind.Incremental,
           completionProvider: {
-            //resolveProvider: true
+            //resolveProvider: true,
             triggerCharacters: ['.', ':', '=']
           }
           ,
           hoverProvider: true,
           definitionProvider: true,
-          referencesProvider: true
+          referencesProvider: true,
+          semanticTokensProvider: { // Add semantic tokens capability
+            legend: this.semanticTokensLegend,
+            full: true, // Support full document tokenization
+          }
         }
       };
     });
   }
 
 
-  private getMethodParamType(methods:UCSJSSystemMethod[], linePrefix: string, fullLine: string,cursorPosition: Position): string | undefined {
+  private getMethodParamType(methods:UCSJSSystemMethod[], linePrefix: string, fullLine: string,cursorPosition: Position): {paramType:string,insideStr:boolean} | undefined {
 
     const lineParamCount = this.ucsmValid.getParamCount(fullLine);
      //this.connection.console.log(`paramCount "${lineParamCount}"`);
@@ -102,7 +120,7 @@ class LanguageServer {
         const methodParamCount = this.ucsmValid.getParamCount(methodDef.value);
         if (methodParamCount != lineParamCount) continue; // Skip if this method if different number of parameters
 
-        //this.connection.console.log(match[1]);
+        //this.connection.console.log(`match "${match[1]}"`);
         const argsSoFar = match[1]; // Content inside parentheses up to cursor
         const methodStart = linePrefix.lastIndexOf(match[0]); // Start of method call
         const argsStart = methodStart + methodName.length + 1; // Position after '('
@@ -142,8 +160,8 @@ class LanguageServer {
 
         
         // Check if cursor is within the method call and parameters are still open
-        const isInside = paramIndex >= 0 && cursorPosition.character > argsStart && !argsSoFar.match(/\)$/);
-
+        const isInside = paramIndex >= 0 && cursorPosition.character >= argsStart && !argsSoFar.match(/\)$/);
+        //this.connection.console.log(`paramIndex "${paramIndex}" argsStart "${argsStart}" character "${cursorPosition.character}"`);
         //this.connection.console.log(`isInside "${isInside}" paramIndex "${paramIndex}" argsStart "${argsStart}"`);
 
         if (isInside) {
@@ -152,7 +170,8 @@ class LanguageServer {
             paramIndex < methodDef.parameterDef.length
                 ? methodDef.parameterDef[paramIndex].DataType
                 : undefined; 
-            return dataType ;
+            if (dataType)
+              return {paramType:dataType,insideStr:inString} ;
         }
       }
 
@@ -194,20 +213,21 @@ class LanguageServer {
       // // Get the text from the start of the line to the cursor
       // const linePrefix = document.getText(rangeToCursor);
       // const fullLine = document.getText(rangeToEnd);
-
+      const [word,wordRange,prefixWord] = this.getWordAtPosition(document, position);
       const [linePrefix,fullLine] = this.getLineTextToCursor(document,position,cursorPosition);
+      console.log(`linePrefix"${linePrefix}" word"${word}" prefixWord "${prefixWord}"`);
 
       let FilterObjProps: boolean = false;
       const showDataType = this.languageId == 'javascript' 
                                       ? this.getMethodParamType(this.ucsjsComp.ucsjsMethods,linePrefix, fullLine, cursorPosition )
-                                      : 'all';
+                                      : {paramType:'All',insideStr:false};
 
    
       if (showDataType) {
-        this.connection.console.log(`method parameter data type "${showDataType}"`);
+        this.connection.console.log(`method parameter data type "${showDataType.paramType}"`);
 
 
-        if (showDataType == 'ucsmSyntax' || this.languageId == 'ucsm') {
+        if (showDataType.paramType == 'ucsmSyntax' || this.languageId == 'ucsm') {
 
 
           /*Check show only properties for special objects like _M: and _CV: */
@@ -238,8 +258,11 @@ class LanguageServer {
               this.ucsmComp.AddObjectClass(items);
               this.ucsmComp.AddObjectType(items);
           }
+        } else if (showDataType.paramType == 'materials') {
+          this.ucsmComp.AddMaterials(items,showDataType.insideStr);
+          return items;
         } else {
-          const split = showDataType.split('.');
+          const split = showDataType.paramType.split('.');
 
 
           if (split.length == 2) {
@@ -249,7 +272,7 @@ class LanguageServer {
             } 
           } else {
             //this.connection.console.log(`Javascript method parameter data type "${showDataType}"`);
-            if (showDataType == 'any')
+            if (showDataType.paramType == 'any')
               this.ucsjsComp.AddObjects(items);
             //else if (showDataType == 'string')
             //  this.ucsjsComp.AddAllConstants(items); 
@@ -277,7 +300,7 @@ class LanguageServer {
 
 
     // this.connection.onCompletionResolve((item) => {
-    
+    //   //if (item.)
     //   return item;
     // });
   }
@@ -302,7 +325,7 @@ class LanguageServer {
   //   return undefined;
   // }
 
-  private getWordAtPosition(document: TextDocument,cursorPosition: Position) : [string,Range,string] | [undefined,undefined,undefined] {
+  private getWordAtPosition(document: TextDocument,cursorPosition: Position) : [string,Range,string] | [undefined,undefined,string] {
     const startOfLine: Position = { line: cursorPosition.line, character: 0 };
     //const rangeToCursor: Range = { start: startOfLine, end: cursorPosition };
     const endPostion: Position = { line: cursorPosition.line, character: Number.MAX_SAFE_INTEGER };
@@ -314,8 +337,8 @@ class LanguageServer {
     const cursorChar = cursorPosition.character;
     console.log(`fullLine "${fullLine}"`);
 
-    const wordRegex = this.languageId == 'ucsm' ? /<?\w+[:>]?/g : /\w+/g;
-    const propDelim = this.languageId == 'ucsm' ? ['.',':'] : ['.'];
+    const wordRegex = this.languageId == 'ucsm' ? /<?[A-Za-z0-9_{}@]+[:>]?/g : /\w+/g;
+    const wordDelim = this.languageId == 'ucsm' ? ['.',':','=',':=','(',`('`] : ['.','(',`('`];
 
     let match;
     let prevMatch = '';
@@ -331,9 +354,10 @@ class LanguageServer {
         const wordRange = Range.create(startOfWord,endOfWord);
         const lastCharOfPrevMatch = prevMatch[prevMatch.length-1];
         const prevChar = this.languageId == 'ucsm' && lastCharOfPrevMatch == ':' ? fullLine[prevEndOffset-1] : fullLine[prevEndOffset];
-        const prefixWord = prevEndOffset == startOffset-1 && propDelim.includes(prevChar) || this.languageId == 'ucsm' && lastCharOfPrevMatch == ':' ? prevMatch : '';
+        const delimText = fullLine.substring(prevEndOffset,startOffset).replaceAll(' ','');
+        const prefixWord = wordDelim.includes(delimText) || this.languageId == 'ucsm' && lastCharOfPrevMatch == ':' ? prevMatch : ''; //prevEndOffset == startOffset-1 && propDelim.includes(prevChar) 
         //const prefixWord = this.languageId == 'ucsm' && prevChar == ':' ? prefixWordMatch+':' : prefixWordMatch;
-        console.log(`prevChar "${fullLine[prevEndOffset]}" lastCharOfPrevMatch "${lastCharOfPrevMatch}"`);
+        console.log(`prevChar "${fullLine[prevEndOffset]}" lastCharOfPrevMatch "${lastCharOfPrevMatch}" delimText "${delimText}"`);
         return [match[0],wordRange,prefixWord];
       }
       prevMatch = match[0];
@@ -341,7 +365,7 @@ class LanguageServer {
       prevEndOffset = endOffset;
     }
 
-    return [undefined,undefined,undefined];
+    return [undefined,undefined,prevMatch];
   }
 
   setupHover() {
@@ -366,14 +390,16 @@ class LanguageServer {
 
         const showDataType = this.languageId == 'javascript' 
                                         ? this.getMethodParamType(this.ucsjsComp.ucsjsMethods,linePrefix, fullLine, cursorPosition )
-                                        : 'all';
+                                        : {paramType:'All',insideStr:false};
     
         if (showDataType) {
-          this.connection.console.log(`Hover parameter "${word}" -> data type "${showDataType}"`);
+          this.connection.console.log(`Hover parameter "${word}" -> data type "${showDataType.paramType}"`);
   
-          if (showDataType == 'ucsmSyntax' || this.languageId == 'ucsm') {
+          if (showDataType.paramType == 'ucsmSyntax' || this.languageId == 'ucsm') {
             const ucsmhover = this.ucsmComp.getHoverWord(word.toUpperCase(), wordRange, prefixWord.toUpperCase());
             if (ucsmhover) return ucsmhover;  
+          } else if (showDataType.paramType == 'materials') {
+            return this.ucsmComp.getHoverMaterialFromID(word);
           }
         } else                     
           return this.ucsjsComp.getHoverWord(word, wordRange, prefixWord);
@@ -440,10 +466,11 @@ class LanguageServer {
       //const symbol = this.findSymbolAtPosition(document, position);
       if (!symbol) return null;
 
+      //console.log(`symbol "${symbol}" prefixWord "${prefixWord}"`);
       if (this.languageId == 'ucsm') {
         return this.ucsmComp.getReferences(symbol);
       } else {
-        const jsRefs =  this.ucsjsComp.getReferences(symbol,prefixWord);
+        const jsRefs =  this.ucsjsComp.getReferences(symbol,prefixWord,uri);
         if (jsRefs) 
           return jsRefs;
       }
@@ -484,6 +511,48 @@ class LanguageServer {
       this.ucsjsComp.classLibraries = params;
       console.log(`Received data updated references for libraries`);
     })
+  }
+
+  private tokenTypeIndex(type: string): number {
+    return this.semanticTokensLegend.tokenTypes.indexOf(type);
+  }
+
+  private setupSemanticTokens() {
+    this.connection.languages.semanticTokens.on((params: SemanticTokensParams) => {
+      const document = this.documents.get(params.textDocument.uri);
+      if (!document) return { data: [] };
+
+      const builder = new SemanticTokensBuilder();
+      if (this.languageId == 'javascript') {
+        const text = document.getText();
+        const lines = text.split('\n');
+        let inMultiLineComment = false;
+
+        // Tokenize each line
+        for (let line = 0; line < lines.length; line++) {
+          //const lineText = lines[line];
+
+          const filteredLine = this.ucsmValid.getUCSJSLineWithoutComment(lines[line],inMultiLineComment);
+          if (filteredLine === false) continue
+          const lineText = filteredLine.newLine;
+          inMultiLineComment = filteredLine.inMultiLineComment;
+          //let trimStart = filteredLine.start;
+
+          this.ucsjsComp.classLibraries.forEach(jsLib => {
+            let match;
+            const customKeywordRegex = new RegExp(`\\b(${jsLib.name})\\b`,'g');
+            //console.log(jsLib.name);
+            while ((match = customKeywordRegex.exec(lineText)) !== null) {
+            builder.push(line,match.index, match[0].length,this.tokenTypeIndex('UCSJSLibrary'),0);
+            }
+          });
+          // Example tokenization logic (customize this based on your language)
+          //this.tokenizeLine(lineText, line, builder);
+        }
+      }
+
+      return builder.build();
+    });
   }
 
   

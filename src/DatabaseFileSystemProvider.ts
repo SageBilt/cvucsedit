@@ -25,7 +25,7 @@ export class DatabaseFileSystemProvider implements vscode.FileSystemProvider {
     }
 
     writeFile(uri: vscode.Uri, content: Uint8Array, options: { create: boolean; overwrite: boolean }): void {
-        console.log('Writing to URI:', uri.toString());
+        //console.log('Writing to URI:', uri.toString());
         this.files.set(uri.toString(), content);
         this._onDidChangeFile.fire([{ type: vscode.FileChangeType.Changed, uri }]);
     }

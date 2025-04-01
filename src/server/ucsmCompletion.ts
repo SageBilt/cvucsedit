@@ -226,6 +226,20 @@ export class ucsmCompletion {
           });
         });
       }
+
+      AddMaterials(items: CompletionItem[],compAsStr:boolean) {
+        this.dynamicData.materials.forEach(mat => {
+          items.push({
+            label: mat.name,
+            insertText: compAsStr ? mat.name : mat.id.toString(),
+            kind: CompletionItemKind.Constant,
+            documentation: {
+              kind: 'markdown',
+              value: `**${mat.name}** (CV Material)\n\n${mat.description}\n\n- **Material Type**: ${mat.typeName}`
+            }
+          });
+        });
+      }
     
       AddVariables(items: CompletionItem[],parentObject? : string) {
         this.variables.forEach(variable => {
@@ -284,6 +298,23 @@ export class ucsmCompletion {
         } 
         
         return word;
+      }
+
+      getHoverMaterialFromID(word: string) : Hover | undefined {
+        const matID = Number(word);
+        if (!isNaN(matID)) {
+          
+          const mat = this.dynamicData.materials.find(m => m.id == matID);
+          if (mat) {
+            console.log(`mat ${mat.name}`);
+              return {
+              contents: {
+                  kind: 'markdown',
+                  value: `**${mat.name}** (CV Material)\n\n${mat.description}\n\n- **Material Type**: ${mat.typeName}`
+              },
+            };
+          }
+        }
       }
 
       getHoverWord(word: string,wordRange: Range,prefixWord: string) : Hover | undefined {

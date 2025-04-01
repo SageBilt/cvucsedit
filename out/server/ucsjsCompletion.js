@@ -352,12 +352,16 @@ class ucsjsCompletion {
             }
         }
     }
-    getReferences(symbol, prefixSymbol) {
+    getReferences(symbol, prefixSymbol, uri) {
         for (const classLibrary of this.classLibraries) {
             if (classLibrary.name === symbol && prefixSymbol == '') {
                 return classLibrary.classReferences.map(classRef => node_1.Location.create(classRef.uri, classRef.range));
             }
-            if (prefixSymbol == classLibrary.name) {
+            console.log(`uri "${uri}" split "${uri.split(":/")}"`);
+            const libName = '_' + uri.split(":/")[1].split(".")[0];
+            ;
+            if (prefixSymbol == classLibrary.name || libName == classLibrary.name) {
+                //console.log(`symbol "${symbol}" prefixWord "${prefixSymbol}"`);
                 const Symbols = classLibrary.classElements.find(elem => elem.name === symbol);
                 if (Symbols) {
                     const sym = Symbols;

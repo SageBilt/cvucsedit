@@ -624,7 +624,7 @@
             "example": "_this.SetMaterial('3/4 Oak Ply');",
             "returnType": "bool - true on success else false",
             "parameterDef": [
-                {"ParamName": "variant value", "ParamValue": "Desired material defined by name or ID","DataType": "any"}
+                {"ParamName": "variant value", "ParamValue": "Desired material defined by name or ID","DataType": "materials"}
             ]
 
         },

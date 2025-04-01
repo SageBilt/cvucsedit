@@ -145,11 +145,20 @@ export interface UCSJSSystemData {
     paramTypeName:string;
   }
 
+  export interface Materials {
+    name : string;
+    id : number;
+    description : string;
+    typeName : string;
+    typeID : number;
+  }
+
   export interface DynamicData {
     partDefs : PartDefs[];
     materialParams: Parameters[];
     constructionParams: Parameters[];
     scheduleParams: Parameters[];
+    materials : Materials[];
   }
 
   export interface ElementParam {

@@ -168,7 +168,20 @@
           "group": "navigation"
         }
       ]
-    }
+    },
+    "semanticTokenTypes": [
+      {
+        "id": "ucsjsLibrary",
+        "description": "A JavaScript UCS Library instance"
+      }
+    ],
+    "semanticTokenModifiers": [
+      {
+        "id": "native",
+        "description": "Annotates a symbol that is implemented natively"
+      }
+    ]
+  
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",

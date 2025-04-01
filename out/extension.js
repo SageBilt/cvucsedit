@@ -78,6 +78,17 @@ async function activate(context) {
         const key = `treeItem:${document.uri.toString()}`;
         context.workspaceState.update(key, undefined); // Clear the entry
     }));
+    /*Below modifies the users semanticTokenColorCustomizations for JS UCS Libraries*/
+    const config = vscode.workspace.getConfiguration('editor');
+    const current = config.get('semanticTokenColorCustomizations') || {};
+    config.update('semanticTokenColorCustomizations', {
+        ...current,
+        enabled: true,
+        rules: {
+            ...(current.rules || {}), // Now TypeScript knows rules is optional
+            'UCSJSLibrary': '#d19404'
+        }
+    }, vscode.ConfigurationTarget.Global).then(() => console.log('Semantic token colors updated'), (err) => console.error('Failed to update semantic token colors:', err));
 }
 function deactivate() {
     if (!clients.length) {

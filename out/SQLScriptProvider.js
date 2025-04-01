@@ -165,7 +165,7 @@ class SQLScriptProvider {
             const newCode = document.getText();
             const docName = document.fileName.split("\\")[1].split(".")[0];
             if (treeItem.isJSLibrary)
-                this.UCSJSLibRefParser.updateClasses(docName, document.uri.toString(), newCode, fType != 'UCSJS-Disabled');
+                this.UCSJSLibRefParser.updateClasses('_' + docName, document.uri.toString(), newCode, fType != 'UCSJS-Disabled');
             else
                 this.UCSJSLibRefParser.updateClassReferences(docName, document.uri.toString(), newCode);
         }
@@ -301,6 +301,7 @@ class SQLScriptProvider {
         await this.loadMaterialParameters();
         await this.loadConstructionParameters();
         await this.loadScheduleParameters();
+        await this.loadMaterials();
         return this.USCMDynamicData;
     }
     async loadPartTypes() {
@@ -360,6 +361,23 @@ class SQLScriptProvider {
                 paramTypeName: ucsrecord.ParamTypeName,
             }));
             this.USCMDynamicData.scheduleParams = List;
+        }
+    }
+    async loadMaterials() {
+        let SQLText = "Select Material.Name as MatName,Material.ID as MatID,refMaterialType.Name as MatType,MaterialTypeID,Description\n";
+        SQLText += "From Material Inner join refMaterialType ON refMaterialType.ID = MaterialTypeID\n";
+        SQLText += "Where System = 0 and Deleted = 0\n";
+        SQLText += "Order By Material.Name";
+        const result = await this.SQLConn.ExecuteStatment(SQLText, []);
+        if (result.recordset) {
+            const List = result.recordset.map((ucsrecord) => ({
+                name: ucsrecord.MatName,
+                id: ucsrecord.MatID,
+                description: ucsrecord.Description,
+                typeName: ucsrecord.MatType,
+                typeID: ucsrecord.MaterialTypeID
+            }));
+            this.USCMDynamicData.materials = List;
         }
     }
 }
