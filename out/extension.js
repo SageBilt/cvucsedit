@@ -39,8 +39,6 @@ exports.deactivate = deactivate;
 // Import the module and reference it with the alias vscode in your code below
 const path = __importStar(require("path"));
 const vscode = __importStar(require("vscode"));
-const DatabaseFileSystemProvider_1 = require("./DatabaseFileSystemProvider");
-const CLT = __importStar(require("./CustomLookupTree"));
 const SQLScriptProvider_1 = require("./SQLScriptProvider");
 const client_1 = require("./client/client");
 const ucsmFoldingProvider_1 = require("./ucsmFoldingProvider");
@@ -50,7 +48,6 @@ async function activate(context) {
     //UCS Text editors
     //const SQLConn = new SQLConnection();
     const SQLProvider = new SQLScriptProvider_1.SQLScriptProvider(context);
-    const textProvider = new DatabaseFileSystemProvider_1.DatabaseFileSystemProvider();
     await SQLProvider.loadSideBarMenus();
     const dynamicData = await SQLProvider.loadDBVariables();
     const UCSMClient = new client_1.LanguageClientWrapper({
@@ -67,28 +64,10 @@ async function activate(context) {
     UCSJSClient.start(context);
     context.subscriptions.push(vscode.languages.registerFoldingRangeProvider('ucsm', // Replace with your language ID
     new ucsmFoldingProvider_1.CustomLanguageFoldingProvider()));
-    const lookupProvider = new CLT.LookupTreeDataProvider(context);
-    // Register the TreeView
-    // vscode.window.createTreeView('CVUCSList', {
-    //     treeDataProvider: lookupProvider,
-    // });
-    // // Register a command for search
-    // context.subscriptions.push(
-    //     vscode.commands.registerCommand('cvucs.search', async () => {
-    //         const searchTerm = await vscode.window.showInputBox({
-    //         placeHolder: 'Search by name or code...',
-    //         prompt: 'Enter a search term to filter the UCS list',
-    //         });
-    //         if (searchTerm !== undefined) {
-    //         lookupProvider.filter(searchTerm); // Pass the search term to the provider
-    //         }
-    //     })
-    // );
-    vscode.workspace.registerFileSystemProvider('cvucs', textProvider, { isCaseSensitive: false });
     context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.loadUCSLists', async () => SQLProvider.loadSideBarMenus()));
     context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.refreshUCSList', async () => SQLProvider.loadUCSListSideBarMenu()));
     context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.refreshUCSLibList', async () => SQLProvider.loadUCSLibraryListSideBarMenu()));
-    context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.onUCSItemClick', async (item) => SQLProvider.openUCS(item, textProvider)));
+    context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.onUCSItemClick', async (item) => SQLProvider.openUCS(item)));
     context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.searchUCSList', async () => SQLProvider.filterUCSList(false)));
     context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.clearSearchUCSList', async () => SQLProvider.clearFilterUCSList(false)));
     context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.searchUCSLibList', async () => SQLProvider.filterUCSList(true)));

@@ -1,20 +1,51 @@
-# cvucsedit README
+# Cabinet Vision USC editor
+----------
 
-This is the README for your extension "cvucsedit". After writing up a brief description, we recommend including the following sections.
+This extension adds features to VS Code for loading, editing and saving Cabinet Vision User Created Standards (UCS).
 
 ## Features
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
 
-For example if there is an image subfolder under your extension project workspace:
+### key benefits over existing UCS editor
+- Edit multiple UCS's at the same time.
+- Edit UCS's while testing logic in the object.
+- Nicer looking syntax highlighting.
+- Cabinet Vision documented UCS parameters, functions, keywords etc, integrated into the editor via intellisense and hover.
+- Intellisense that actually works and is context aware.
+- Hover over element (variables, functions, keywords etc) to see information about element.
+- Database specific items like user added material, schedule & construction parameters integrated into into intellisense & hover.
+- Snippets (pre-built code).
+- Syntax error checking.
+- Filter UCS list and search UCS contents.
 
-\!\[feature X\]\(images/feature-x.png\)
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+### Main Features
+
+- **UCS & JavaScript library tree views**
+  - UCS opens when clicked in tree view.
+  - Search, clear search and reload list buttons for each list.
+
+- **Syntax highlighting**
+  - Different elements like keywords, constraints, data types etc are styled accordingly.
+  - Syntax highlighting follows VSCode theming and can be customized by the user.
+  - 
+
+- **Language server**
+    The extension uses a language server (LSP) to handle autocomplete, hover and references for declared variable, for both **UCS:M** and **UCS:JS**. Using an LSP inprove user experance as it run under a seperate process and doesn't create any delay for the user typing.
+
+
 
 ## Requirements
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+#### Supported UCS macro types
+- **UCS:M** Legacy UCS syntax
+- **UCS:JS** Javascript from version 2024.1+
+
+
+#### Supported Versions
+
+Currently supports all Cabinet Versions from 2021 through to 2024. 
+> **Note:** Version 12 may work but it has not been tested.
 
 ## dependencies
 - vscode-languageclient
@@ -26,22 +57,28 @@ If you have any requirements or dependencies, add a section describing those and
 
 ## Extension Settings
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+#### Available Setttings
 
-For example:
 
-This extension contributes the following settings:
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+#### Available Commands
 
+* `cvucsedit.loadUCSLists`: Reload Cabinet Vision UCS & library lists.
+* `cvucsedit.searchUCSList`: Search UCS List.
+* `cvucsedit.clearSearchUCSList`: Clear UCS Search.
+* `cvucsedit.refreshUCSList`: Refresh UCS List.
+* `cvucsedit.searchUCSLibList`: Search library List.
+* `cvucsedit.clearSearchUCSLibList`: Clear library Search.
+* `cvucsedit.refreshUCSLibList`: Refresh library List.
+* 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+Please report all issues on [Github](https://github.com/SageBilt/cvucsedit/issues)
+
 
 ## Release Notes
 
-Users appreciate release notes as you update your extension.
+Initial release
 
 ### 1.0.0
 

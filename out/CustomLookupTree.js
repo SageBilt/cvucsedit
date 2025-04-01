@@ -74,21 +74,25 @@ function GetFileType(UCSTypeID, MacroType, Disabled) {
 }
 class CustomTreeItem extends vscode.TreeItem {
     UCSID;
+    UCSName;
     label;
     FileType;
     isJSLibrary;
     Code;
     searchCodeLine;
-    constructor(UCSID, label, FileType, isJSLibrary, Code, searchCodeLine, collapsibleState, context // Pass context to access extension path
+    docURI;
+    constructor(UCSID, UCSName, label, FileType, isJSLibrary, Code, searchCodeLine, collapsibleState, context // Pass context to access extension path
     ) {
         super(label, collapsibleState);
         this.UCSID = UCSID;
+        this.UCSName = UCSName;
         this.label = label;
         this.FileType = FileType;
         this.isJSLibrary = isJSLibrary;
         this.Code = Code;
         this.searchCodeLine = searchCodeLine;
         // Optional: Add a tooltip or description
+        this.docURI = vscode.Uri.parse(`cvucs:/${UCSName}.${FileType.Extension}`);
         if (this.searchCodeLine == -1) {
             this.tooltip = Code.split("\n")[0]; //`Type: ${this.extensionType}`;
             this.description = Code.split("\n")[0]; // Displays next to the label
@@ -155,7 +159,7 @@ class LookupTreeDataProvider {
         if (!element) {
             // Root level: return filtered items
             return Promise.resolve(this.filteredResults.map(result => {
-                const treeItem = new CustomTreeItem(result.UCSID, result.label, result.FileType, result.isJSLibrary, result.Code, -1, this.searchTerm && result.Code.toLowerCase().includes(this.searchTerm)
+                const treeItem = new CustomTreeItem(result.UCSID, result.label, result.label, result.FileType, result.isJSLibrary, result.Code, -1, this.searchTerm && result.Code.toLowerCase().includes(this.searchTerm)
                     ? vscode.TreeItemCollapsibleState.Expanded
                     : vscode.TreeItemCollapsibleState.None, this.context);
                 treeItem.command = {
@@ -173,7 +177,7 @@ class LookupTreeDataProvider {
                 const childItems = codeLines.map((line, index) => {
                     if (line.toLowerCase().includes(this.searchTerm)) {
                         const childItem = new CustomTreeItem(element.UCSID, // Unique ID
-                        line.trim(), element.FileType, element.isJSLibrary, element.Code, // Pass the full code so it can be opened
+                        element.label, line.trim(), element.FileType, element.isJSLibrary, element.Code, // Pass the full code so it can be opened
                         index, vscode.TreeItemCollapsibleState.None, this.context);
                         // Store the line number in contextValue or another property
                         childItem.contextValue = line;
@@ -193,6 +197,7 @@ class LookupTreeDataProvider {
         }
     }
     getTreeItemByDocumentUri(uri) {
+        return this.results.find(item => item.docURI.toString() == uri);
         return this.documentToTreeItem.get(uri);
     }
     // Method to store the mapping

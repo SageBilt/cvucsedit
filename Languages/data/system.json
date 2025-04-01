@@ -1,20 +1,20 @@
 {
   "keywords": [
-    "If",
-    "Then",
-    "Else",
-    "End",
-    "While",
-    "Do",
-    "Exit",
-    "Delete",
-    "For",
-    "Each",
-    "Dim",
-    "as",
-    "New",
-    "this",
-    "null"
+    "IF",
+    "THEN",
+    "ELSE",
+    "END",
+    "WHILE",
+    "DO",
+    "EXIT",
+    "DELETE",
+    "FOR",
+    "EACH",
+    "DIM",
+    "AS",
+    "NEW",
+    "THIS",
+    "NULL"
   ],
   "variables": [
     {

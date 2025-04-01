@@ -58,6 +58,7 @@ class LanguageServer {
         this.setupCompletion();
         this.setupHover();
         this.setDefinitionProvider();
+        this.setReferenceProvider();
         this.setupDocumentValidation();
         this.setupClientNotification();
         this.documents.listen(this.connection);
@@ -78,7 +79,8 @@ class LanguageServer {
                         triggerCharacters: ['.', ':', '=']
                     },
                     hoverProvider: true,
-                    definitionProvider: true
+                    definitionProvider: true,
+                    referencesProvider: true
                 }
             };
         });
@@ -243,22 +245,60 @@ class LanguageServer {
         //   return item;
         // });
     }
-    getWordRangeAtPosition(document, position) {
-        const text = document.getText();
-        const offset = document.offsetAt(position);
-        const wordRegex = /\w+:?/g;
+    // private getWordRangeAtPosition(document: TextDocument, position: Position): Range | undefined {
+    //   const text = document.getText();
+    //   const offset = document.offsetAt(position);
+    //   const wordRegex = /\w+:?/g;
+    //   let match;
+    //   while ((match = wordRegex.exec(text)) !== null) {
+    //     const startOffset = match.index;
+    //     const endOffset = startOffset + match[0].length;
+    //     //console.log(`match "${match}" startOffset "${startOffset}" endOffset "${endOffset}"`);
+    //     if (startOffset <= offset && offset <= endOffset) {
+    //       return {
+    //         start: document.positionAt(startOffset),
+    //         end: document.positionAt(endOffset)
+    //       };
+    //     }
+    //   }
+    //   return undefined;
+    // }
+    getWordAtPosition(document, cursorPosition) {
+        const startOfLine = { line: cursorPosition.line, character: 0 };
+        //const rangeToCursor: Range = { start: startOfLine, end: cursorPosition };
+        const endPostion = { line: cursorPosition.line, character: Number.MAX_SAFE_INTEGER };
+        const rangeToEnd = { start: startOfLine, end: endPostion };
+        //const linePrefix = document.getText(rangeToCursor);
+        const fullLine = document.getText(rangeToEnd);
+        const offset = document.offsetAt(cursorPosition);
+        const cursorChar = cursorPosition.character;
+        console.log(`fullLine "${fullLine}"`);
+        const wordRegex = this.languageId == 'ucsm' ? /<?\w+[:>]?/g : /\w+/g;
+        const propDelim = this.languageId == 'ucsm' ? ['.', ':'] : ['.'];
         let match;
-        while ((match = wordRegex.exec(text)) !== null) {
+        let prevMatch = '';
+        let prevStartOffset = 0;
+        let prevEndOffset = 0;
+        while ((match = wordRegex.exec(fullLine)) !== null) {
             const startOffset = match.index;
             const endOffset = startOffset + match[0].length;
-            if (startOffset <= offset && offset <= endOffset) {
-                return {
-                    start: document.positionAt(startOffset),
-                    end: document.positionAt(endOffset)
-                };
+            console.log(`match "${match}" startOffset "${startOffset}" endOffset "${endOffset}" offset "${offset}" prevMatch "${prevMatch}"`);
+            if (startOffset <= cursorChar && cursorChar <= endOffset) {
+                const startOfWord = { line: cursorPosition.line, character: startOffset };
+                const endOfWord = { line: cursorPosition.line, character: endOffset };
+                const wordRange = node_1.Range.create(startOfWord, endOfWord);
+                const lastCharOfPrevMatch = prevMatch[prevMatch.length - 1];
+                const prevChar = this.languageId == 'ucsm' && lastCharOfPrevMatch == ':' ? fullLine[prevEndOffset - 1] : fullLine[prevEndOffset];
+                const prefixWord = prevEndOffset == startOffset - 1 && propDelim.includes(prevChar) || this.languageId == 'ucsm' && lastCharOfPrevMatch == ':' ? prevMatch : '';
+                //const prefixWord = this.languageId == 'ucsm' && prevChar == ':' ? prefixWordMatch+':' : prefixWordMatch;
+                console.log(`prevChar "${fullLine[prevEndOffset]}" lastCharOfPrevMatch "${lastCharOfPrevMatch}"`);
+                return [match[0], wordRange, prefixWord];
             }
+            prevMatch = match[0];
+            //prevStartOffset = startOffset;
+            prevEndOffset = endOffset;
         }
-        return undefined;
+        return [undefined, undefined, undefined];
     }
     setupHover() {
         this.connection.onHover((params) => {
@@ -266,11 +306,15 @@ class LanguageServer {
             if (!document)
                 return undefined;
             const position = params.position;
-            const wordRange = this.getWordRangeAtPosition(document, position); // Helper to get word under cursor
-            if (!wordRange)
+            //const newWorkRange = this.getLineText(document, position);
+            //const wordRange = this.getWordRangeAtPosition(document, position); // Helper to get word under cursor
+            //if (!wordRange) return undefined;
+            const [word, wordRange, prefixWord] = this.getWordAtPosition(document, position); //
+            if (!word && !wordRange)
                 return undefined;
-            const word = document.getText(wordRange).toUpperCase();
-            console.log(`Hover text "${word}"`);
+            // const word = document.getText(wordRange).toUpperCase();
+            // if (!word) return undefined;
+            console.log(`Hover text "${word}" prefixWord "${prefixWord}"`);
             const cursorPosition = this.getCursorPosition(position);
             const [linePrefix, fullLine] = this.getLineTextToCursor(document, position, cursorPosition);
             const showDataType = this.languageId == 'javascript'
@@ -279,13 +323,13 @@ class LanguageServer {
             if (showDataType) {
                 this.connection.console.log(`Hover parameter "${word}" -> data type "${showDataType}"`);
                 if (showDataType == 'ucsmSyntax' || this.languageId == 'ucsm') {
-                    const ucsmhover = this.ucsmComp.getHoverWord(word, wordRange);
+                    const ucsmhover = this.ucsmComp.getHoverWord(word.toUpperCase(), wordRange, prefixWord.toUpperCase());
                     if (ucsmhover)
                         return ucsmhover;
                 }
             }
             else
-                return this.ucsjsComp.getHoverWord(word, wordRange);
+                return this.ucsjsComp.getHoverWord(word, wordRange, prefixWord);
         });
     }
     findSymbolAtPosition(doc, pos) {
@@ -311,15 +355,15 @@ class LanguageServer {
             if (!document)
                 return null;
             // Identify the symbol at the position
-            const symbol = this.findSymbolAtPosition(document, position);
+            const [symbol, wordRange, prefixWord] = this.getWordAtPosition(document, position);
+            //const symbol = this.findSymbolAtPosition(document, position);
             if (!symbol)
                 return null;
-            // Look up its definition in your symbol table or AST
-            //console.log(`symbol "${symbol}"`);
-            const definition = this.ucsmComp.getDefinition(symbol, uri);
+            console.log(`symbol "${symbol}" prefixWord "${prefixWord}"`);
+            const definition = this.languageId == 'ucsm' ? this.ucsmComp.getReferences(symbol)[0] : this.ucsjsComp.getDefinition(symbol, prefixWord);
             if (!definition)
                 return null;
-            // console.log(`uri "${definition.uri}" uri "${params.textDocument.uri}"`);
+            //console.log(`uri "${definition.uri}" uri "${params.textDocument.uri}"`);
             // console.log(`StartLine "${definition.range.start.line}" StartChar "${definition.range.start.character}"`); 
             // console.log(`EndLine "${definition.range.end.line}" EndChar "${definition.range.end.character}"`);  
             //Return the location
@@ -327,6 +371,29 @@ class LanguageServer {
                 uri: definition.uri,
                 range: definition.range
             };
+        });
+    }
+    setReferenceProvider() {
+        this.connection.onReferences((params) => {
+            const uri = params.textDocument.uri;
+            const position = params.position;
+            // Get the document text (assumes you’re tracking open documents)
+            const document = this.documents.get(uri);
+            if (!document)
+                return null;
+            // Identify the symbol at the position
+            const [symbol, wordRange, prefixWord] = this.getWordAtPosition(document, position);
+            //const symbol = this.findSymbolAtPosition(document, position);
+            if (!symbol)
+                return null;
+            if (this.languageId == 'ucsm') {
+                return this.ucsmComp.getReferences(symbol);
+            }
+            else {
+                const jsRefs = this.ucsjsComp.getReferences(symbol, prefixWord);
+                if (jsRefs)
+                    return jsRefs;
+            }
             return null;
         });
     }

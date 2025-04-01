@@ -45,8 +45,10 @@ export function GetFileType(UCSTypeID: number, MacroType: number, Disabled: bool
 }
 
 export class CustomTreeItem extends vscode.TreeItem {
+    public docURI: vscode.Uri;
     constructor(
       public readonly UCSID: number,
+      public readonly UCSName: string,
       public readonly label: string,
       public readonly FileType: UCSFileType,
       public readonly isJSLibrary: boolean,
@@ -57,7 +59,7 @@ export class CustomTreeItem extends vscode.TreeItem {
     ) {
       super(label, collapsibleState);
       // Optional: Add a tooltip or description
-
+      this.docURI = vscode.Uri.parse(`cvucs:/${UCSName}.${FileType.Extension}`);
 
   
       if (this.searchCodeLine == -1) {
@@ -141,6 +143,7 @@ export class LookupTreeDataProvider implements vscode.TreeDataProvider<CustomTre
           const treeItem = new CustomTreeItem(
             result.UCSID,
             result.label,
+            result.label,
             result.FileType,
             result.isJSLibrary,
             result.Code,
@@ -167,6 +170,7 @@ export class LookupTreeDataProvider implements vscode.TreeDataProvider<CustomTre
           if (line.toLowerCase().includes(this.searchTerm)) {
             const childItem = new CustomTreeItem(
               element.UCSID, // Unique ID
+              element.label,
               line.trim(),
               element.FileType,
               element.isJSLibrary,
@@ -195,6 +199,8 @@ export class LookupTreeDataProvider implements vscode.TreeDataProvider<CustomTre
   }
 
   getTreeItemByDocumentUri(uri: string): CustomTreeItem | undefined {
+    return this.results.find(item => item.docURI.toString() == uri);
+
     return this.documentToTreeItem.get(uri);
   }
 

@@ -84,12 +84,12 @@
     "views": {
       "cvucs-container": [
         {
-          "icon": "",
+          "icon": "$(list-tree)",
           "id": "CVUCSList",
           "name": "User Created Standards"
         },
         {
-          "icon": "",
+          "icon": "$(library)",
           "id": "CVUCSLibList",
           "name": "JavaScript Libraries"
         }
@@ -98,7 +98,7 @@
     "commands": [
       {
         "command": "cvucsedit.loadUCSLists",
-        "title": "Reload Cabinet Vision UCS & Library list"
+        "title": "Reload Cabinet Vision UCS & Library lists"
       },
       {
         "command": "cvucsedit.onUCSItemClick",
@@ -111,7 +111,7 @@
       },
       {
         "command": "cvucsedit.clearSearchUCSList",
-        "title": "Clear UCS Search ",
+        "title": "Clear UCS Search",
         "icon": "$(clear-all)"
       },
       {
@@ -121,12 +121,12 @@
       },
       {
         "command": "cvucsedit.searchUCSLibList",
-        "title": "Search UCS List",
+        "title": "Search library List",
         "icon": "$(search)"
       },
       {
         "command": "cvucsedit.clearSearchUCSLibList",
-        "title": "Clear UCS Search ",
+        "title": "Clear library Search",
         "icon": "$(clear-all)"
       },
       {
@@ -195,7 +195,6 @@
     "@babel/parser": "^7.27.0",
     "@babel/traverse": "^7.27.0",
     "express": "^4.21.2",
-    "msnodesqlv8": "^4.5.0",
     "mssql": "^11.0.1",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver-textdocument": "^1.0.12"

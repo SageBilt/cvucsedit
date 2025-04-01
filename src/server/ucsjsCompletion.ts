@@ -5,12 +5,14 @@ import {
     Connection, 
     InsertTextFormat,
     Range,
-    Hover
+    Hover,
+    Location
    } from 'vscode-languageserver/node';
    
    import * as fs from 'fs';
 import { UCSJSSystemConstants, UCSJSSystemPropertie, UCSJSSystemFunction, UCSJSSystemData,UCSJSSystemMethod, UCSJSParameterDef, DynamicData, docClassRef, classElement, ElementParam } from '.././interfaces';
 import * as CONSTANTS from '.././constants';
+import { Position, Uri } from 'vscode';
 
 
 export class ucsjsCompletion {
@@ -256,9 +258,9 @@ export class ucsjsCompletion {
         });
       }
 
-    getHoverWord(word: string,wordRange: Range) : Hover | undefined {
+    getHoverWord(word: string,wordRange: Range,prefixWord: string) : Hover | undefined {
 
-        const object = this.ucsjsObjects.find(obj => obj.toUpperCase() === word);
+        const object = this.ucsjsObjects.find(obj => obj === word);
         if (object) {
             return {
             contents: {
@@ -269,7 +271,7 @@ export class ucsjsCompletion {
             };
         }
       
-        const func = this.ucsjsFunctions.find(f => f.name.toUpperCase() === word);
+        const func = this.ucsjsFunctions.find(f => f.name === word);
         if (func) {
             return {
             contents: {
@@ -280,8 +282,9 @@ export class ucsjsCompletion {
             };
         }
 
-        const property = this.ucsjsProperties.find(prop => prop.name.toUpperCase() === word);
-        if (property) {
+        const property = this.ucsjsProperties.find(prop => prop.name === word);
+        if (property && property.parentObject.includes(prefixWord)) { // 
+            //this.connection.console.log(`prefixWord "${prefixWord}" parentObject "${property.parentObject}"`);
             return {
             contents: {
                 kind: 'markdown',
@@ -291,11 +294,13 @@ export class ucsjsCompletion {
             };
         }
 
-        const method = this.ucsjsMethods.find(method => method.name.toUpperCase() === word);
-        if (method) {
+        const method = this.ucsjsMethods.find(method => method.name === word);
+
+        if (method && method.parentObject.includes(prefixWord)) {
+            //this.connection.console.log(`prefixWord "${prefixWord}" parentObject "${method.parentObject}"`);
             const paramDefs = this.buildMethodParams(method.parameterDef); 
             const paramDefStr = paramDefs != '' ? `\n- **Parameters**: \n\n- ${paramDefs}` : '';
-            this.connection.console.log(`Hover parameter data type "${method.name}"`);
+            //this.connection.console.log(`Hover parameter data type "${method.name}"`);
             return {
             contents: {
                 kind: 'markdown',
@@ -305,7 +310,7 @@ export class ucsjsCompletion {
             };
         }
 
-        const classLib = this.classLibraries.find(item => item.name.toUpperCase() === word);
+        const classLib = this.classLibraries.find(item => item.name === word);
         if (classLib) {
             return {
                 contents: {
@@ -319,25 +324,26 @@ export class ucsjsCompletion {
 
 
         for (const classLibrary of this.classLibraries) {
-
-            const element = classLibrary.classElements.find(elem => elem.name.toUpperCase() === word);
-            if (element) {
-                const paramDefs = element.params ? this.buildLibraryClassParams(element.params) : undefined; 
-                const paramsStr = paramDefs ? `\n- **Parameters**: \n\n ${paramDefs}` : '';
-                    return {
-                    contents: {
-                        kind: 'markdown',
-                        value: `**${element.name}**\n\n **Library**: ${classLibrary.name}\n\n **Type**: ${element.type}${paramsStr}`
-                    },
-                    range: wordRange // Optional: Highlight the word
-                };  
+            if (classLibrary.name == prefixWord) {
+                const element = classLibrary.classElements.find(elem => elem.name === word);
+                if (element) {
+                    const paramDefs = element.params ? this.buildLibraryClassParams(element.params) : undefined; 
+                    const paramsStr = paramDefs ? `\n- **Parameters**: \n\n ${paramDefs}` : '';
+                        return {
+                        contents: {
+                            kind: 'markdown',
+                            value: `**${element.name}**\n\n **Library**: ${classLibrary.name}\n\n **Type**: ${element.type}${paramsStr}`
+                        },
+                        range: wordRange // Optional: Highlight the word
+                    };  
+                }
             }
         }
 
     
         for (const key of Object.keys( this.ucsjsConstants )) {
             const KeyName = key as keyof UCSJSSystemConstants;
-            const cons = this.ucsjsConstants[KeyName].find(con => con.toUpperCase() === word);
+            const cons = this.ucsjsConstants[KeyName].find(con => con === word);
             if (cons) {
                 return {
                 contents: {
@@ -352,5 +358,49 @@ export class ucsjsCompletion {
     
         // Return undefined if no hover info is available
         return undefined;
+    }
+
+    getDefinition(symbol: string,prefixSymbol: string) : Location | undefined {
+    
+        for (const classLibrary of this.classLibraries) {
+            if (classLibrary.name === symbol && prefixSymbol == '') {
+                const startPos = {line: 0,character: 0};
+                const endPos = {line: 1,character: 0};
+                const range = Range.create(startPos,endPos);
+                return {uri:classLibrary.uri ,range};
+            }
+
+            if (prefixSymbol == classLibrary.name) {
+                const Symbols = classLibrary.classElements.find(elem => elem.name === symbol);
+                if (Symbols) {
+                    const sym = Symbols;
+                    if (sym) {
+                    return {uri:classLibrary.uri ,range:sym.range}
+                    }
+                }
+            }
+        }
+
+    }
+
+    getReferences(symbol: string,prefixSymbol: string) : Location[] | undefined {
+    
+        for (const classLibrary of this.classLibraries) {
+            if (classLibrary.name === symbol && prefixSymbol == '') {
+                return classLibrary.classReferences.map(classRef => Location.create(classRef.uri ,classRef.range));
+            }
+
+            if (prefixSymbol == classLibrary.name) {
+                const Symbols = classLibrary.classElements.find(elem => elem.name === symbol);
+                if (Symbols) {
+                    const sym = Symbols;
+                    if (sym) {
+                        const elemRefs = classLibrary.elementReferences.filter(elemRef => elemRef.elementName == sym.name);
+                        return elemRefs.map(elemRef => Location.create(elemRef.uri ,elemRef.range));
+                    }
+                }
+            }
+        }
+
     }
 }

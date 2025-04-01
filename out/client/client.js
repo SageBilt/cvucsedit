@@ -26,6 +26,11 @@ class LanguageClientWrapper {
             },
             outputChannel: vscode_1.window.createOutputChannel(`${this.languageId} Language Server`),
             initializationOptions: dynamicData, // Pass dynamic data here
+            //   middleware: {
+            //     // Point to the external function
+            //     provideDefinition: this.handleDefinition.bind(this)
+            //     //provideReferences: this.handleReferences.bind(this)
+            // }
         };
         // Create and start the client
         this.client = new node_1.LanguageClient(`${this.languageId}LanguageServer`, `${this.languageId} Language Server`, serverOptions, clientOptions);
@@ -56,6 +61,49 @@ class LanguageClientWrapper {
             return undefined;
         }
         return this.client.stop();
+    }
+    // private setupGetDefinitionNotification() {
+    //   this.client.onNotification('textDocument/definition', (params: Location) => {
+    //     console.log(`definition notification ${params.uri} server:`);
+    //   })
+    // }
+    // private async handleReferences(document: TextDocument, position: Position, options: {
+    //         includeDeclaration: boolean}, token: CancellationToken, next: ProvideReferencesSignature
+    // ) : Promise<Location[] | null | undefined> {
+    //   const result = await next(document, position, options, token);
+    //   if (result) {
+    //     if (this.languageId == 'ucsm')
+    //       return result;
+    //     else {
+    //       return result;
+    //       // result.forEach(ref => {
+    //       //   console.log('Manually opened document:', ref.uri.toString());
+    //       //   this.ScriptProvider.openUCSByURI(ref.uri.toString(),ref.range);
+    //       // })
+    //     }
+    //   }
+    //   return undefined;
+    // }
+    async handleDefinition(document, position, token, next) {
+        const result = await next(document, position, token);
+        if (this.languageId == 'ucsm')
+            return result;
+        else {
+            if (result) {
+                console.log('is array:', Array.isArray(result));
+                if (Array.isArray(result) && result.length > 0 && 'targetUri' in result[0]) {
+                    const firstLink = result[0];
+                    this.ScriptProvider.openUCSByURI(firstLink.targetUri.toString(), firstLink.targetRange);
+                    console.log('Manually opened document:', firstLink.targetUri.toString());
+                }
+                else if ('uri' in result) {
+                    const location = result;
+                    this.ScriptProvider.openUCSByURI(location.uri.toString(), location.range);
+                    console.log('Manually opened document:', location.uri.toString());
+                }
+            }
+            return undefined;
+        }
     }
     isRelevantDocument(document) {
         // Check if the changed document matches this language server's scope

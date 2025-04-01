@@ -1,6 +1,7 @@
 import * as path from 'path';
-import { workspace, ExtensionContext, window, TextDocumentChangeEvent, TextDocument } from 'vscode';
-import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient/node';
+import { workspace, ExtensionContext, window, TextDocumentChangeEvent, TextDocument, CancellationToken , Position, Definition, LocationLink, Location} from 'vscode';
+import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind, ProvideDefinitionSignature, ProvideReferencesSignature } from 'vscode-languageclient/node';
+import {TextDocument as LSPTextDocument} from 'vscode-languageserver-textdocument';
 import { DynamicData, docClassRef } from '.././interfaces';
 import { SQLScriptProvider } from '.././SQLScriptProvider';
 
@@ -34,6 +35,11 @@ export class LanguageClientWrapper {
           },
           outputChannel: window.createOutputChannel(`${this.languageId} Language Server`),
           initializationOptions: dynamicData, // Pass dynamic data here
+        //   middleware: {
+        //     // Point to the external function
+        //     provideDefinition: this.handleDefinition.bind(this)
+        //     //provideReferences: this.handleReferences.bind(this)
+        // }
       };
   
       // Create and start the client
@@ -54,6 +60,8 @@ export class LanguageClientWrapper {
         );
       }
     }
+
+
 
     public async start(context: ExtensionContext): Promise<void> {
       try {
@@ -78,6 +86,60 @@ export class LanguageClientWrapper {
       }
       return this.client.stop();
     }
+
+    // private setupGetDefinitionNotification() {
+    //   this.client.onNotification('textDocument/definition', (params: Location) => {
+    //     console.log(`definition notification ${params.uri} server:`);
+    //   })
+    // }
+
+
+    // private async handleReferences(document: TextDocument, position: Position, options: {
+    //         includeDeclaration: boolean}, token: CancellationToken, next: ProvideReferencesSignature
+    // ) : Promise<Location[] | null | undefined> {
+
+    //   const result = await next(document, position, options, token);
+    //   if (result) {
+    //     if (this.languageId == 'ucsm')
+    //       return result;
+    //     else {
+    //       return result;
+    //       // result.forEach(ref => {
+    //       //   console.log('Manually opened document:', ref.uri.toString());
+    //       //   this.ScriptProvider.openUCSByURI(ref.uri.toString(),ref.range);
+    //       // })
+    //     }
+    //   }
+    //   return undefined;
+    // }
+
+    private async handleDefinition(
+       document: TextDocument, position: Position, token: CancellationToken, next: ProvideDefinitionSignature
+    ) : Promise<Definition | LocationLink[] | null | undefined> {
+
+
+      const result = await next(document, position, token);
+
+      if (this.languageId == 'ucsm')
+        return result;
+      else {
+        if (result) {
+          console.log('is array:', Array.isArray(result));
+          if (Array.isArray(result) && result.length > 0 && 'targetUri' in result[0]) {
+            const firstLink = result[0] as LocationLink;
+            this.ScriptProvider.openUCSByURI(firstLink.targetUri.toString(),firstLink.targetRange);
+            console.log('Manually opened document:', firstLink.targetUri.toString());
+          } else if ('uri' in result) {
+            const location = result as Location;
+            this.ScriptProvider.openUCSByURI(location.uri.toString(),location.range);
+            console.log('Manually opened document:', location.uri.toString());
+          }
+        }
+        return undefined;
+      }
+    }
+
+
 
     private isRelevantDocument(document: TextDocument): boolean {
       // Check if the changed document matches this language server's scope

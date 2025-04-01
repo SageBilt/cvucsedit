@@ -13,7 +13,7 @@ export interface SymbolInfo {
   name: string;
   uri: string; // Document URI where it’s defined
   range: Range; // Location of the declaration
-  dataType: string;
+  dataType?: string;
   scope?: string; // Optional: e.g., "global", "functionName"
 }
 
@@ -157,6 +157,12 @@ export interface UCSJSSystemData {
     optional?: boolean | null;
   }
 
+  export interface ClassReference {
+    elementName: string;
+    uri: string;
+    range: Range;
+  }
+
   export interface classElement {
     name: string;
     compKind: CompletionItemKind;
@@ -168,5 +174,8 @@ export interface UCSJSSystemData {
       name: string;
       uri: string;
       classElements: classElement[];
+      elementReferences: ClassReference[];
+      classReferences: ClassReference[];
+      isEnabled: boolean;
   }
 

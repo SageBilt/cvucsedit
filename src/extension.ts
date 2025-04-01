@@ -2,14 +2,9 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as path from 'path';
 import * as vscode from 'vscode';
-import sql from 'mssql';
-import { DatabaseFileSystemProvider } from './DatabaseFileSystemProvider';
 import * as CLT from './CustomLookupTree';
-import { SQLConnection } from './SQLConnection';
 import { SQLScriptProvider } from './SQLScriptProvider';
-import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient/node';
 import { LanguageClientWrapper } from './client/client';
-import { initializeSystemJson } from './jsonDocCreator';
 import { CustomLanguageFoldingProvider } from './ucsmFoldingProvider';
 
 
@@ -22,7 +17,6 @@ export async function activate(context: vscode.ExtensionContext) {
         //UCS Text editors
     //const SQLConn = new SQLConnection();
     const SQLProvider = new SQLScriptProvider(context);
-    const textProvider = new DatabaseFileSystemProvider();
     await SQLProvider.loadSideBarMenus();
     const dynamicData = await SQLProvider.loadDBVariables();
 
@@ -58,30 +52,6 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
 
-    const lookupProvider = new CLT.LookupTreeDataProvider(context);
-
-    // Register the TreeView
-    // vscode.window.createTreeView('CVUCSList', {
-    //     treeDataProvider: lookupProvider,
-    // });
-
-    // // Register a command for search
-    // context.subscriptions.push(
-    //     vscode.commands.registerCommand('cvucs.search', async () => {
-    //         const searchTerm = await vscode.window.showInputBox({
-    //         placeHolder: 'Search by name or code...',
-    //         prompt: 'Enter a search term to filter the UCS list',
-    //         });
-
-    //         if (searchTerm !== undefined) {
-    //         lookupProvider.filter(searchTerm); // Pass the search term to the provider
-    //         }
-    //     })
-    // );
-
-
-    vscode.workspace.registerFileSystemProvider('cvucs', textProvider, { isCaseSensitive: false });
-
     context.subscriptions.push(
         vscode.commands.registerCommand('cvucsedit.loadUCSLists',async () => SQLProvider.loadSideBarMenus())
     );
@@ -95,7 +65,7 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('cvucsedit.onUCSItemClick', async (item: CLT.CustomTreeItem) => SQLProvider.openUCS(item,textProvider))
+        vscode.commands.registerCommand('cvucsedit.onUCSItemClick', async (item: CLT.CustomTreeItem) => SQLProvider.openUCS(item))
 
     );
 

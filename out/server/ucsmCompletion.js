@@ -70,23 +70,50 @@ class ucsmCompletion {
         }
     }
     updateSymbolTable(doc) {
+        const Insert = (varName, lineNum, Char, dataType) => {
+            if (!varName)
+                return;
+            if (excluded.includes(varName.toUpperCase()))
+                return;
+            const range = {
+                start: { line: lineNum, character: Char },
+                end: { line: lineNum, character: Char + varName.length }
+            };
+            console.log(varName, dataType);
+            const newSymbol = { name: varName, uri: doc.uri, range, dataType: dataType };
+            const varNameRef = varName.toUpperCase();
+            const symbols = this.symbolTable.get(varNameRef);
+            if (!symbols)
+                this.symbolTable.set(varNameRef, [newSymbol]);
+            else
+                symbols.push(newSymbol);
+        };
         this.symbolTable.clear(); // For simplicity; optimize later with incremental updates
         const text = doc.getText();
+        const Vars = this.variables.map(v => v.name);
+        const specOjb = this.specialObjects.map(v => v.prefix);
+        const excluded = [...this.keywords, ...Vars, ...specOjb, ...this.objectClass, ...this.objectTypes];
         // Example: Naive parsing for variables like "let x = ..."
         const lines = text.split('\n');
         lines.forEach((line, lineNum) => {
-            const pattern = /^\s*(?<![If|While]\s+)([A-Za-z_{}:][A-Za-z0-9_{}@\\.:]*)(?:<(crncy|meas|deg|int|bool|dec|text|style|desc)?>)?\s*:?=\s*/i;
-            const match = line.match(pattern);
-            if (match) {
-                const varName = match[1];
-                const range = {
-                    start: { line: lineNum, character: line.indexOf(varName) },
-                    end: { line: lineNum, character: line.indexOf(varName) + varName.length }
-                };
-                console.log(varName, match[2]);
-                this.symbolTable.set(varName.toUpperCase(), [{
-                        name: varName, uri: doc.uri, range, dataType: match[2]
-                    }]);
+            const lineWithoutComments = line.split(';')[0];
+            if (!lineWithoutComments.toUpperCase().includes('FOR EACH')) {
+                const defpPattern = /^\s*(?<![If|While]\s+)([A-Za-z_{}:][A-Za-z0-9_{}@\\.:]*)+(?:<(crncy|meas|deg|int|bool|dec|text|style|desc)?>)?\s*:?=\s*/i;
+                const matchDef = lineWithoutComments.match(defpPattern);
+                if (matchDef) {
+                    const varName = matchDef[1].trim();
+                    Insert(varName, lineNum, lineWithoutComments.indexOf(varName), matchDef[2]);
+                }
+                else {
+                    const pattern = /\s*([A-Za-z_{}:][A-Za-z0-9_{}@\\.:]*)+\s*/ig;
+                    const match = lineWithoutComments.match(pattern);
+                    if (match) {
+                        match.forEach(m => {
+                            const varName = m.trim();
+                            Insert(varName, lineNum, lineWithoutComments.indexOf(varName));
+                        });
+                    }
+                }
             }
         });
     }
@@ -95,7 +122,7 @@ class ucsmCompletion {
             const groupedSymbols = new Map();
             Symbols.forEach((symbol) => {
                 const dataTypeUC = symbol.dataType?.toUpperCase();
-                if (!groupedSymbols.has(dataTypeUC))
+                if (dataTypeUC && !groupedSymbols.has(dataTypeUC))
                     groupedSymbols.set(dataTypeUC, symbol);
             });
             groupedSymbols.forEach(sym => {
@@ -256,7 +283,7 @@ class ucsmCompletion {
         }
         return word;
     }
-    getHoverWord(word, wordRange) {
+    getHoverWord(word, wordRange, prefixWord) {
         // this.symbolTable.forEach((Symbols: SymbolInfo[], key: string) => {
         //   console.log(` this is the ${key}`);
         // });
@@ -291,6 +318,16 @@ class ucsmCompletion {
                 range: wordRange
             };
         }
+        const dataType = this.datatypes.find(dt => dt.value.toUpperCase() === word);
+        if (dataType) {
+            return {
+                contents: {
+                    kind: 'markdown',
+                    value: `**${dataType.name}**\n\n${dataType.description}`
+                },
+                range: wordRange
+            };
+        }
         const objClass = this.objectClass.find(cls => cls.toUpperCase() === word);
         if (objClass) {
             return {
@@ -312,7 +349,7 @@ class ucsmCompletion {
             };
         }
         const MatParams = this.dynamicData.materialParams.find(param => param.paramName.toUpperCase() === word);
-        if (MatParams) {
+        if (MatParams && prefixWord == '_M:') {
             return {
                 contents: {
                     kind: 'markdown',
@@ -322,7 +359,7 @@ class ucsmCompletion {
             };
         }
         const ConstParams = this.dynamicData.constructionParams.find(param => param.paramName.toUpperCase() === word);
-        if (ConstParams) {
+        if (ConstParams && prefixWord == '_CS:') {
             return {
                 contents: {
                     kind: 'markdown',
@@ -332,7 +369,7 @@ class ucsmCompletion {
             };
         }
         const SchedParams = this.dynamicData.scheduleParams.find(param => param.paramName.toUpperCase() === word);
-        if (SchedParams) {
+        if (SchedParams && prefixWord == '_MS:') {
             return {
                 contents: {
                     kind: 'markdown',
@@ -354,7 +391,7 @@ class ucsmCompletion {
         const filtForWorkPlan = this.FilterVariableNameForWorkPlan(word);
         const variable = this.variables.find(v => {
             //if (v.name.substring(0,4) == '_EDG') console.log(`"${filtForWorkPlan}" "${v.name.toUpperCase()}"`);
-            if (v.name.toUpperCase() == filtForWorkPlan) {
+            if (v.name.toUpperCase() == filtForWorkPlan && (!v.parentObject || v.parentObject == prefixWord)) {
                 return v;
             }
         });
@@ -394,14 +431,15 @@ class ucsmCompletion {
         // Return undefined if no hover info is available
         return undefined;
     }
-    getDefinition(symbol, uri) {
+    getReferences(symbol) {
+        const Result = [];
         const Symbols = this.symbolTable.get(symbol.toUpperCase());
         if (Symbols) {
-            const sym = Symbols[0];
-            if (sym) {
-                return { uri: sym.uri, range: sym.range };
-            }
+            Symbols.forEach((sym) => {
+                Result.push({ uri: sym.uri, range: sym.range });
+            });
         }
+        return Result;
     }
 }
 exports.ucsmCompletion = ucsmCompletion;

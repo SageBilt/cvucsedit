@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SQLScriptProvider = void 0;
 const vscode = __importStar(require("vscode"));
 const CLT = __importStar(require("./CustomLookupTree"));
+const DatabaseFileSystemProvider_1 = require("./DatabaseFileSystemProvider");
 const SQLConnection_1 = require("./SQLConnection");
 const referenceParser_1 = require("./referenceParser");
 class SQLScriptProvider {
@@ -47,12 +48,29 @@ class SQLScriptProvider {
     SQLConn = new SQLConnection_1.SQLConnection();
     USCMDynamicData = {};
     UCSJSLibRefParser = new referenceParser_1.referenceParser;
+    textProvider = new DatabaseFileSystemProvider_1.DatabaseFileSystemProvider();
     constructor(context) {
         this.context = context;
         this.UCSListlookupProvider = new CLT.LookupTreeDataProvider(this.context);
         vscode.window.registerTreeDataProvider('CVUCSList', this.UCSListlookupProvider);
         this.UCSLibListlookupProvider = new CLT.LookupTreeDataProvider(this.context);
         vscode.window.registerTreeDataProvider('CVUCSLibList', this.UCSLibListlookupProvider);
+        vscode.workspace.registerFileSystemProvider('cvucs', this.textProvider, { isCaseSensitive: false });
+        this.setupLanguageHandler();
+    }
+    setupLanguageHandler() {
+        this.context.subscriptions.push(vscode.workspace.onDidOpenTextDocument(async (doc) => {
+            if (doc.uri.scheme === 'cvucs') {
+                const treeItem = this.findTreeItemByUri(doc.uri.toString());
+                if (treeItem) {
+                    const langId = ["UCSJS", "UCSJS-Disabled"].includes(treeItem.FileType.FileTypeName) ? 'javascript' : 'ucsm';
+                    if (doc.languageId !== langId) {
+                        console.log(`Setting language for ${doc.uri.toString()} to ${langId}`);
+                        await vscode.languages.setTextDocumentLanguage(doc, langId);
+                    }
+                }
+            }
+        }));
     }
     async GetDBVersion() {
         const result = await this.SQLConn.ExecuteStatment('Select Version From DbInfo', []);
@@ -81,8 +99,8 @@ class SQLScriptProvider {
     }
     async loadSideBarMenus() {
         this.DBVersion = await this.GetDBVersion();
-        await this.loadUCSListSideBarMenu();
         await this.loadUCSLibraryListSideBarMenu();
+        await this.loadUCSListSideBarMenu();
     }
     async loadUCSListSideBarMenu() {
         let SQLText;
@@ -109,46 +127,86 @@ class SQLScriptProvider {
         lookupProvider.clearItems();
         const result = await this.SQLConn.ExecuteStatment(SQLText, []);
         if (result.recordset) {
-            const List = result.recordset.map((ucsrecord) => new CLT.CustomTreeItem(ucsrecord.ID, ucsrecord.Name, CLT.GetFileType(ucsrecord.UCSTypeID, ucsrecord.MacroType, ucsrecord.Disabled), isJSLibrary, ucsrecord.Code, -1, vscode.TreeItemCollapsibleState.Expanded, this.context));
+            const List = result.recordset.map((ucsrecord) => new CLT.CustomTreeItem(ucsrecord.ID, ucsrecord.Name, ucsrecord.Name, CLT.GetFileType(ucsrecord.UCSTypeID, ucsrecord.MacroType, ucsrecord.Disabled), isJSLibrary, ucsrecord.Code, -1, vscode.TreeItemCollapsibleState.Expanded, this.context));
             lookupProvider.updateResults(List);
-            if (isJSLibrary)
-                this.addClassRefs(List);
+            this.createFilesInFileSystem(List);
+            this.addClassRefs(List);
         }
+    }
+    createFilesInFileSystem(list) {
+        list.forEach(item => {
+            // Wrap JavaScript code in a class for UCSJS/UCSJS-Disabled
+            const wrappedCode = item.isJSLibrary
+                ? this.addClassDefToLibraryCode(item)
+                : item.Code;
+            this.textProvider.writeFile(item.docURI, Buffer.from(wrappedCode, 'utf8'), { create: true, overwrite: true });
+        });
     }
     addClassRefs(list) {
         list.forEach(item => {
-            //if (item.FileType.FileTypeName == "UCSJS") { //only pass enabled ones for now
-            const docURI = this.parseURI(item);
-            const wrappedCode = this.addClassDefToLibraryCode(item);
-            this.UCSJSLibRefParser.updateDocRefs(item.label, docURI.toString(), wrappedCode);
-            //}
+            const fType = item.FileType.FileTypeName;
+            if (['UCSJS', 'UCSJS-Disabled'].includes(fType)) { //only pass enabled ones for now
+                const docURI = this.parseURI(item);
+                if (item.isJSLibrary) {
+                    const wrappedCode = this.addClassDefToLibraryCode(item);
+                    const docName = '_' + item.label;
+                    this.UCSJSLibRefParser.updateClasses(docName, docURI.toString(), wrappedCode, fType != 'UCSJS-Disabled');
+                }
+                else {
+                    this.UCSJSLibRefParser.updateClassReferences(item.label, docURI.toString(), item.Code);
+                }
+            }
         });
     }
     updateClassRefsForDoc(document) {
-        const newCode = document.getText();
-        const docName = document.fileName.split("\\")[1].split(".")[0];
-        this.UCSJSLibRefParser.updateDocRefs(docName, document.uri.toString(), newCode);
+        const treeItem = this.UCSLibListlookupProvider.getTreeItemByDocumentUri(document.uri.toString());
+        if (treeItem) {
+            const fType = treeItem.FileType.FileTypeName;
+            const newCode = document.getText();
+            const docName = document.fileName.split("\\")[1].split(".")[0];
+            if (treeItem.isJSLibrary)
+                this.UCSJSLibRefParser.updateClasses(docName, document.uri.toString(), newCode, fType != 'UCSJS-Disabled');
+            else
+                this.UCSJSLibRefParser.updateClassReferences(docName, document.uri.toString(), newCode);
+        }
     }
     parseURI(item) {
         return vscode.Uri.parse(`cvucs:/${item.label}.${item.FileType.Extension}`);
     }
     addClassDefToLibraryCode(item) {
-        return `class _${item.label} {\n${item.Code}\n}`;
+        return `class _${item.label} {\r\n${item.Code}\r\n}`;
     }
-    async openUCS(item, textProvider) {
+    findTreeItemByUri(uri) {
+        let item = this.UCSListlookupProvider.getTreeItemByDocumentUri(uri);
+        if (!item) {
+            item = this.UCSLibListlookupProvider.getTreeItemByDocumentUri(uri);
+        }
+        return item;
+    }
+    // public openUCSByURI(uri:string,position:vscode.Range) {
+    //     const treeItem = this.UCSListlookupProvider.getTreeItemByDocumentUri(uri);
+    //     if (treeItem)
+    //         this.openUCS(treeItem,position);
+    // }
+    openUCSByURI(uri, position) {
+        const treeItem = this.findTreeItemByUri(uri);
+        if (treeItem)
+            this.openUCS(treeItem, position);
+    }
+    async openUCS(item, highlightRange) {
         if (item.FileType.FileTypeName === "Divider") {
             vscode.window.showWarningMessage('This is a divider. There is no code associated with this!');
             return;
         }
-        const uri = this.parseURI(item);
-        // Wrap JavaScript code in a class for UCSJS/UCSJS-Disabled
-        const wrappedCode = item.isJSLibrary
-            ? this.addClassDefToLibraryCode(item)
-            : item.Code;
-        textProvider.writeFile(uri, Buffer.from(wrappedCode, 'utf8'), { create: true, overwrite: true });
+        const uri = item.docURI; // this.parseURI(item); 
+        // // Wrap JavaScript code in a class for UCSJS/UCSJS-Disabled
+        // const wrappedCode = item.isJSLibrary
+        //     ? this.addClassDefToLibraryCode(item)
+        //     : item.Code;
+        // this.textProvider.writeFile(uri, Buffer.from(wrappedCode, 'utf8'), { create: true, overwrite: true });
         const document = await vscode.workspace.openTextDocument(uri);
-        const LangId = ["UCSJS", "UCSJS-Disabled"].includes(item.FileType.FileTypeName) ? 'javascript' : 'ucsm';
-        await vscode.languages.setTextDocumentLanguage(document, LangId);
+        // const LangId = ["UCSJS", "UCSJS-Disabled"].includes(item.FileType.FileTypeName) ? 'javascript' : 'ucsm';
+        // await vscode.languages.setTextDocumentLanguage(document, LangId);
         console.log('Opened document URI:', document.uri.toString());
         const editor = await vscode.window.showTextDocument(document, {
             preview: false
@@ -200,7 +258,7 @@ class SQLScriptProvider {
                 }
             });
         }
-        this.UCSListlookupProvider.storeTreeItem(document.uri.toString(), item);
+        //this.UCSListlookupProvider.storeTreeItem(document.uri.toString(), item);
         if (item.searchCodeLine > -1) {
             const lineNumber = item.searchCodeLine + (item.isJSLibrary ? 1 : 0); // Offset for class line
             const startChar = item.contextValue?.indexOf(item.label) || 0;
@@ -208,6 +266,12 @@ class SQLScriptProvider {
             const endPos = new vscode.Position(lineNumber, startChar + item.label.length);
             editor.selection = new vscode.Selection(startPos, endPos);
             editor.revealRange(new vscode.Range(startPos, endPos));
+        }
+        if (highlightRange) {
+            //const lineNumber = highlightRange.start.line
+            //const startPos = item.isJSLibrary ? new vscode.Position(lineNumber, startChar); :  ;
+            editor.selection = new vscode.Selection(highlightRange.start, highlightRange.start);
+            editor.revealRange(highlightRange);
         }
     }
     stripFirstLastLines(document) {
@@ -297,9 +361,6 @@ class SQLScriptProvider {
             }));
             this.USCMDynamicData.scheduleParams = List;
         }
-    }
-    provideTextDocumentContent(uri) {
-        return this.UCS.get(uri.toString()) || '-- Script not found';
     }
 }
 exports.SQLScriptProvider = SQLScriptProvider;
