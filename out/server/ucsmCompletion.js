@@ -235,12 +235,27 @@ class ucsmCompletion {
             items.push({
                 label: mat.name,
                 insertText: compAsStr ? mat.name : mat.id.toString(),
-                kind: node_1.CompletionItemKind.Constant,
+                kind: node_1.CompletionItemKind.Value,
                 documentation: {
                     kind: 'markdown',
                     value: `**${mat.name}** (CV Material)\n\n${mat.description}\n\n- **Material Type**: ${mat.typeName}`
                 }
             });
+        });
+    }
+    AddConstructions(items, constType, compAsStr) {
+        this.dynamicData.constructions.forEach(con => {
+            if (constType == con.typeName || constType == '') {
+                items.push({
+                    label: con.name,
+                    insertText: compAsStr ? con.name : con.id.toString(),
+                    kind: node_1.CompletionItemKind.Value,
+                    documentation: {
+                        kind: 'markdown',
+                        value: `**${con.name}** (CV Construction)\n\n${con.description}\n\n- **Construction Type**: ${con.typeName}`
+                    }
+                });
+            }
         });
     }
     AddVariables(items, parentObject) {
@@ -306,6 +321,21 @@ class ucsmCompletion {
                     contents: {
                         kind: 'markdown',
                         value: `**${mat.name}** (CV Material)\n\n${mat.description}\n\n- **Material Type**: ${mat.typeName}`
+                    },
+                };
+            }
+        }
+    }
+    getHoverConstructionFromID(word) {
+        const matID = Number(word);
+        if (!isNaN(matID)) {
+            const con = this.dynamicData.constructions.find(c => c.id == matID);
+            if (con) {
+                console.log(`mat ${con.name}`);
+                return {
+                    contents: {
+                        kind: 'markdown',
+                        value: `**${con.name}** (CV Construction)\n\n${con.description}\n\n- **Construction Type**: ${con.typeName}`
                     },
                 };
             }

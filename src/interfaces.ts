@@ -153,12 +153,21 @@ export interface UCSJSSystemData {
     typeID : number;
   }
 
+  export interface Construction {
+    name : string;
+    id : number;
+    description : string;
+    typeName : string;
+    typeID : number;
+  }
+
   export interface DynamicData {
     partDefs : PartDefs[];
     materialParams: Parameters[];
     constructionParams: Parameters[];
     scheduleParams: Parameters[];
     materials : Materials[];
+    constructions : Construction[];
   }
 
   export interface ElementParam {

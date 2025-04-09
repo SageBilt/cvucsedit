@@ -332,6 +332,7 @@ export class SQLScriptProvider {
         await this.loadConstructionParameters();
         await this.loadScheduleParameters();
         await this.loadMaterials();
+        await this.loadConstructions();
 
         return this.USCMDynamicData;
     }
@@ -429,6 +430,27 @@ export class SQLScriptProvider {
                 })
             );
             this.USCMDynamicData.materials = List;
+        }
+    }
+
+    async loadConstructions() {
+        let SQLText = "Select Construction.Name as ConstName,Construction.ID as ConstID,Construction.Description,refConstructionType.Name as ConstType,ConstructionTypeID\n";
+        SQLText += "From Construction inner Join refConstructionType ON refConstructionType.ID = ConstructionTypeID\n";
+        SQLText += "Where Construction.System = 0\n"
+        SQLText += "Order By Construction.Name";
+        const result = await this.SQLConn.ExecuteStatment(SQLText, []);
+        if (result.recordset) {
+             
+
+            const List = result.recordset.map((ucsrecord: { ConstName: string; ConstID: number; ConstType: string; ConstructionTypeID: number;Description: string}) => ({
+                name: ucsrecord.ConstName,
+                id: ucsrecord.ConstID,
+                description: ucsrecord.Description,
+                typeName: ucsrecord.ConstType,
+                typeID: ucsrecord.ConstructionTypeID
+                })
+            );
+            this.USCMDynamicData.constructions = List;
         }
     }
 

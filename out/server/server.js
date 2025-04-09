@@ -198,8 +198,16 @@ class LanguageServer {
                 ? this.getMethodParamType(this.ucsjsComp.ucsjsMethods, linePrefix, fullLine, cursorPosition)
                 : { paramType: 'All', insideStr: false };
             if (showDataType) {
-                this.connection.console.log(`method parameter data type "${showDataType.paramType}"`);
-                if (showDataType.paramType == 'ucsmSyntax' || this.languageId == 'ucsm') {
+                this.connection.console.log(`method parameter data type "${showDataType.paramType}" inStr "${showDataType.insideStr}"`);
+                if (showDataType.paramType == 'materials' || prefixWord == 'MATID' && !word) {
+                    this.ucsmComp.AddMaterials(items, showDataType.insideStr);
+                    return items;
+                }
+                else if (this.languageId == 'ucsm' && prefixWord == 'CONSTID') {
+                    this.ucsmComp.AddConstructions(items, '', false);
+                    return items;
+                }
+                else if (showDataType.paramType == 'ucsmSyntax' || this.languageId == 'ucsm') {
                     /*Check show only properties for special objects like _M: and _CV: */
                     for (const spObj of this.ucsmComp.specialObjects) {
                         const wordRegex = new RegExp(`${spObj.prefix}[^\\s]*$`, 'i');
@@ -216,7 +224,7 @@ class LanguageServer {
                             break;
                         }
                     }
-                    if (!FilterObjProps) {
+                    if (!FilterObjProps && !showDataType.insideStr) {
                         this.ucsmComp.AddFunction(items);
                         this.ucsmComp.AddVariables(items);
                         if (this.languageId == 'ucsm') {
@@ -229,10 +237,6 @@ class LanguageServer {
                         this.ucsmComp.AddObjectClass(items);
                         this.ucsmComp.AddObjectType(items);
                     }
-                }
-                else if (showDataType.paramType == 'materials') {
-                    this.ucsmComp.AddMaterials(items, showDataType.insideStr);
-                    return items;
                 }
                 else {
                     const split = showDataType.paramType.split('.');
@@ -347,13 +351,16 @@ class LanguageServer {
                 : { paramType: 'All', insideStr: false };
             if (showDataType) {
                 this.connection.console.log(`Hover parameter "${word}" -> data type "${showDataType.paramType}"`);
-                if (showDataType.paramType == 'ucsmSyntax' || this.languageId == 'ucsm') {
+                if (showDataType.paramType == 'materials' || prefixWord == 'MATID' && !isNaN(Number(word))) {
+                    return this.ucsmComp.getHoverMaterialFromID(word);
+                }
+                else if (this.languageId == 'ucsm' && prefixWord == 'CONSTID') {
+                    return this.ucsmComp.getHoverConstructionFromID(word);
+                }
+                else if (showDataType.paramType == 'ucsmSyntax' || this.languageId == 'ucsm') {
                     const ucsmhover = this.ucsmComp.getHoverWord(word.toUpperCase(), wordRange, prefixWord.toUpperCase());
                     if (ucsmhover)
                         return ucsmhover;
-                }
-                else if (showDataType.paramType == 'materials') {
-                    return this.ucsmComp.getHoverMaterialFromID(word);
                 }
             }
             else
