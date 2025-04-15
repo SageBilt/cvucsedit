@@ -307,8 +307,13 @@ class LanguageServer {
         const startOfLine = { line: cursorPosition.line, character: 0 };
         //const rangeToCursor: Range = { start: startOfLine, end: cursorPosition };
         const endPostion = { line: cursorPosition.line, character: Number.MAX_SAFE_INTEGER };
-        const rangeToEnd = { start: startOfLine, end: endPostion };
-        //const linePrefix = document.getText(rangeToCursor);
+        const rangeAfterCursor = { start: cursorPosition, end: endPostion };
+        const remainText = document.getText(rangeAfterCursor);
+        const firstSpaceIndex = remainText.indexOf(' ');
+        const endOfTextIndex = firstSpaceIndex == -1 ? Number.MAX_SAFE_INTEGER : firstSpaceIndex + cursorPosition.character;
+        console.log(`remainText "${remainText}" endOfTextIndex "${endOfTextIndex}" Cursorcharacter "${cursorPosition.character}"`);
+        const endOfTextAtCursor = { line: cursorPosition.line, character: endOfTextIndex };
+        const rangeToEnd = { start: startOfLine, end: endOfTextAtCursor };
         const fullLine = document.getText(rangeToEnd);
         const offset = document.offsetAt(cursorPosition);
         const cursorChar = cursorPosition.character;

@@ -4,7 +4,7 @@
   "name": "cvucsedit",
   "displayName": "Cabinet Vision UCS Editor",
   "description": "Adds features to VS Code for loading, editing and saving Cabinet Vision User Created Standards",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "author": {
     "name": "David Bilton"
   },
@@ -18,7 +18,7 @@
   "categories": [
     "Programming Languages"
   ],
-  "icon": "images/Ext Icon.png",
+  "icon": "./Icons/Ext_Icon.png",
   "activationEvents": [
     "onStartupFinished"
   ],
