@@ -35,16 +35,16 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_1 = require("vscode-languageserver/node");
 const vscode_languageserver_textdocument_1 = require("vscode-languageserver-textdocument");
-const ucsmCompletion_1 = require("./ucsmCompletion");
-const ucsjsCompletion_1 = require("./ucsjsCompletion");
+const ucsmLanguageHandler_1 = require("./ucsmLanguageHandler");
+const ucsjsLanguageHandler_1 = require("./ucsjsLanguageHandler");
 const ucsmValidation_1 = require("./ucsmValidation");
 const CONSTANTS = __importStar(require(".././constants"));
 class LanguageServer {
     connection;
     documents;
     languageId;
-    ucsmComp;
-    ucsjsComp;
+    ucsmHandler;
+    ucsjsHandler;
     ucsmValid;
     semanticTokensLegend = {
         tokenTypes: [
@@ -61,8 +61,8 @@ class LanguageServer {
         this.connection.console.log("Starting language server...");
         this.documents = new node_1.TextDocuments(vscode_languageserver_textdocument_1.TextDocument);
         this.languageId = config.languageId;
-        this.ucsmComp = new ucsmCompletion_1.ucsmCompletion(this.languageId, this.connection);
-        this.ucsjsComp = new ucsjsCompletion_1.ucsjsCompletion(this.languageId, this.connection);
+        this.ucsmHandler = new ucsmLanguageHandler_1.ucsmLanguageHandler(this.languageId, this.connection);
+        this.ucsjsHandler = new ucsjsLanguageHandler_1.ucsjsLanguageHandler(this.languageId, this.connection);
         this.ucsmValid = new ucsmValidation_1.ucsmValidation(this.languageId, this.connection);
         this.initialize();
         this.setupCompletion();
@@ -78,8 +78,8 @@ class LanguageServer {
     initialize() {
         this.connection.onInitialize((params) => {
             const dynamicData = params.initializationOptions || {};
-            this.ucsmComp.dynamicData = dynamicData;
-            this.ucsjsComp.dynamicData = dynamicData;
+            this.ucsmHandler.dynamicData = dynamicData;
+            this.ucsjsHandler.dynamicData = dynamicData;
             this.ucsmValid.dynamicData = dynamicData;
             console.log(`partDefs.length ${dynamicData.partDefs.length}`);
             return {
@@ -195,57 +195,57 @@ class LanguageServer {
             console.log(`linePrefix"${linePrefix}" word"${word}" prefixWord "${prefixWord}"`);
             let FilterObjProps = false;
             const showDataType = this.languageId == 'javascript'
-                ? this.getMethodParamType(this.ucsjsComp.ucsjsMethods, linePrefix, fullLine, cursorPosition)
+                ? this.getMethodParamType(this.ucsjsHandler.ucsjsMethods, linePrefix, fullLine, cursorPosition)
                 : { paramType: 'All', insideStr: false };
             if (showDataType) {
                 this.connection.console.log(`method parameter data type "${showDataType.paramType}" inStr "${showDataType.insideStr}"`);
                 if (showDataType.paramType == 'materials' || prefixWord == 'MATID' && !word) {
-                    this.ucsmComp.AddMaterials(items, showDataType.insideStr);
+                    this.ucsmHandler.AddMaterials(items, showDataType.insideStr);
                     return items;
                 }
                 else if (this.languageId == 'ucsm' && prefixWord == 'CONSTID') {
-                    this.ucsmComp.AddConstructions(items, '', false);
+                    this.ucsmHandler.AddConstructions(items, '', false);
                     return items;
                 }
                 else if (this.languageId == 'ucsm' && prefixWord == 'SCHEDID') {
-                    this.ucsmComp.AddSchedules(items, '', false);
+                    this.ucsmHandler.AddSchedules(items, '', false);
                     return items;
                 }
                 else if (this.languageId == 'ucsm' && (prefixWord == '_STYLEID' || prefixWord == 'DOORSTYLEID')) {
-                    this.ucsmComp.AddDoors(items, false);
+                    this.ucsmHandler.AddDoors(items, false);
                     return items;
                 }
                 else if (showDataType.paramType == 'ucsmSyntax' || this.languageId == 'ucsm') {
                     /*Check show only properties for special objects like _M: and _CV: */
-                    for (const spObj of this.ucsmComp.specialObjects) {
+                    for (const spObj of this.ucsmHandler.specialObjects) {
                         const wordRegex = new RegExp(`${spObj.prefix}[^\\s]*$`, 'i');
                         //if (linePrefix.endsWith(spObj.prefix)) {
                         if (wordRegex.test(linePrefix)) {
-                            this.ucsmComp.AddVariables(items, spObj.prefix);
+                            this.ucsmHandler.AddVariables(items, spObj.prefix);
                             if (spObj.prefix == '_M:')
-                                this.ucsmComp.AddMaterialParams(items);
+                                this.ucsmHandler.AddMaterialParams(items);
                             if (spObj.prefix == '_CS:')
-                                this.ucsmComp.AddConstructionParams(items);
+                                this.ucsmHandler.AddConstructionParams(items);
                             if (spObj.prefix == '_MS:')
-                                this.ucsmComp.AddScheduleParams(items);
+                                this.ucsmHandler.AddScheduleParams(items);
                             if (spObj.prefix == '_CB:' || spObj.prefix == '_CV:')
-                                this.ucsmComp.AddCaseStandards(items);
+                                this.ucsmHandler.AddCaseStandards(items);
                             FilterObjProps = true;
                             break;
                         }
                     }
                     if (!FilterObjProps && (!showDataType.insideStr || showDataType.paramType == 'ucsmSyntax')) {
-                        this.ucsmComp.AddFunction(items);
-                        this.ucsmComp.AddVariables(items);
+                        this.ucsmHandler.AddFunction(items);
+                        this.ucsmHandler.AddVariables(items);
                         if (this.languageId == 'ucsm') {
-                            this.ucsmComp.AddKeywords(items); //Only add keywords in ucsm
+                            this.ucsmHandler.AddKeywords(items); //Only add keywords in ucsm
                         }
-                        this, this.ucsmComp.AddPartDefs(items);
-                        this.ucsmComp.AddSpecialObjects(items);
-                        this.ucsmComp.AddDatTypes(items, linePrefix.charAt(linePrefix.length - 1));
-                        this.ucsmComp.Addsymbols(items);
-                        this.ucsmComp.AddObjectClass(items);
-                        this.ucsmComp.AddObjectType(items);
+                        this, this.ucsmHandler.AddPartDefs(items);
+                        this.ucsmHandler.AddSpecialObjects(items);
+                        this.ucsmHandler.AddDatTypes(items, linePrefix.charAt(linePrefix.length - 1));
+                        this.ucsmHandler.Addsymbols(items);
+                        this.ucsmHandler.AddObjectClass(items);
+                        this.ucsmHandler.AddObjectType(items);
                     }
                 }
                 else {
@@ -253,30 +253,30 @@ class LanguageServer {
                     if (split.length == 2) {
                         if (split[0] == 'constants') { //For example 'constants.parameterTypes'
                             const key = split[1];
-                            this.ucsjsComp.AddConstants(items, this.ucsjsComp.ucsjsConstants[key], split[1]);
+                            this.ucsjsHandler.AddConstants(items, this.ucsjsHandler.ucsjsConstants[key], split[1]);
                         }
                     }
                     else {
                         //this.connection.console.log(`Javascript method parameter data type "${showDataType}"`);
                         if (showDataType.paramType == 'any')
-                            this.ucsjsComp.AddObjects(items);
+                            this.ucsjsHandler.AddObjects(items);
                         //else if (showDataType == 'string')
                         //  this.ucsjsComp.AddAllConstants(items); 
                     }
                 }
             }
             else if (this.languageId == 'javascript') {
-                if (this.ucsjsComp.isObject(items, linePrefix))
+                if (this.ucsjsHandler.isObject(items, linePrefix))
                     return items;
-                if (this.ucsjsComp.isCVAsmManaged(items, prefixWord))
+                if (this.ucsjsHandler.isCVAsmManaged(items, prefixWord))
                     return items;
-                if (this.ucsjsComp.isLibraryClassInstances(items, linePrefix))
+                if (this.ucsjsHandler.isLibraryClassInstances(items, linePrefix))
                     return items;
-                this.ucsjsComp.AddMethods(items);
-                this.ucsjsComp.AddAllConstants(items);
-                this.ucsjsComp.AddObjects(items);
-                this.ucsjsComp.AddFunctions(items);
-                this.ucsjsComp.AddLibraryClassInstances(items);
+                this.ucsjsHandler.AddMethods(items);
+                this.ucsjsHandler.AddAllConstants(items);
+                this.ucsjsHandler.AddObjects(items);
+                this.ucsjsHandler.AddFunctions(items);
+                this.ucsjsHandler.AddLibraryClassInstances(items);
             }
             return items;
         });
@@ -359,30 +359,30 @@ class LanguageServer {
             const cursorPosition = this.getCursorPosition(position);
             const [linePrefix, fullLine] = this.getLineTextToCursor(document, position, cursorPosition);
             const showDataType = this.languageId == 'javascript'
-                ? this.getMethodParamType(this.ucsjsComp.ucsjsMethods, linePrefix, fullLine, cursorPosition)
+                ? this.getMethodParamType(this.ucsjsHandler.ucsjsMethods, linePrefix, fullLine, cursorPosition)
                 : { paramType: 'All', insideStr: false };
             if (showDataType) {
                 this.connection.console.log(`Hover parameter "${word}" -> data type "${showDataType.paramType}"`);
                 if (showDataType.paramType == 'materials' || prefixWord.toUpperCase() == 'MATID' && !isNaN(Number(word))) {
-                    return this.ucsmComp.getHoverMaterialFromID(word);
+                    return this.ucsmHandler.getHoverMaterialFromID(word);
                 }
                 else if (this.languageId == 'ucsm' && prefixWord.toUpperCase() == 'CONSTID') {
-                    return this.ucsmComp.getHoverConstructionFromID(word);
+                    return this.ucsmHandler.getHoverConstructionFromID(word);
                 }
                 else if (this.languageId == 'ucsm' && prefixWord.toUpperCase() == 'SCHEDID') {
-                    return this.ucsmComp.getHoverScheduleFromID(word);
+                    return this.ucsmHandler.getHoverScheduleFromID(word);
                 }
                 else if (showDataType.paramType == 'ucsmSyntax' || this.languageId == 'ucsm') {
-                    const ucsmhover = this.ucsmComp.getHoverWord(word.toUpperCase(), wordRange, prefixWord.toUpperCase());
+                    const ucsmhover = this.ucsmHandler.getHoverWord(word.toUpperCase(), wordRange, prefixWord.toUpperCase());
                     if (ucsmhover)
                         return ucsmhover;
                 }
                 else if (!['ucsmSyntax', 'string'].includes(showDataType.paramType) && this.languageId == 'javascript') {
-                    return this.ucsjsComp.getHoverWord(word, wordRange, prefixWord);
+                    return this.ucsjsHandler.getHoverWord(word, wordRange, prefixWord);
                 }
             }
             else
-                return this.ucsjsComp.getHoverWord(word, wordRange, prefixWord);
+                return this.ucsjsHandler.getHoverWord(word, wordRange, prefixWord);
         });
     }
     findSymbolAtPosition(doc, pos) {
@@ -413,7 +413,7 @@ class LanguageServer {
             if (!symbol)
                 return null;
             console.log(`symbol "${symbol}" prefixWord "${prefixWord}"`);
-            const definition = this.languageId == 'ucsm' ? this.ucsmComp.getReferences(symbol)[0] : this.ucsjsComp.getDefinition(symbol, prefixWord);
+            const definition = this.languageId == 'ucsm' ? this.ucsmHandler.getReferences(symbol)[0] : this.ucsjsHandler.getDefinition(symbol, prefixWord);
             if (!definition)
                 return null;
             //console.log(`uri "${definition.uri}" uri "${params.textDocument.uri}"`);
@@ -441,10 +441,10 @@ class LanguageServer {
                 return null;
             //console.log(`symbol "${symbol}" prefixWord "${prefixWord}"`);
             if (this.languageId == 'ucsm') {
-                return this.ucsmComp.getReferences(symbol);
+                return this.ucsmHandler.getReferences(symbol);
             }
             else {
-                const jsRefs = this.ucsjsComp.getReferences(symbol, prefixWord, uri);
+                const jsRefs = this.ucsjsHandler.getReferences(symbol, prefixWord, uri);
                 if (jsRefs)
                     return jsRefs;
             }
@@ -465,7 +465,7 @@ class LanguageServer {
         if (this.languageId == 'javascript')
             diagnostics = this.ucsmValid.validateUCSJS(text, this.languageId);
         else {
-            this.ucsmComp.updateSymbolTable(document);
+            this.ucsmHandler.updateSymbolTable(document);
             diagnostics = this.ucsmValid.validateUCSM(text, this.languageId);
         }
         //console.log(diagnostics);
@@ -474,8 +474,8 @@ class LanguageServer {
     }
     setupClientNotification() {
         this.connection.onNotification('updateJSReferences', (params) => {
-            this.ucsjsComp.classLibraries = params.classRefs;
-            this.ucsjsComp.CVAsmManagedReferences = params.CVAsmManagedRefs;
+            this.ucsjsHandler.classLibraries = params.classRefs;
+            this.ucsjsHandler.CVAsmManagedReferences = params.CVAsmManagedRefs;
             //console.log(`Received data updated references for libraries`);
         });
     }
@@ -501,7 +501,7 @@ class LanguageServer {
                     const lineText = filteredLine.newLine;
                     inMultiLineComment = filteredLine.inMultiLineComment;
                     //let trimStart = filteredLine.start;
-                    this.ucsjsComp.classLibraries.forEach(jsLib => {
+                    this.ucsjsHandler.classLibraries.forEach(jsLib => {
                         let match;
                         const customKeywordRegex = new RegExp(`\\b(${jsLib.name})\\b`, 'g');
                         //console.log(jsLib.name);

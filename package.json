@@ -1,5 +1,6 @@
 {
   "publisher": "SageDoorsLtd",
+  "license": "MIT",
   "name": "cvucsedit",
   "displayName": "Cabinet Vision UCS Editor",
   "description": "Adds features to VS Code for loading, editing and saving Cabinet Vision User Created Standards",

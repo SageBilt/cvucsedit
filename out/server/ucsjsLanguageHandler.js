@@ -37,7 +37,7 @@ exports.ucsjsLanguageHandler = void 0;
 //import { CompletionBase } from './CompletionBase';
 const node_1 = require("vscode-languageserver/node");
 const fs = __importStar(require("fs"));
-const CONSTANTS = __importStar(require(".././constants"));
+const CONSTANTS = __importStar(require("../constants"));
 class ucsjsLanguageHandler {
     connection;
     languageId;
@@ -405,4 +405,4 @@ class ucsjsLanguageHandler {
     }
 }
 exports.ucsjsLanguageHandler = ucsjsLanguageHandler;
-//# sourceMappingURL=ucsjsCompletion.js.map
+//# sourceMappingURL=ucsjsLanguageHandler.js.map

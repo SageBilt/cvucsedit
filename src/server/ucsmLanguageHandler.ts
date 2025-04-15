@@ -10,10 +10,10 @@ import {
    } from 'vscode-languageserver/node';
 import * as fs from 'fs';
 import { TextDocument } from 'vscode-languageserver-textdocument';
-import { UCSMSystemVariable, UCSMSpecialObject, UCSMSystemData , UCSMSystemFunctions, UCSMVariableTypes, DynamicData, SymbolInfo} from '.././interfaces';
-import * as CONSTANTS from '.././constants';
+import { UCSMSystemVariable, UCSMSpecialObject, UCSMSystemData , UCSMSystemFunctions, UCSMVariableTypes, DynamicData, SymbolInfo} from '../interfaces';
+import * as CONSTANTS from '../constants';
 
-export class ucsmCompletion {
+export class ucsmLanguageHandler {
     private connection: Connection;
     private languageId: string;
 

@@ -10,12 +10,12 @@ import {
    } from 'vscode-languageserver/node';
    
    import * as fs from 'fs';
-import { UCSJSSystemConstants, UCSJSSystemPropertie, UCSJSSystemFunction, UCSJSSystemData,UCSJSSystemMethod, UCSJSParameterDef, DynamicData, docClassRef, classElement, ElementParam, CVAsmManaged } from '.././interfaces';
-import * as CONSTANTS from '.././constants';
+import { UCSJSSystemConstants, UCSJSSystemPropertie, UCSJSSystemFunction, UCSJSSystemData,UCSJSSystemMethod, UCSJSParameterDef, DynamicData, docClassRef, classElement, ElementParam, CVAsmManaged } from '../interfaces';
+import * as CONSTANTS from '../constants';
 import { Position, Uri } from 'vscode';
 
 
-export class ucsjsCompletion {
+export class ucsjsLanguageHandler {
     private connection: Connection;
     private languageId: string;
 
