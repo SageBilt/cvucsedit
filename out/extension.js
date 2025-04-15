@@ -59,7 +59,7 @@ async function activate(context) {
     const UCSJSClient = new client_1.LanguageClientWrapper({
         languageId: 'javascript',
         serverModulePath: path.join('out', 'server', 'server.js'),
-        fileExtension: '.js'
+        fileExtension: '.ucsjs'
     }, context, SQLProvider, dynamicData);
     UCSJSClient.start(context);
     context.subscriptions.push(vscode.languages.registerFoldingRangeProvider('ucsm', // Replace with your language ID

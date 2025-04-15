@@ -14,7 +14,10 @@
     "AS",
     "NEW",
     "THIS",
-    "NULL"
+    "NULL",
+    "AND",
+    "OR",
+    "CAB"
   ],
   "variables": [
     {

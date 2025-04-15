@@ -92,10 +92,10 @@ class LanguageServer {
                     hoverProvider: true,
                     definitionProvider: true,
                     referencesProvider: true,
-                    semanticTokensProvider: {
-                        legend: this.semanticTokensLegend,
-                        full: true, // Support full document tokenization
-                    }
+                    // semanticTokensProvider: { // Add semantic tokens capability
+                    //   legend: this.semanticTokensLegend,
+                    //   full: true, // Support full document tokenization
+                    // }
                 }
             };
         });
@@ -152,7 +152,7 @@ class LanguageServer {
             // Check if cursor is within the method call and parameters are still open
             const isInside = paramIndex >= 0 && cursorPosition.character >= argsStart && !argsSoFar.match(/\)$/);
             //this.connection.console.log(`paramIndex "${paramIndex}" argsStart "${argsStart}" character "${cursorPosition.character}"`);
-            //this.connection.console.log(`isInside "${isInside}" paramIndex "${paramIndex}" argsStart "${argsStart}"`);
+            this.connection.console.log(`isInside "${isInside}" paramIndex "${paramIndex}" argsStart "${argsStart}"`);
             if (isInside) {
                 // Determine the DataType based on paramIndex
                 const dataType = paramIndex < methodDef.parameterDef.length
@@ -207,6 +207,14 @@ class LanguageServer {
                     this.ucsmComp.AddConstructions(items, '', false);
                     return items;
                 }
+                else if (this.languageId == 'ucsm' && prefixWord == 'SCHEDID') {
+                    this.ucsmComp.AddSchedules(items, '', false);
+                    return items;
+                }
+                else if (this.languageId == 'ucsm' && (prefixWord == '_STYLEID' || prefixWord == 'DOORSTYLEID')) {
+                    this.ucsmComp.AddDoors(items, false);
+                    return items;
+                }
                 else if (showDataType.paramType == 'ucsmSyntax' || this.languageId == 'ucsm') {
                     /*Check show only properties for special objects like _M: and _CV: */
                     for (const spObj of this.ucsmComp.specialObjects) {
@@ -220,11 +228,13 @@ class LanguageServer {
                                 this.ucsmComp.AddConstructionParams(items);
                             if (spObj.prefix == '_MS:')
                                 this.ucsmComp.AddScheduleParams(items);
+                            if (spObj.prefix == '_CB:' || spObj.prefix == '_CV:')
+                                this.ucsmComp.AddCaseStandards(items);
                             FilterObjProps = true;
                             break;
                         }
                     }
-                    if (!FilterObjProps && !showDataType.insideStr) {
+                    if (!FilterObjProps && (!showDataType.insideStr || showDataType.paramType == 'ucsmSyntax')) {
                         this.ucsmComp.AddFunction(items);
                         this.ucsmComp.AddVariables(items);
                         if (this.languageId == 'ucsm') {
@@ -232,7 +242,7 @@ class LanguageServer {
                         }
                         this, this.ucsmComp.AddPartDefs(items);
                         this.ucsmComp.AddSpecialObjects(items);
-                        this.ucsmComp.AddDatTypes(items);
+                        this.ucsmComp.AddDatTypes(items, linePrefix.charAt(linePrefix.length - 1));
                         this.ucsmComp.Addsymbols(items);
                         this.ucsmComp.AddObjectClass(items);
                         this.ucsmComp.AddObjectType(items);
@@ -257,6 +267,8 @@ class LanguageServer {
             }
             else if (this.languageId == 'javascript') {
                 if (this.ucsjsComp.isObject(items, linePrefix))
+                    return items;
+                if (this.ucsjsComp.isCVAsmManaged(items, prefixWord))
                     return items;
                 if (this.ucsjsComp.isLibraryClassInstances(items, linePrefix))
                     return items;
@@ -301,7 +313,7 @@ class LanguageServer {
         const offset = document.offsetAt(cursorPosition);
         const cursorChar = cursorPosition.character;
         console.log(`fullLine "${fullLine}"`);
-        const wordRegex = this.languageId == 'ucsm' ? /<?[A-Za-z0-9_{}@]+[:>]?/g : /\w+/g;
+        const wordRegex = this.languageId == 'ucsm' ? /<?[A-Za-z0-9_]+[:>]?/g : /\w+/g; ///<?[A-Za-z0-9_{}@]+[:>]?/g
         const wordDelim = this.languageId == 'ucsm' ? ['.', ':', '=', ':=', '(', `('`] : ['.', '(', `('`];
         let match;
         let prevMatch = '';
@@ -351,16 +363,22 @@ class LanguageServer {
                 : { paramType: 'All', insideStr: false };
             if (showDataType) {
                 this.connection.console.log(`Hover parameter "${word}" -> data type "${showDataType.paramType}"`);
-                if (showDataType.paramType == 'materials' || prefixWord == 'MATID' && !isNaN(Number(word))) {
+                if (showDataType.paramType == 'materials' || prefixWord.toUpperCase() == 'MATID' && !isNaN(Number(word))) {
                     return this.ucsmComp.getHoverMaterialFromID(word);
                 }
-                else if (this.languageId == 'ucsm' && prefixWord == 'CONSTID') {
+                else if (this.languageId == 'ucsm' && prefixWord.toUpperCase() == 'CONSTID') {
                     return this.ucsmComp.getHoverConstructionFromID(word);
+                }
+                else if (this.languageId == 'ucsm' && prefixWord.toUpperCase() == 'SCHEDID') {
+                    return this.ucsmComp.getHoverScheduleFromID(word);
                 }
                 else if (showDataType.paramType == 'ucsmSyntax' || this.languageId == 'ucsm') {
                     const ucsmhover = this.ucsmComp.getHoverWord(word.toUpperCase(), wordRange, prefixWord.toUpperCase());
                     if (ucsmhover)
                         return ucsmhover;
+                }
+                else if (!['ucsmSyntax', 'string'].includes(showDataType.paramType) && this.languageId == 'javascript') {
+                    return this.ucsjsComp.getHoverWord(word, wordRange, prefixWord);
                 }
             }
             else
@@ -455,9 +473,10 @@ class LanguageServer {
         this.connection.sendDiagnostics({ uri: normalizedUri, diagnostics });
     }
     setupClientNotification() {
-        this.connection.onNotification('updateJSLibraryReferences', (params) => {
-            this.ucsjsComp.classLibraries = params;
-            console.log(`Received data updated references for libraries`);
+        this.connection.onNotification('updateJSReferences', (params) => {
+            this.ucsjsComp.classLibraries = params.classRefs;
+            this.ucsjsComp.CVAsmManagedReferences = params.CVAsmManagedRefs;
+            //console.log(`Received data updated references for libraries`);
         });
     }
     tokenTypeIndex(type) {

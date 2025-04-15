@@ -637,7 +637,7 @@
             "example": "_this.SetParameter('PAR_MY', 23.5);",
             "returnType": "void",
             "parameterDef": [
-                {"ParamName": "string sParameter", "ParamValue": "Parameter name","DataType": "string"},
+                {"ParamName": "string sParameter", "ParamValue": "Parameter name","DataType": "ucsmSyntax"},
                 {"ParamName": "variant pValue", "ParamValue": "Parameter value","DataType": "any"},
                 {
                     "ParamName": "WORD nType[optional]", 

@@ -46,37 +46,45 @@ class CustomLanguageFoldingProvider {
         const config = JSON.parse(jsonContent);
         this.controlStructures = config.controlStructures;
     }
+    isOpeningKeyword(line, structure) {
+        const KeyW = structure.openingKeyword;
+        const Suffix = structure.requiredSuffix;
+        const pettern = structure.requiredSuffix ? `${KeyW}.*${Suffix}` : `${KeyW}`;
+        const openMatch = new RegExp(pettern, 'i');
+        return openMatch.test(line);
+    }
     provideFoldingRanges(document, context, token) {
         const foldingRanges = [];
         for (let i = 0; i < document.lineCount; i++) {
             const line = document.lineAt(i).text.trim();
+            const lineWithoutComments = line.split(';')[0];
             // Check each control structure
             for (const structure of this.controlStructures) {
                 if (!structure.customValidation) {
                     // const openingPattern = structure.requiredSuffix
                     //     ? `${structure.openingKeyword} ${structure.requiredSuffix}`
                     //     : structure.openingKeyword;
-                    const openingPattern = structure.openingKeyword;
-                    const KeyW = structure.openingKeyword;
-                    const Suffix = structure.requiredSuffix;
-                    const pettern = structure.requiredSuffix ? `${KeyW}.*${Suffix}` : `${KeyW}`;
-                    const openMatch = new RegExp(pettern, 'i');
-                    //if (this.lineMatches(line, structure, document, i)) {
-                    if (openMatch.test(line)) {
+                    //const openingPattern = structure.openingKeyword;
+                    // const KeyW = structure.openingKeyword;
+                    // const Suffix = structure.requiredSuffix;
+                    // const pettern = structure.requiredSuffix ? `${KeyW}.*${Suffix}` : `${KeyW}` ;
+                    // const openMatch = new RegExp(pettern,'i' );
+                    //if (this.lineMatches(lineWithoutComments, structure, document, i)) {
+                    if (this.isOpeningKeyword(lineWithoutComments, structure)) {
                         const startLine = i;
                         let endLine = this.findClosingLine(document, i, structure);
                         if (endLine !== -1) {
                             foldingRanges.push(new vscode.FoldingRange(startLine, endLine));
                             // Handle Else clause if supported
                             if (structure.supportsElse) {
-                                const elseLine = this.findElseLine(document, startLine, endLine);
+                                const elseLine = this.findElseLine(document, startLine, endLine, structure);
                                 if (elseLine !== -1) {
                                     foldingRanges.push(new vscode.FoldingRange(startLine, elseLine - 1)); // Before Else
                                     foldingRanges.push(new vscode.FoldingRange(elseLine, endLine)); // After Else
                                 }
                             }
-                            i = endLine; // Skip to the end of the block
-                            break;
+                            //i = endLine; // Skip to the end of the block
+                            //break;
                         }
                     }
                 }
@@ -86,20 +94,36 @@ class CustomLanguageFoldingProvider {
     }
     // Find the line number of the closing keyword
     findClosingLine(document, startLine, structure) {
+        let openCount = 0;
         for (let j = startLine + 1; j < document.lineCount; j++) {
             const line = document.lineAt(j).text.trim();
-            if (line === structure.closingKeyword) {
-                return j;
+            const lineWithoutComments = line.split(';')[0].toUpperCase();
+            if (this.isOpeningKeyword(lineWithoutComments, structure)) {
+                openCount++;
+            }
+            else if (lineWithoutComments === structure.closingKeyword.toUpperCase()) {
+                if (openCount === 0) {
+                    return j;
+                }
+                openCount--;
             }
         }
         return -1; // Not found
     }
     // Find an Else clause between start and end lines (if supported)
-    findElseLine(document, startLine, endLine) {
+    findElseLine(document, startLine, endLine, structure) {
+        let openCount = 0;
         for (let j = startLine + 1; j < endLine; j++) {
             const line = document.lineAt(j).text.trim();
-            if (line === 'Else') {
-                return j;
+            const lineWithoutComments = line.split(';')[0].toUpperCase();
+            if (this.isOpeningKeyword(lineWithoutComments, structure)) {
+                openCount++;
+            }
+            else if (lineWithoutComments === 'ELSE') {
+                if (openCount === 0) {
+                    return j;
+                }
+                openCount--;
             }
         }
         return -1; // No Else found

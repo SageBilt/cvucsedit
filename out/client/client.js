@@ -19,7 +19,7 @@ class LanguageClientWrapper {
         };
         // Client options
         const clientOptions = {
-            documentSelector: [{ scheme: 'file', language: this.languageId },
+            documentSelector: [{ scheme: 'file', language: this.languageId, pattern: `**/*${config.fileExtension}` },
                 { scheme: 'cvucs', language: this.languageId }], //{ scheme: 'cvucs', language: 'ucsm' }
             synchronize: {
                 fileEvents: vscode_1.workspace.createFileSystemWatcher(`**/*${config.fileExtension}`)
@@ -49,7 +49,7 @@ class LanguageClientWrapper {
             });
             context.subscriptions.push(this.client);
             if (this.languageId == 'javascript')
-                this.sendDynamicData();
+                this.sendUpdatedReferences();
         }
         catch (error) {
             console.error(`Failed to start ${this.languageId} client:`, error);
@@ -111,14 +111,16 @@ class LanguageClientWrapper {
     }
     updateReferences(document) {
         this.ScriptProvider.updateClassRefsForDoc(document);
-        this.sendDynamicData();
+        this.sendUpdatedReferences();
     }
-    sendDynamicData() {
-        const dynamicData = this.ScriptProvider.UCSJSLibRefParser.docReferences;
+    sendUpdatedReferences() {
+        const dynamicData = {};
+        dynamicData.classRefs = this.ScriptProvider.UCSJSLibRefParser.classReferences;
+        dynamicData.CVAsmManagedRefs = this.ScriptProvider.UCSJSLibRefParser.CVAsmManagedReferences;
         // Send notification once the client is ready
         this.client.start().then(() => {
-            this.client.sendNotification('updateJSLibraryReferences', dynamicData); //updateJSLibraryClassRef
-            console.log(`updated JS Library References for ${this.languageId} on server`); //${JSON.stringify(dynamicData)
+            this.client.sendNotification('updateJSReferences', dynamicData); //updateJSLibraryClassRef
+            //console.log(`updated JS Library References for ${this.languageId} on server`); //${JSON.stringify(dynamicData)
         }).catch((err) => {
             console.error(`Failed to send notification to ${this.languageId} server:`, err);
         });

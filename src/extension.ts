@@ -39,7 +39,7 @@ export async function activate(context: vscode.ExtensionContext) {
     const UCSJSClient = new LanguageClientWrapper({
         languageId: 'javascript',
         serverModulePath: path.join('out','server', 'server.js'),
-        fileExtension: '.js'
+        fileExtension: '.ucsjs'
         },
         context,
         SQLProvider,

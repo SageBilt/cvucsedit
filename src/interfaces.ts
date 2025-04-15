@@ -145,6 +145,13 @@ export interface UCSJSSystemData {
     paramTypeName:string;
   }
 
+  export interface CaseStandards {
+    name : string;
+    id : number;
+    description : string;
+    typeName : string;
+  }
+
   export interface Materials {
     name : string;
     id : number;
@@ -161,6 +168,23 @@ export interface UCSJSSystemData {
     typeID : number;
   }
 
+  export interface Schedules {
+    name : string;
+    id : number;
+    description : string;
+    typeName : string;
+    typeID : number;
+  }
+
+  export interface Doors {
+    name : string;
+    id : number;
+    description : string;
+    CatName : string;
+    Notes : string;
+    Tags : string;
+  }
+
   export interface DynamicData {
     partDefs : PartDefs[];
     materialParams: Parameters[];
@@ -168,6 +192,9 @@ export interface UCSJSSystemData {
     scheduleParams: Parameters[];
     materials : Materials[];
     constructions : Construction[];
+    schedules: Schedules[];
+    caseStandards: CaseStandards[];
+    doors : Doors[];
   }
 
   export interface ElementParam {
@@ -188,6 +215,7 @@ export interface UCSJSSystemData {
     type: string;
     range: Range;
 }
+
   export interface docClassRef {
       name: string;
       uri: string;
@@ -195,5 +223,17 @@ export interface UCSJSSystemData {
       elementReferences: ClassReference[];
       classReferences: ClassReference[];
       isEnabled: boolean;
+  }
+
+  export interface CVAsmManaged {
+    variableName: string;
+    objectName: string;
+    uri: string;
+    range: Range;
+  }
+
+  export interface docReferences {
+    classRefs : docClassRef[];
+    CVAsmManagedRefs : CVAsmManaged[];
   }
 

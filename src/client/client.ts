@@ -2,7 +2,7 @@ import * as path from 'path';
 import { workspace, ExtensionContext, window, TextDocumentChangeEvent, TextDocument, CancellationToken , Position, Definition, LocationLink, Location} from 'vscode';
 import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind, ProvideDefinitionSignature, ProvideReferencesSignature } from 'vscode-languageclient/node';
 import {TextDocument as LSPTextDocument} from 'vscode-languageserver-textdocument';
-import { DynamicData, docClassRef } from '.././interfaces';
+import { DynamicData, docClassRef, docReferences } from '.././interfaces';
 import { SQLScriptProvider } from '.././SQLScriptProvider';
 
 interface LanguageClientConfig {
@@ -28,7 +28,7 @@ export class LanguageClientWrapper {
   
       // Client options
       const clientOptions: LanguageClientOptions = {
-          documentSelector: [{ scheme: 'file', language: this.languageId }
+          documentSelector: [{ scheme: 'file', language: this.languageId, pattern: `**/*${config.fileExtension}`}
                             ,{ scheme: 'cvucs', language: this.languageId }], //{ scheme: 'cvucs', language: 'ucsm' }
           synchronize: {
               fileEvents: workspace.createFileSystemWatcher(`**/*${config.fileExtension}`)
@@ -72,7 +72,7 @@ export class LanguageClientWrapper {
         context.subscriptions.push(this.client);
         
         if (this.languageId == 'javascript') 
-            this.sendDynamicData();
+            this.sendUpdatedReferences();
   
       } catch (error) {
         console.error(`Failed to start ${this.languageId} client:`, error);
@@ -148,16 +148,20 @@ export class LanguageClientWrapper {
 
     private updateReferences(document: TextDocument) {
       this.ScriptProvider.updateClassRefsForDoc(document);
-      this.sendDynamicData();
+      this.sendUpdatedReferences();
     }
 
-    private sendDynamicData(): void {
-      const dynamicData: docClassRef[] = this.ScriptProvider.UCSJSLibRefParser.docReferences;
-  
+    private sendUpdatedReferences(): void {
+
+      const dynamicData: docReferences = {} as docReferences;
+      
+      dynamicData.classRefs = this.ScriptProvider.UCSJSLibRefParser.classReferences;
+      dynamicData.CVAsmManagedRefs = this.ScriptProvider.UCSJSLibRefParser.CVAsmManagedReferences;
+
       // Send notification once the client is ready
       this.client.start().then(() => {
-        this.client.sendNotification('updateJSLibraryReferences', dynamicData); //updateJSLibraryClassRef
-        console.log(`updated JS Library References for ${this.languageId} on server`); //${JSON.stringify(dynamicData)
+        this.client.sendNotification('updateJSReferences', dynamicData); //updateJSLibraryClassRef
+        //console.log(`updated JS Library References for ${this.languageId} on server`); //${JSON.stringify(dynamicData)
       }).catch((err) => {
         console.error(`Failed to send notification to ${this.languageId} server:`, err);
       });

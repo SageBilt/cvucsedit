@@ -92,20 +92,20 @@ class ucsmCompletion {
         const text = doc.getText();
         const Vars = this.variables.map(v => v.name);
         const specOjb = this.specialObjects.map(v => v.prefix);
-        const excluded = [...this.keywords, ...Vars, ...specOjb, ...this.objectClass, ...this.objectTypes];
+        const excluded = [...this.keywords, ...Vars, ...specOjb, ...this.objectClass, ...this.objectTypes, ...this.dynamicData.partDefs];
         // Example: Naive parsing for variables like "let x = ..."
         const lines = text.split('\n');
         lines.forEach((line, lineNum) => {
             const lineWithoutComments = line.split(';')[0];
             if (!lineWithoutComments.toUpperCase().includes('FOR EACH')) {
-                const defpPattern = /^\s*(?<![If|While]\s+)([A-Za-z_{}:][A-Za-z0-9_{}@\\.:]*)+(?:<(crncy|meas|deg|int|bool|dec|text|style|desc)?>)?\s*:?=\s*/i;
+                const defpPattern = /^\s*([A-Za-z_:][A-Za-z0-9_\\.:]*)+(?:<(crncy|meas|deg|int|bool|dec|text|style|desc)?>)?\s*(?::?=|as)s*/i;
                 const matchDef = lineWithoutComments.match(defpPattern);
                 if (matchDef) {
                     const varName = matchDef[1].trim();
                     Insert(varName, lineNum, lineWithoutComments.indexOf(varName), matchDef[2]);
                 }
                 else {
-                    const pattern = /\s*([A-Za-z_{}:][A-Za-z0-9_{}@\\.:]*)+\s*/ig;
+                    const pattern = /(?<!')\b[A-Za-z_][A-Za-z0-9_]*/ig; ///\s*([A-Za-z_{}][A-Za-z0-9_{}@]*)+\s*/ig;
                     const match = lineWithoutComments.match(pattern);
                     if (match) {
                         match.forEach(m => {
@@ -230,6 +230,18 @@ class ucsmCompletion {
             });
         });
     }
+    AddCaseStandards(items) {
+        this.dynamicData.caseStandards.forEach(std => {
+            items.push({
+                label: std.id.toString(),
+                kind: node_1.CompletionItemKind.Property,
+                documentation: {
+                    kind: 'markdown',
+                    value: `**${std.id.toString()}** (Construction case standard)\n\n${std.name}\n\n${std.description}\n\n- **Measurment Type**: ${std.typeName}`
+                }
+            });
+        });
+    }
     AddMaterials(items, compAsStr) {
         this.dynamicData.materials.forEach(mat => {
             items.push({
@@ -256,6 +268,34 @@ class ucsmCompletion {
                     }
                 });
             }
+        });
+    }
+    AddSchedules(items, constType, compAsStr) {
+        this.dynamicData.schedules.forEach(sched => {
+            if (constType == sched.typeName || constType == '') {
+                items.push({
+                    label: sched.name,
+                    insertText: compAsStr ? sched.name : sched.id.toString(),
+                    kind: node_1.CompletionItemKind.Value,
+                    documentation: {
+                        kind: 'markdown',
+                        value: `**${sched.name}** (CV Schedule)\n\n${sched.description}\n\n- **Schedule Type**: ${sched.typeName}`
+                    }
+                });
+            }
+        });
+    }
+    AddDoors(items, compAsStr) {
+        this.dynamicData.doors.forEach(dor => {
+            items.push({
+                label: dor.name,
+                insertText: compAsStr ? dor.name : dor.id.toString(),
+                kind: node_1.CompletionItemKind.Value,
+                documentation: {
+                    kind: 'markdown',
+                    value: `**${dor.name}** (CV Door)\n\n${dor.description}\n\n- **Catalog Name**: ${dor.CatName}\n- **Notes**: ${dor.Notes}\n- **Tags**: ${dor.Tags}`
+                }
+            });
         });
     }
     AddVariables(items, parentObject) {
@@ -288,14 +328,14 @@ class ucsmCompletion {
             });
         });
     }
-    AddDatTypes(items) {
+    AddDatTypes(items, prevChar) {
         this.datatypes.forEach(type => {
             items.push({
                 label: type.name,
                 kind: node_1.CompletionItemKind.TypeParameter,
-                insertTextFormat: node_1.InsertTextFormat.Snippet,
+                //insertTextFormat: InsertTextFormat.Snippet,
                 detail: `${type.value} (data type)`,
-                insertText: type.value,
+                insertText: prevChar == '<' ? type.value.substring(1) : type.value,
                 documentation: {
                     kind: 'markdown',
                     value: `**${type.name}**\n\n${type.description}`
@@ -316,7 +356,7 @@ class ucsmCompletion {
         if (!isNaN(matID)) {
             const mat = this.dynamicData.materials.find(m => m.id == matID);
             if (mat) {
-                console.log(`mat ${mat.name}`);
+                //console.log(`mat ${mat.name}`);
                 return {
                     contents: {
                         kind: 'markdown',
@@ -331,11 +371,26 @@ class ucsmCompletion {
         if (!isNaN(matID)) {
             const con = this.dynamicData.constructions.find(c => c.id == matID);
             if (con) {
-                console.log(`mat ${con.name}`);
+                //console.log(`mat ${con.name}`);
                 return {
                     contents: {
                         kind: 'markdown',
                         value: `**${con.name}** (CV Construction)\n\n${con.description}\n\n- **Construction Type**: ${con.typeName}`
+                    },
+                };
+            }
+        }
+    }
+    getHoverScheduleFromID(word) {
+        const schedID = Number(word);
+        if (!isNaN(schedID)) {
+            const sched = this.dynamicData.schedules.find(sched => sched.id == schedID);
+            if (sched) {
+                //console.log(`mat ${con.name}`);
+                return {
+                    contents: {
+                        kind: 'markdown',
+                        value: `**${sched.name}** (CV Schedule)\n\n${sched.description}\n\n- **Schedule Type**: ${sched.typeName}`
                     },
                 };
             }
@@ -432,6 +487,26 @@ class ucsmCompletion {
                 contents: {
                     kind: 'markdown',
                     value: `**${SchedParams.paramName}** (Material Schedule Parameter)\n\n${SchedParams.paramDesc}\n\n- **Type**: ${SchedParams.paramTypeName}`
+                },
+                range: wordRange
+            };
+        }
+        const dor = this.dynamicData.doors.find(dor => dor.id.toString() == word);
+        if (dor && (prefixWord == '_STYLEID' || prefixWord == 'DOORSTYLEID')) {
+            return {
+                contents: {
+                    kind: 'markdown',
+                    value: `**${dor.name}** (CV Door)\n\n${dor.description}\n\n- **Catalog Name**: ${dor.CatName}\n- **Notes**: ${dor.Notes}\n- **Tags**: ${dor.Tags}`
+                },
+                range: wordRange
+            };
+        }
+        const caseStd = this.dynamicData.caseStandards.find(std => std.id.toString() === word);
+        if (caseStd && (prefixWord == '_CB:' || prefixWord == '_CV:')) {
+            return {
+                contents: {
+                    kind: 'markdown',
+                    value: `**${caseStd.id.toString()}** (Construction case standard)\n\n${caseStd.name}\n\n${caseStd.description}\n\n- **Measurment Type**: ${caseStd.typeName}`
                 },
                 range: wordRange
             };

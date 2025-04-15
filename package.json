@@ -41,12 +41,6 @@
         ]
       }
     ],
-    "typescriptServerPlugins": [
-      {
-        "name": "ucsjs-ts-plugin",
-        "path": "./out/ts-plugin.js"
-      }
-    ],
     "snippets": [
       {
         "language": "ucsm",

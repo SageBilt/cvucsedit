@@ -264,7 +264,7 @@ export class ucsmValidation {
             
             const startOffset = filteredForJS.startOffset + trimStart;
             const lineToEval = filteredForJS.filteredText;
-            this.connection.console.log(`text to evaluate "${lineToEval}" startOffset "${startOffset}"`);
+            //this.connection.console.log(`text to evaluate "${lineToEval}" startOffset "${startOffset}"`);
 
             const bracketCheck = this.checkBalancedBrackets(lineToEval);
             if (bracketCheck !== true) {
@@ -319,7 +319,7 @@ export class ucsmValidation {
 
             const startOffset = 0;
             const lineToEval = lineWithoutCommentsTrim;
-            this.connection.console.log(`text to evaluate "${lineToEval}"`);
+            //this.connection.console.log(`text to evaluate "${lineToEval}"`);
 
             const bracketCheck = this.checkBalancedBrackets(lineToEval);
             if (bracketCheck !== true) {

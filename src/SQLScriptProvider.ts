@@ -152,14 +152,15 @@ export class SQLScriptProvider {
                     const docName = '_' + item.label;
                     this.UCSJSLibRefParser.updateClasses(docName,docURI.toString(),wrappedCode,fType != 'UCSJS-Disabled');
                 } else {
-                    this.UCSJSLibRefParser.updateClassReferences(item.label,docURI.toString(),item.Code);
+                    this.UCSJSLibRefParser.updateReferences(item.label,docURI.toString(),item.Code);
                 }
             }
         });
     }
 
     public updateClassRefsForDoc(document: TextDocument) {
-        const treeItem = this.UCSLibListlookupProvider.getTreeItemByDocumentUri(document.uri.toString());
+        let treeItem = this.UCSLibListlookupProvider.getTreeItemByDocumentUri(document.uri.toString());
+        if (!treeItem) treeItem = this.UCSListlookupProvider.getTreeItemByDocumentUri(document.uri.toString());
         if (treeItem) {
             const fType = treeItem.FileType.FileTypeName;
             const newCode = document.getText();
@@ -167,8 +168,9 @@ export class SQLScriptProvider {
             if (treeItem.isJSLibrary)
                 this.UCSJSLibRefParser.updateClasses('_' + docName,document.uri.toString(),newCode, fType != 'UCSJS-Disabled');
             else
-                this.UCSJSLibRefParser.updateClassReferences(docName,document.uri.toString(),newCode);
+                this.UCSJSLibRefParser.updateReferences(docName,document.uri.toString(),newCode);
         }
+
     }
 
     private parseURI(item: CLT.CustomTreeItem) {
@@ -321,7 +323,7 @@ export class SQLScriptProvider {
 
                 this.SQLConn.ExecuteStatment(`Update UCS Set Code = @Code Where ID = @ID`,[{"Name":"ID","Value": scriptId},{"Name":"Code","Value": content}]);
                 treeItem.Code = content;
-                vscode.window.showInformationMessage(`Updated UCS ${treeItem.label} in Cabinet Vision SQL Server Database.`);
+                //vscode.window.showInformationMessage(`Updated UCS ${treeItem.label} in Cabinet Vision SQL Server Database.`);
             }
         }
     }
@@ -331,8 +333,11 @@ export class SQLScriptProvider {
         await this.loadMaterialParameters();
         await this.loadConstructionParameters();
         await this.loadScheduleParameters();
+        await this.loadCaseStandards();
         await this.loadMaterials();
         await this.loadConstructions();
+        await this.loadSchedules();
+        await this.loadDoors();
 
         return this.USCMDynamicData;
     }
@@ -412,6 +417,24 @@ export class SQLScriptProvider {
         }
     }
 
+    async loadCaseStandards() {
+        let SQLText = "Select refCaseStandard.Name as StdName,refCaseStandard.ID as StdID,refCaseStandard.Description as StdDesc,refParameterType.Name as ParamName\n";
+        SQLText += "From refCaseStandard Left Join refParameterType ON ParameterTypeID = refParameterType.ID\n";
+        const result = await this.SQLConn.ExecuteStatment(SQLText, []);
+        if (result.recordset) {
+             
+
+            const List = result.recordset.map((ucsrecord: { StdName: string; StdID: number; StdDesc: string; ParamName: string}) => ({
+                name: ucsrecord.StdName,
+                id: ucsrecord.StdID,
+                description: ucsrecord.StdDesc,
+                typeName: ucsrecord.ParamName
+                })
+            );
+            this.USCMDynamicData.caseStandards = List;
+        }
+    }  
+
     async loadMaterials() {
         let SQLText = "Select Material.Name as MatName,Material.ID as MatID,refMaterialType.Name as MatType,MaterialTypeID,Description\n";
         SQLText += "From Material Inner join refMaterialType ON refMaterialType.ID = MaterialTypeID\n";
@@ -453,6 +476,49 @@ export class SQLScriptProvider {
             this.USCMDynamicData.constructions = List;
         }
     }
+
+    async loadSchedules() {
+        let SQLText = "Select Schedule.Name as SchedName,Schedule.ID as SchedID,Schedule.Description,refPartClass.Name as PartClassName,PartClassID\n";
+        SQLText += "From Schedule inner Join refPartClass ON PartClassID = refPartClass.ID\n";
+        SQLText += "Where Schedule.Deleted = 0 and Schedule.System = 0\n"
+        SQLText += "Order By Schedule.Name";
+        const result = await this.SQLConn.ExecuteStatment(SQLText, []);
+        if (result.recordset) {
+             
+
+            const List = result.recordset.map((ucsrecord: { SchedName: string; SchedID: number; PartClassName: string; PartClassID: number;Description: string}) => ({
+                name: ucsrecord.SchedName,
+                id: ucsrecord.SchedID,
+                description: ucsrecord.Description,
+                typeName: ucsrecord.PartClassName,
+                typeID: ucsrecord.PartClassID
+                })
+            );
+            this.USCMDynamicData.schedules = List;
+        }
+    }
+
+    async loadDoors() {
+        let SQLText = "Select Door.Name as DoorName,Door.ID as DoorID,Door.Description,DoorCatalog.Name as DoorCatName,Door.Notes,Door.Tags\n";
+        SQLText += "From Door Inner Join DoorCatalog ON DoorCatalogID = DoorCatalog.ID\n";
+        SQLText += "Order By Door.Name";
+        const result = await this.SQLConn.ExecuteStatment(SQLText, []);
+        if (result.recordset) {
+             
+
+            const List = result.recordset.map((ucsrecord: { DoorName: string; DoorID: number; DoorCatName: string;Description: string;Notes: string;Tags: string}) => ({
+                name: ucsrecord.DoorName,
+                id: ucsrecord.DoorID,
+                description: ucsrecord.Description,
+                CatName: ucsrecord.DoorCatName,
+                Notes: ucsrecord.Notes,
+                Tags: ucsrecord.Tags,
+                })
+            );
+            this.USCMDynamicData.doors = List;
+        }
+    }
+
 
 
     // provideTextDocumentContent(uri: vscode.Uri): string {

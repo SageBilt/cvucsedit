@@ -1,13 +1,55 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.referenceParser = void 0;
 const parser_1 = require("@babel/parser");
 //import { traverse } from "@babel/traverse";
 const traverse = require('@babel/traverse').default;
-//import {  } from 'vscode';
+const fs = __importStar(require("fs"));
+const CONSTANTS = __importStar(require("./constants"));
 const node_1 = require("vscode-languageserver/node");
 class referenceParser {
-    docReferences = [];
+    classReferences = [];
+    CVAsmManagedReferences = [];
+    ucsjsObjects = [];
+    ucsjsMethods = [];
+    constructor() {
+        const ucsjsSystemData = JSON.parse(fs.readFileSync(CONSTANTS.UCSJSSYSTEMJSONPATH, 'utf8'));
+        this.ucsjsObjects = ucsjsSystemData.objects;
+        this.ucsjsMethods = ucsjsSystemData.methods;
+    }
     passParams(params) {
         const Result = [];
         let paramTyped;
@@ -59,9 +101,9 @@ class referenceParser {
         if (!ast)
             return;
         const symbolsMap = this.extractClassesAndMethods(ast);
-        const existKey = this.docReferences.find(docRef => docRef.name == className);
+        const existKey = this.classReferences.find(docRef => docRef.name == className);
         if (!existKey)
-            this.docReferences.push({ name: className, uri: docURI, classElements: symbolsMap, isEnabled: enabled, elementReferences: [], classReferences: [] });
+            this.classReferences.push({ name: className, uri: docURI, classElements: symbolsMap, isEnabled: enabled, elementReferences: [], classReferences: [] });
         else
             existKey.classElements = symbolsMap;
     }
@@ -105,19 +147,21 @@ class referenceParser {
         });
         return classElems;
     }
-    updateClassReferences(docName, docURI, fullDocText) {
+    updateReferences(docName, docURI, fullDocText) {
         const className = '_' + docName;
         const ast = this.parseDocument(fullDocText);
         if (!ast)
             return;
         this.cleanExistingReferences(docURI);
         this.extractCallExpressions(docURI, ast);
+        this.extractVariableAssignments(docURI, ast);
     }
     cleanExistingReferences(docURI) {
-        this.docReferences.forEach((classRef) => {
+        this.classReferences.forEach((classRef) => {
             classRef.classReferences = classRef.classReferences.filter(ref => ref.uri != docURI);
             classRef.elementReferences = classRef.elementReferences.filter(ref => ref.uri != docURI);
         });
+        this.CVAsmManagedReferences = this.CVAsmManagedReferences.filter(ref => ref.uri != docURI);
     }
     extractCallExpressions(docURI, ast) {
         traverse(ast, {
@@ -128,7 +172,7 @@ class referenceParser {
                     const propertyName = memberExpr.property?.name;
                     const startPos = node.loc ? node_1.Position.create(node.loc.start.line - 1, node.loc.start.column) : node_1.Position.create(0, 0);
                     const endPos = node.loc ? node_1.Position.create(node.loc.end.line - 1, node.loc.end.column) : node_1.Position.create(0, 0);
-                    const classRef = this.docReferences.find(docRef => docRef.name == objectName);
+                    const classRef = this.classReferences.find(docRef => docRef.name == objectName);
                     if (classRef) {
                         classRef.classReferences.push({
                             elementName: objectName,
@@ -146,6 +190,63 @@ class referenceParser {
                     }
                 }
             }
+        });
+    }
+    extractVariableAssignments(docURI, ast) {
+        traverse(ast, {
+            VariableDeclaration: ({ node }) => {
+                node.declarations.forEach((declarator) => {
+                    //declarator.id.name - this is the variable name
+                    //
+                    const init = declarator.init;
+                    if (init.type === 'Identifier') {
+                        this.ucsjsObjects.forEach(obj => {
+                            if (obj == init.name) {
+                                const variableName = declarator.id.name;
+                                this.CVAsmManagedReferences.push({
+                                    variableName,
+                                    objectName: obj,
+                                    uri: docURI,
+                                    range: this.getRange(declarator.loc),
+                                });
+                            }
+                        });
+                    }
+                    if (init.type === 'CallExpression') {
+                        const variableName = declarator.id.name;
+                        const callee = init.callee;
+                        const calleeObj = callee.object;
+                        const calleeProp = callee.property;
+                        const varRef = this.CVAsmManagedReferences.find(varRef => varRef.variableName == calleeObj?.name
+                            && varRef.variableName != variableName);
+                        //callee.object.name should be _this
+                        //callee.property.name should be the method name
+                        this.ucsjsMethods.forEach(meth => {
+                            if (meth.name == calleeProp?.name && meth.parentObject.includes(calleeObj?.name) || varRef) {
+                                if (meth.returnType.includes('CVAsmManaged')) {
+                                    this.CVAsmManagedReferences.push({
+                                        variableName,
+                                        objectName: varRef ? varRef.objectName : calleeObj.name,
+                                        uri: docURI,
+                                        range: this.getRange(declarator.loc),
+                                    });
+                                }
+                            }
+                        });
+                        // this.CVAsmManagedReferences.forEach(varRef => {
+                        //     const variableName = (declarator.id as Identifier).name;
+                        //     if (varRef.objectName == calleeObj?.name && varRef.variableName != variableName) {
+                        //         this.CVAsmManagedReferences.push({
+                        //             variableName,
+                        //             objectName: calleeObj.name,
+                        //             uri: docURI,
+                        //             range: this.getRange(declarator.loc),
+                        //         });
+                        //     }
+                        // });
+                    }
+                });
+            },
         });
     }
 }

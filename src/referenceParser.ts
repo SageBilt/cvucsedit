@@ -4,15 +4,28 @@ const traverse = require('@babel/traverse').default;
 import { ClassDeclaration as BabelClassDeclaration, ClassMethod, ClassProperty, Identifier, Pattern
     , RestElement, CallExpression, MemberExpression, 
     callExpression,
-    SourceLocation} from '@babel/types';
-import { docClassRef, classElement, ElementParam, ClassReference } from './interfaces';
-//import {  } from 'vscode';
+    SourceLocation,
+    VariableDeclaration,
+    VariableDeclarator,
+    Expression} from '@babel/types';
+import { docClassRef, classElement, ElementParam, UCSJSSystemMethod, UCSJSSystemData, CVAsmManaged } from './interfaces';
+import * as fs from 'fs';
+import * as CONSTANTS from './constants';
 import { Position, Range ,CompletionItemKind } from 'vscode-languageserver/node';
 
 
 
 export class referenceParser {
-    public docReferences: docClassRef[] = [];
+    public classReferences: docClassRef[] = [];
+    public CVAsmManagedReferences : CVAsmManaged[] = [];
+    private ucsjsObjects: string[] = [];
+    public ucsjsMethods: UCSJSSystemMethod[] = [];
+
+    constructor() {
+          const ucsjsSystemData: UCSJSSystemData = JSON.parse(fs.readFileSync(CONSTANTS.UCSJSSYSTEMJSONPATH, 'utf8'));
+          this.ucsjsObjects = ucsjsSystemData.objects;
+          this.ucsjsMethods = ucsjsSystemData.methods;
+    }
 
     private passParams(params: Array<any>) : ElementParam[] {
         const Result: ElementParam[] = [];
@@ -69,9 +82,9 @@ export class referenceParser {
         if (!ast) return
         const symbolsMap = this.extractClassesAndMethods(ast);
 
-        const existKey = this.docReferences.find(docRef => docRef.name == className);
+        const existKey = this.classReferences.find(docRef => docRef.name == className);
         if (!existKey) 
-            this.docReferences.push({name: className,uri: docURI,classElements: symbolsMap,isEnabled: enabled,elementReferences: [],classReferences: []});
+            this.classReferences.push({name: className,uri: docURI,classElements: symbolsMap,isEnabled: enabled,elementReferences: [],classReferences: []});
         else 
             existKey.classElements = symbolsMap;
     }
@@ -131,19 +144,22 @@ export class referenceParser {
         return classElems;
     }
 
-    public updateClassReferences(docName: string,docURI: string,fullDocText: string) {
+    public updateReferences(docName: string,docURI: string,fullDocText: string) {
         const className = '_' + docName;
         const ast = this.parseDocument(fullDocText);
         if (!ast) return
         this.cleanExistingReferences(docURI);
         this.extractCallExpressions(docURI,ast);
+        this.extractVariableAssignments(docURI,ast);
     }
 
     private cleanExistingReferences(docURI: string) {
-        this.docReferences.forEach((classRef: docClassRef) => {
+        this.classReferences.forEach((classRef: docClassRef) => {
             classRef.classReferences = classRef.classReferences.filter(ref => ref.uri != docURI);
             classRef.elementReferences = classRef.elementReferences.filter(ref => ref.uri != docURI);
         });
+
+        this.CVAsmManagedReferences = this.CVAsmManagedReferences.filter(ref => ref.uri != docURI);
     }
     private extractCallExpressions(docURI: string,ast: ParseResult) {
 
@@ -158,7 +174,7 @@ export class referenceParser {
                   const endPos = node.loc ? Position.create(node.loc.end.line - 1, node.loc.end.column) : Position.create(0, 0);
     
         
-                  const classRef = this.docReferences.find(docRef => docRef.name == objectName);
+                  const classRef = this.classReferences.find(docRef => docRef.name == objectName);
                   if (classRef) {
                     classRef.classReferences.push({
                         elementName: objectName,
@@ -177,6 +193,74 @@ export class referenceParser {
                   }
                 }
               }
+        });
+    }
+
+    private extractVariableAssignments(docURI: string, ast: ParseResult) {
+        traverse(ast, {
+            VariableDeclaration: ({ node }: { node: VariableDeclaration }) => {
+                node.declarations.forEach((declarator: VariableDeclarator) => {
+
+                    //declarator.id.name - this is the variable name
+                    //
+
+            
+                    const init = (declarator.init as Expression);
+                    if (init.type === 'Identifier') {
+                        this.ucsjsObjects.forEach(obj =>{
+
+                            if (obj == init.name) {
+                                const variableName = (declarator.id as Identifier).name;
+
+                                this.CVAsmManagedReferences.push({
+                                    variableName,
+                                    objectName: obj,
+                                    uri: docURI,
+                                    range: this.getRange(declarator.loc),
+                                });
+                            }
+                        });
+                    }
+
+                    if (init.type === 'CallExpression') {
+                        const variableName = (declarator.id as Identifier).name;
+                        const callee = (init.callee as MemberExpression);
+                        const calleeObj = (callee.object as Identifier);
+                        const calleeProp = (callee.property as Identifier);
+
+                        const varRef = this.CVAsmManagedReferences.find(varRef => varRef.variableName == calleeObj?.name
+                                && varRef.variableName != variableName 
+                            );
+                        //callee.object.name should be _this
+                        //callee.property.name should be the method name
+                        this.ucsjsMethods.forEach(meth => {
+                            if (meth.name == calleeProp?.name && meth.parentObject.includes(calleeObj?.name) || varRef) {
+                                if (meth.returnType.includes('CVAsmManaged')) {
+             
+
+                                    this.CVAsmManagedReferences.push({
+                                        variableName,
+                                        objectName: varRef ? varRef.objectName : calleeObj.name,
+                                        uri: docURI,
+                                        range: this.getRange(declarator.loc),
+                                    });
+                                }
+                            }
+                        });
+                        // this.CVAsmManagedReferences.forEach(varRef => {
+                        //     const variableName = (declarator.id as Identifier).name;
+                        //     if (varRef.objectName == calleeObj?.name && varRef.variableName != variableName) {
+                        //         this.CVAsmManagedReferences.push({
+                        //             variableName,
+                        //             objectName: calleeObj.name,
+                        //             uri: docURI,
+                        //             range: this.getRange(declarator.loc),
+                        //         });
+                        //     }
+                        // });
+                    }
+                });
+            },
         });
     }
 

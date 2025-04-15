@@ -10,7 +10,7 @@ import {
    } from 'vscode-languageserver/node';
    
    import * as fs from 'fs';
-import { UCSJSSystemConstants, UCSJSSystemPropertie, UCSJSSystemFunction, UCSJSSystemData,UCSJSSystemMethod, UCSJSParameterDef, DynamicData, docClassRef, classElement, ElementParam } from '.././interfaces';
+import { UCSJSSystemConstants, UCSJSSystemPropertie, UCSJSSystemFunction, UCSJSSystemData,UCSJSSystemMethod, UCSJSParameterDef, DynamicData, docClassRef, classElement, ElementParam, CVAsmManaged } from '.././interfaces';
 import * as CONSTANTS from '.././constants';
 import { Position, Uri } from 'vscode';
 
@@ -28,6 +28,8 @@ export class ucsjsCompletion {
     public dynamicData: DynamicData = {} as DynamicData;
 
     public classLibraries: docClassRef[] = [];
+
+    public CVAsmManagedReferences: CVAsmManaged[] = [];
 
 
     // private AssemblyTypes: string[] = [];
@@ -72,7 +74,7 @@ export class ucsjsCompletion {
             //detail: `**${obj}**\n\n (CV object)`
             documentation: {
                 kind: 'markdown',
-                value: `**${obj}**\n\n (CV object)`
+                value: `**${obj}**\n\n (CVAsmManaged object)`
               }
           });
         });
@@ -167,7 +169,6 @@ export class ucsjsCompletion {
         return Result;
     }  
 
-
     AddMethods(items: CompletionItem[],parentObject? : string) {
         this.ucsjsMethods.forEach(method => {
             const pObj = parentObject ? parentObject : ''; 
@@ -217,6 +218,22 @@ export class ucsjsCompletion {
                 return true;
             } 
         }
+        
+        return false;
+    }
+
+    isCVAsmManaged(items: CompletionItem[],linePrefix: string)  : boolean {
+        for (const CVAsmObj of this.CVAsmManagedReferences) {
+            //console.log(linePrefix , CVAsmObj.variableName);
+            //const wordRegex = new RegExp(`${CVAsmObj.objectName}[^\\s]*$`, 'i');
+            if (linePrefix == CVAsmObj.variableName) {
+                this.AddProperties(items,CVAsmObj.objectName);
+                this.AddMethods(items,CVAsmObj.objectName);
+                console.log(linePrefix , CVAsmObj.variableName, CVAsmObj.objectName);
+                return true;
+            } 
+        }
+        
         return false;
     }
 
@@ -265,7 +282,7 @@ export class ucsjsCompletion {
             return {
             contents: {
                 kind: 'markdown',
-                value: `**${object}**\n\n (CV object)`
+                value: `**${object}**\n\n (CVAsmManaged object)`
             },
             range: wordRange // Optional: Highlight the word
             };
@@ -282,32 +299,37 @@ export class ucsjsCompletion {
             };
         }
 
+        const varRefMatch = this.CVAsmManagedReferences.find(varRef => varRef.variableName == prefixWord);
+
         const property = this.ucsjsProperties.find(prop => prop.name === word);
-        if (property && property.parentObject.includes(prefixWord)) { // 
-            //this.connection.console.log(`prefixWord "${prefixWord}" parentObject "${property.parentObject}"`);
-            return {
-            contents: {
-                kind: 'markdown',
-                value: `**${property.name}**\n\n (${property.Type} type)`
-            },
-            range: wordRange
-            };
+        if (property) { // 
+            if (property.parentObject.includes(prefixWord) || varRefMatch && property.parentObject.includes(varRefMatch.objectName)) {
+                //this.connection.console.log(`prefixWord "${prefixWord}" parentObject "${property.parentObject}"`);
+                return {
+                contents: {
+                    kind: 'markdown',
+                    value: `**${property.name}**\n\n (${property.Type} type)`
+                },
+                range: wordRange
+                };
+            }
         }
 
         const method = this.ucsjsMethods.find(method => method.name === word);
-
-        if (method && method.parentObject.includes(prefixWord)) {
+        if (method) {
             //this.connection.console.log(`prefixWord "${prefixWord}" parentObject "${method.parentObject}"`);
-            const paramDefs = this.buildMethodParams(method.parameterDef); 
-            const paramDefStr = paramDefs != '' ? `\n- **Parameters**: \n\n- ${paramDefs}` : '';
-            //this.connection.console.log(`Hover parameter data type "${method.name}"`);
-            return {
-            contents: {
-                kind: 'markdown',
-                value: `**${method.name}**\n\n- **Description**: ${method.description}\n- **Definition**: ${method.definition}\n- **Example**: ${method.example}\n- **ReturnType**: ${method.returnType}${paramDefStr}`
-            },
-            range: wordRange
-            };
+            if (method.parentObject.includes(prefixWord) || varRefMatch && method.parentObject.includes(varRefMatch.objectName)) {
+                const paramDefs = this.buildMethodParams(method.parameterDef); 
+                const paramDefStr = paramDefs != '' ? `\n- **Parameters**: \n\n- ${paramDefs}` : '';
+                //this.connection.console.log(`Hover parameter data type "${method.name}"`);
+                return {
+                contents: {
+                    kind: 'markdown',
+                    value: `**${method.name}**\n\n- **Description**: ${method.description}\n- **Definition**: ${method.definition}\n- **Example**: ${method.example}\n- **ReturnType**: ${method.returnType}${paramDefStr}`
+                },
+                range: wordRange
+                };
+            }
         }
 
         const classLib = this.classLibraries.find(item => item.name === word);
@@ -337,6 +359,19 @@ export class ucsjsCompletion {
                         range: wordRange // Optional: Highlight the word
                     };  
                 }
+            }
+        }
+
+        for (const CVAsmObj of this.CVAsmManagedReferences) {
+            if (CVAsmObj.variableName == word) {
+
+                return {
+                    contents: {
+                        kind: 'markdown',
+                        value: `**${CVAsmObj.variableName}**\n\n (CVAsmManaged object "${CVAsmObj.objectName}")`
+                    },
+                    range: wordRange // Optional: Highlight the word
+                    };
             }
         }
 

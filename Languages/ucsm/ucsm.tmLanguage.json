@@ -8,6 +8,7 @@
     { "include": "#valueTypes" },
     { "include": "#keywords" },
     { "include": "#operators" },
+    { "include": "#objectClasses" },
     { "include": "#numbersWithUnits" },
     { "include": "#functions" },
     { "include": "#objectPaths" },
@@ -15,8 +16,8 @@
     { "include": "#controlStructures" },
     { "include": "#dimStatements" },
     { "include": "#forEachTypes" },
-    { "include": "#objectClasses" },
     { "include": "#variables" }
+
   ],
   "repository": {
     "comments": {
@@ -48,7 +49,7 @@
       "patterns": [
         {
           "name": "keyword.control.ucsm",
-          "match": "(?i)\\b(If|Then|Else|End|While|Do|Exit|Delete|For|Each|Dim|as|New|this|null)\\b"
+          "match": "(?i)\\b(If|Then|Else|End|While|Do|Exit|Delete|For|Each|Dim|as|New|null|AND|OR)\\b"
         }
       ]
     },
@@ -115,7 +116,7 @@
       "patterns": [
         {
           "name": "variable.other.object.ucsm",
-          "match": "(?i)\\b(this|[A-Za-z_][A-Za-z0-9_]*)(?:\\.[A-Za-z_][A-Za-z0-9_]*)+\\b"
+          "match": "(?i)\\b([A-Za-z_][A-Za-z0-9_]*)(?:\\.[A-Za-z_][A-Za-z0-9_]*)+\\b"
         }
       ]
     },
@@ -201,7 +202,7 @@
       "patterns": [
         {
           "name": "entity.name.class.ucsm",
-          "match": "(?i)\\b(ASM_CLASS_ACSRY|ASM_CLASS_APPL|ASM_CLASS_BASE|ASM_CLASS_BATH|ASM_CLASS_CEILING|ASM_CLASS_CLOSET|ASM_CLASS_CLOSETBASE|ASM_CLASS_CLOSETUPPER|ASM_CLASS_DECORATIVE|ASM_CLASS_DOOR|ASM_CLASS_FIXTURE|ASM_CLASS_FLOOR|ASM_CLASS_MOLDING|ASM_CLASS_NG_ACSRY|ASM_CLASS_SPLASH|ASM_CLASS_TALL|ASM_CLASS_TOP|ASM_CLASS_UPPER|ASM_CLASS_USER_LIGHT|ASM_CLASS_VANITY|ASM_CLASS_WALL|ASM_CLASS_WALLFAC)\\b"
+          "match": "(?i)\\b(ASM_CLASS_ACSRY|ASM_CLASS_APPL|ASM_CLASS_BASE|ASM_CLASS_BATH|ASM_CLASS_CEILING|ASM_CLASS_CLOSET|ASM_CLASS_CLOSETBASE|ASM_CLASS_CLOSETUPPER|ASM_CLASS_DECORATIVE|ASM_CLASS_DOOR|ASM_CLASS_FIXTURE|ASM_CLASS_FLOOR|ASM_CLASS_MOLDING|ASM_CLASS_NG_ACSRY|ASM_CLASS_SPLASH|ASM_CLASS_TALL|ASM_CLASS_TOP|ASM_CLASS_UPPER|ASM_CLASS_USER_LIGHT|ASM_CLASS_VANITY|ASM_CLASS_WALL|ASM_CLASS_WALLFAC|This|Cab)\\b"
         },
         {
           "name": "entity.name.type.ucsm",

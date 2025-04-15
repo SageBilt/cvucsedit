@@ -238,7 +238,7 @@ class ucsmValidation {
                 continue;
             const startOffset = filteredForJS.startOffset + trimStart;
             const lineToEval = filteredForJS.filteredText;
-            this.connection.console.log(`text to evaluate "${lineToEval}" startOffset "${startOffset}"`);
+            //this.connection.console.log(`text to evaluate "${lineToEval}" startOffset "${startOffset}"`);
             const bracketCheck = this.checkBalancedBrackets(lineToEval);
             if (bracketCheck !== true) {
                 this.addDiagnostic(diagnostics, i, startOffset + bracketCheck.position, startOffset + bracketCheck.position + 1, bracketCheck.message);
@@ -272,7 +272,7 @@ class ucsmValidation {
             //this.connection.console.log(`trimStartText "${trimStartText}"`);
             const startOffset = 0;
             const lineToEval = lineWithoutCommentsTrim;
-            this.connection.console.log(`text to evaluate "${lineToEval}"`);
+            //this.connection.console.log(`text to evaluate "${lineToEval}"`);
             const bracketCheck = this.checkBalancedBrackets(lineToEval);
             if (bracketCheck !== true) {
                 this.addDiagnostic(diagnostics, i, startOffset + bracketCheck.position, startOffset + bracketCheck.position + 1, bracketCheck.message);
