@@ -8,6 +8,7 @@ This extension adds features to VS Code for loading, editing and saving Cabinet 
 
 ### key benefits over existing UCS editor
 - Edit multiple UCS's at the same time.
+- Search UCS list and contents.
 - Edit UCS's while testing logic in the object.
 - Nicer looking syntax highlighting.
 - Cabinet Vision documented UCS parameters, functions, keywords etc, integrated into the editor via intellisense and hover.
@@ -16,7 +17,8 @@ This extension adds features to VS Code for loading, editing and saving Cabinet 
 - Database specific items like user added material, schedule & construction parameters integrated into into intellisense & hover.
 - Snippets (pre-built code).
 - Syntax error checking.
-- Filter UCS list and search UCS contents.
+- Find user defined variable references
+- Find user defined variable definitions
 
 
 ### Main Features
@@ -31,7 +33,7 @@ This extension adds features to VS Code for loading, editing and saving Cabinet 
   - 
 
 - **Language server**
-    The extension uses a language server (LSP) to handle autocomplete, hover and references for declared variable, for both **UCS:M** and **UCS:JS**. Using an LSP inprove user experance as it run under a seperate process and doesn't create any delay for the user typing.
+    The extension uses a language server (LSP) to handle autocomplete, hover and references for declared variables for both **UCS:M** and **UCS:JS**. Using an LSP inproves user experance as it runs under a seperate process and doesn't create any delay for the user typing.
 
 
 
@@ -59,7 +61,8 @@ Currently supports all Cabinet Versions from 2021 through to 2024.
 
 #### Available Setttings
 
-
+* `cvucsedit.Server`: The Cabinet Vision database SQL server instance name (defaults to **localhost\CV24**).
+* `cvucsedit.Database`: The name of the Cabinet Vision SQL database (defaults to **CVData**).
 
 #### Available Commands
 
@@ -78,39 +81,10 @@ Please report all issues on [Github](https://github.com/SageBilt/cvucsedit/issue
 
 ## Release Notes
 
-Initial release
-
 ### 1.0.0
 
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
+Initial release
 
 ---
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
 
 **Enjoy!**
