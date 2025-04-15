@@ -1,14 +1,23 @@
 {
+  "publisher": "SageDoorsLtd",
   "name": "cvucsedit",
-  "displayName": "CV-UCS-Editor",
-  "description": "Cabinet Vision UCS Editor",
-  "version": "0.0.1",
+  "displayName": "Cabinet Vision UCS Editor",
+  "description": "Adds features to VS Code for loading, editing and saving Cabinet Vision User Created Standards",
+  "version": "1.0.0",
+  "author": {
+    "name": "David Bilton"
+  },
+  "bugs": {
+    "url": "https://github.com/SageBilt/cvucsedit/issues"
+  },
+  "pricing": "Free",
   "engines": {
     "vscode": "^1.98.0"
   },
   "categories": [
-    "Other"
+    "Programming Languages"
   ],
+  "icon": "images/Ext Icon.png",
   "activationEvents": [
     "onStartupFinished"
   ],
@@ -71,7 +80,7 @@
         {
           "id": "cvucs-container",
           "title": "Cabinet Vision UCS Editor",
-          "icon": "./icons/UCSM.svg"
+          "icon": "./icons/UCS Editor.png"
         }
       ]
     },
