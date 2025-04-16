@@ -4,12 +4,16 @@
   "name": "cvucsedit",
   "displayName": "Cabinet Vision UCS Editor",
   "description": "Adds features to VS Code for loading, editing and saving Cabinet Vision User Created Standards",
-  "version": "1.1.0",
+  "version": "1.0.0",
   "author": {
     "name": "David Bilton"
   },
   "bugs": {
     "url": "https://github.com/SageBilt/cvucsedit/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SageBilt/cvucsedit.git"
   },
   "pricing": "Free",
   "engines": {
