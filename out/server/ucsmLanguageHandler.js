@@ -328,14 +328,14 @@ class ucsmLanguageHandler {
             });
         });
     }
-    AddDatTypes(items, prevChar) {
+    AddDatTypes(items, excludeFirstChar) {
         this.datatypes.forEach(type => {
             items.push({
                 label: type.name,
                 kind: node_1.CompletionItemKind.TypeParameter,
                 //insertTextFormat: InsertTextFormat.Snippet,
                 detail: `${type.value} (data type)`,
-                insertText: prevChar == '<' ? type.value.substring(1) : type.value,
+                insertText: excludeFirstChar ? type.value.substring(1) : type.value,
                 documentation: {
                     kind: 'markdown',
                     value: `**${type.name}**\n\n${type.description}`

@@ -18,7 +18,7 @@
   "categories": [
     "Programming Languages"
   ],
-  "icon": "images/Ext Icon.png",
+  "icon": "./Icons/Ext_Icon.png",
   "activationEvents": [
     "onStartupFinished"
   ],
@@ -185,7 +185,6 @@
         "description": "Annotates a symbol that is implemented natively"
       }
     ]
-  
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
