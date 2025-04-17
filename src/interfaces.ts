@@ -176,6 +176,14 @@ export interface UCSJSSystemData {
     typeID : number;
   }
 
+  export interface Connections {
+    name : string;
+    id : number;
+    description : string;
+    typeName : string;
+    typeID : number;
+  }
+
   export interface Doors {
     name : string;
     id : number;
@@ -195,6 +203,7 @@ export interface UCSJSSystemData {
     schedules: Schedules[];
     caseStandards: CaseStandards[];
     doors : Doors[];
+    connections: Connections[];
   }
 
   export interface ElementParam {

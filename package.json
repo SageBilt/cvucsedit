@@ -4,7 +4,7 @@
   "name": "cvucsedit",
   "displayName": "Cabinet Vision UCS Editor",
   "description": "Adds features to VS Code for loading, editing and saving Cabinet Vision User Created Standards",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "author": {
     "name": "David Bilton"
   },
@@ -208,8 +208,7 @@
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.4.1",
     "eslint": "^9.21.0",
-    "typescript": "^5.8.2",
-    "vscode-languageserver": "^9.0.1"
+    "typescript": "^5.8.2"
   },
   "dependencies": {
     "@babel/parser": "^7.27.0",
@@ -217,6 +216,7 @@
     "express": "^4.21.2",
     "mssql": "^11.0.1",
     "vscode-languageclient": "^9.0.1",
-    "vscode-languageserver-textdocument": "^1.0.12"
+    "vscode-languageserver": "^9.0.1",
+    "vscode-languageserver-textdocument": "^1.0.11"
   }
 }

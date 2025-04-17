@@ -300,6 +300,21 @@ export class ucsmLanguageHandler {
             });
         });
       }
+
+      AddConnections(items: CompletionItem[],compAsStr:boolean) {
+        this.dynamicData.connections.forEach(conn => {
+          
+            items.push({
+              label: conn.name,
+              insertText: compAsStr ? conn.name : conn.id.toString(),
+              kind: CompletionItemKind.Value,
+              documentation: {
+                kind: 'markdown',
+                value: `**${conn.name}** (CV Connection)\n\n${conn.description}\n\n- **Connection Type**: ${conn.typeName}`
+              }
+            });
+        });
+      }
     
       AddVariables(items: CompletionItem[],parentObject? : string) {
         this.variables.forEach(variable => {
@@ -407,6 +422,21 @@ export class ucsmLanguageHandler {
               },
             };
           }
+        }
+      }
+
+      getHoverConnectionFromID(word: string) : Hover | undefined {
+        const connID = Number(word);
+        if (!isNaN(connID)) {
+          const conn = this.dynamicData.connections.find(conn => conn.id == connID);
+          if (conn) {
+              return {
+              contents: {
+                 kind: 'markdown',
+                value: `**${conn.name}** (CV Connection)\n\n${conn.description}\n\n- **Connection Type**: ${conn.typeName}`
+              },
+            };
+          }  
         }
       }
 

@@ -298,6 +298,19 @@ class ucsmLanguageHandler {
             });
         });
     }
+    AddConnections(items, compAsStr) {
+        this.dynamicData.connections.forEach(conn => {
+            items.push({
+                label: conn.name,
+                insertText: compAsStr ? conn.name : conn.id.toString(),
+                kind: node_1.CompletionItemKind.Value,
+                documentation: {
+                    kind: 'markdown',
+                    value: `**${conn.name}** (CV Connection)\n\n${conn.description}\n\n- **Connection Type**: ${conn.typeName}`
+                }
+            });
+        });
+    }
     AddVariables(items, parentObject) {
         this.variables.forEach(variable => {
             if (!parentObject && !variable.parentObject || variable.parentObject == parentObject) {
@@ -391,6 +404,20 @@ class ucsmLanguageHandler {
                     contents: {
                         kind: 'markdown',
                         value: `**${sched.name}** (CV Schedule)\n\n${sched.description}\n\n- **Schedule Type**: ${sched.typeName}`
+                    },
+                };
+            }
+        }
+    }
+    getHoverConnectionFromID(word) {
+        const connID = Number(word);
+        if (!isNaN(connID)) {
+            const conn = this.dynamicData.connections.find(conn => conn.id == connID);
+            if (conn) {
+                return {
+                    contents: {
+                        kind: 'markdown',
+                        value: `**${conn.name}** (CV Connection)\n\n${conn.description}\n\n- **Connection Type**: ${conn.typeName}`
                     },
                 };
             }

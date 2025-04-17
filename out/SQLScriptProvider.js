@@ -308,6 +308,7 @@ class SQLScriptProvider {
         await this.loadConstructions();
         await this.loadSchedules();
         await this.loadDoors();
+        await this.loadConnections();
         return this.USCMDynamicData;
     }
     async loadPartTypes() {
@@ -449,6 +450,23 @@ class SQLScriptProvider {
                 Tags: ucsrecord.Tags,
             }));
             this.USCMDynamicData.doors = List;
+        }
+    }
+    async loadConnections() {
+        let SQLText = "Select Connection.Name as ConnName,Connection.ID as ConnID,Connection.Description,refConnectionType.Name as ConnTypeName,ConnectionTypeID\n";
+        SQLText += "From Connection Inner Join refConnectionType ON ConnectionTypeID = refConnectionType.ID\n";
+        SQLText += "Where System = 0\n";
+        SQLText += "Order By Connection.Name";
+        const result = await this.SQLConn.ExecuteStatment(SQLText, []);
+        if (result.recordset) {
+            const List = result.recordset.map((ucsrecord) => ({
+                name: ucsrecord.ConnName,
+                id: ucsrecord.ConnID,
+                description: ucsrecord.Description,
+                typeName: ucsrecord.ConnTypeName,
+                typeID: ucsrecord.ConnectionTypeID
+            }));
+            this.USCMDynamicData.connections = List;
         }
     }
 }

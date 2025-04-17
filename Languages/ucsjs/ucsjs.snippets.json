@@ -1,14 +1,110 @@
 {
-    "CreateChild": {
-      "prefix": "CreateChild",
-      "body": ["CreateChild(${1:long type},${2:string name}${3:, string description[optional]})"],
-      "description": "Returns a new object as a child of the current _this object. Creates a child of the object it is called on, not always _this."
-    },
-    "Evaluate": {
-      "prefix": "Evaluate",
-      "body": ["Evaluate(${1:string name})"],
-      "description": "Evaluate a CV equation utilizing object parameters"
-    }
+  "NewPart": {
+    "prefix": "NewPart",
+    "body": [
+        "const ${1:NewPart} = _this.CreateChild(OBJ_PART, '${2:part name}'${3:, string description[optional]});",
+        "${1:NewPart}.DX = ${4:0};",
+        "${1:NewPart}.DY = ${5:0};",
+        "${1:NewPart}.DZ = ${6:'_M:DZ'};",
+        "${1:NewPart}.X = ${7:0};",
+        "${1:NewPart}.Y = ${8:0};",
+        "${1:NewPart}.Z = ${9:0};",
+        "${1:NewPart}.AX = ${10:0};",
+        "${1:NewPart}.AY = ${11:0};",
+        "${1:NewPart}.AZ = ${12:0};"
+    ],
+    "description": "Creates a new Part with customizable name"
+  },
+  "NewRoute": {
+    "prefix": "NewRoute",
+    "body": [
+        "const ${1:NewRoute} = _this.CreateChild(OBJ_ROUTE, '${2:route name}'${3:, string description[optional]});",
+        "${1:NewRoute}.DX = ${4:0};",
+        "${1:NewRoute}.DY = ${5:0};",
+        "${1:NewRoute}.DZ = ${6:0};",
+        "${1:NewRoute}.X = ${7:0};",
+        "${1:NewRoute}.Y = ${8:0};",
+        "${1:NewRoute}.Z = ${9:0};",
+        "${1:NewRoute}.AX = ${10:0};",
+        "${1:NewRoute}.AY = ${11:0};",
+        "${1:NewRoute}.AZ = ${12:0};",
+        "${1:NewRoute}.SetParameter('_FACEWP', ${13:0}, VAL_INTEGER);",
+        "${1:NewRoute}.SetParameter('_POCKET', ${14:0}, VAL_INTEGER);"
+    ],
+    "description": "Creates a new Route with customizable name"
+  },
+  "NewDado": {
+    "prefix": "NewDado",
+    "body": [
+        "const ${1:NewDado} = _this.CreateChild(OBJ_DADO, '${2:dado name}'${3:, string description[optional]});",
+        "${1:NewDado}.DX = ${4:0};",
+        "${1:NewDado}.DY = ${5:0};",
+        "${1:NewDado}.DZ = ${6:0};",
+        "${1:NewDado}.X = ${7:0};",
+        "${1:NewDado}.Y = ${8:0};",
+        "${1:NewDado}.Z = ${9:0};",
+        "${1:NewDado}.AX = ${10:0};",
+        "${1:NewDado}.AY = ${11:0};",
+        "${1:NewDado}.AZ = ${12:0};",
+        "${1:NewDado}.SetParameter('_FACEWP', ${13:0}, VAL_INTEGER);"
+    ],
+    "description": "Creates a new Route with customizable name"
+  },
+  "NewHole": {
+    "prefix": "NewHole",
+    "body": [
+        "const ${1:NewHole} = _this.CreateChild(OBJ_HOLE, '${2:hole name}'${3:, string description[optional]});",
+        "${1:NewHole}.DX = ${4:0};",
+        "${1:NewHole}.DY = ${5:0};",
+        "${1:NewHole}.DZ = ${6:0};",
+        "${1:NewHole}.X = ${7:0};",
+        "${1:NewHole}.Y = ${8:0};",
+        "${1:NewHole}.Z = ${9:0};",
+        "${1:NewHole}.AX = ${10:0};",
+        "${1:NewHole}.AY = ${11:0};",
+        "${1:NewHole}.AZ = ${12:0};",
+        "${1:NewHole}.SetParameter('_FACEWP', ${13:0}, VAL_INTEGER);"
+    ],
+    "description": "Creates a new Hole with customizable name"
+  },
+  "NewLinebore": {
+    "prefix": "NewLinebore",
+    "body": [
+        "const ${1:NewLinebore} = _this.CreateChild(OBJ_LINEBORE, '${2:linebore name}'${3:, string description[optional]});",
+        "${1:NewLinebore}.DX = ${4:0};",
+        "${1:NewLinebore}.DY = ${5:0};",
+        "${1:NewLinebore}.DZ = ${6:0};",
+        "${1:NewLinebore}.X = ${7:0};",
+        "${1:NewLinebore}.Y = ${8:0};",
+        "${1:NewLinebore}.Z = ${9:0};",
+        "${1:NewLinebore}.AX = ${10:0};",
+        "${1:NewLinebore}.AY = ${11:0};",
+        "${1:NewLinebore}.AZ = ${12:0};",
+        "${1:NewLinebore}.SetParameter('_FACEWP', ${13:0}, VAL_INTEGER);",
+        "${1:NewLinebore}.REPT = ${14:1};",
+        "${1:NewLinebore}.SPCNG = ${15:1};"
+    ],
+    "description": "Creates a new Linebore with customizable name"
+  },
+  "NewConnection": {
+    "prefix": "NewConnection",
+    "body": [
+        "const ${1:NewConnection} = _this.CreateChild(OBJ_CONNECTION, '${2:connection name}'${3:, string description[optional]});",
+        "${1:NewConnection}.DX = ${4:0};",
+        "${1:NewConnection}.DY = ${5:0};",
+        "${1:NewConnection}.DZ = ${6:0};",
+        "${1:NewConnection}.X = ${7:0};",
+        "${1:NewConnection}.Y = ${8:0};",
+        "${1:NewConnection}.Z = ${9:0};",
+        "${1:NewConnection}.AX = ${10:0};",
+        "${1:NewConnection}.AY = ${11:0};",
+        "${1:NewConnection}.AZ = ${12:0};",
+        "${1:NewConnection}._CONNID = ${13:0};",
+        "${1:NewConnection}.SetParameter('_CONNFLIP', ${14:false}, VAL_BOOL);",
+        "${1:NewConnection}.SetParameter('_CONNREV', ${15:false}, VAL_BOOL);"
+    ],
+    "description": "Creates a new Connection with customizable name"
+  }
 }
 
 

@@ -77,12 +77,18 @@ function getDbConfig() {
 class SQLConnection {
     ConnPool;
     async getPool() {
-        if (!this.ConnPool) {
+        let tryCount = 0;
+        let errorMessage = '';
+        while (!this.ConnPool && tryCount < 3) {
             try {
                 this.ConnPool = await new mssql.ConnectionPool(getDbConfig()).connect();
+                errorMessage = '';
             }
             catch (error) {
-                //vscode.window.showErrorMessage(error);
+                errorMessage = 'An unknown error occurred';
+                if (error instanceof Error) {
+                    errorMessage = error.message; // Safe to access if error is an Error
+                }
                 const config = GetConfig();
                 const origServer = config.get('Server', '');
                 const origDatabase = config.get('Database', '');
@@ -90,11 +96,13 @@ class SQLConnection {
                 const newDatabase = await vscode.window.showInputBox({ prompt: 'Enter Cabinet Vision SQL Database Name', value: origDatabase }) || origDatabase;
                 await writeConfig('Server', newServer);
                 await writeConfig('Database', newDatabase);
-                const orig1Server = config.get('Server', '');
-                const orig1Database = config.get('Database', '');
-                this.ConnPool = await new mssql.ConnectionPool(getDbConfig()).connect();
             }
+            // const orig1Server = config.get('Server', '') ;
+            // const orig1Database = config.get('Database', '');
+            tryCount++;
         }
+        if (errorMessage != '')
+            vscode.window.showErrorMessage(errorMessage);
         return this.ConnPool;
     }
     async OpenPool() {

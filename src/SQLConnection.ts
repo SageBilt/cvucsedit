@@ -56,27 +56,40 @@ interface StatementResult {
 export class SQLConnection {
     private ConnPool: mssql.ConnectionPool | undefined;
 
-    async getPool(): Promise<mssql.ConnectionPool> {
-        if (!this.ConnPool) {
-            try {
-                this.ConnPool = await new mssql.ConnectionPool(getDbConfig()).connect();
-            } catch (error) {
-                //vscode.window.showErrorMessage(error);
-                const config = GetConfig();
-                const origServer = config.get('Server', '') ;
-                const origDatabase = config.get('Database', '');
-                const newServer = await vscode.window.showInputBox({ prompt: 'Enter Cabinet Vision SQL Server Name', value: origServer}) || origServer;
-                const newDatabase = await vscode.window.showInputBox({ prompt: 'Enter Cabinet Vision SQL Database Name', value: origDatabase }) || origDatabase;
+    async getPool(): Promise<mssql.ConnectionPool | undefined> {
+            let tryCount = 0;
+            let errorMessage = '';
+            while (!this.ConnPool && tryCount < 3) {
 
-                await writeConfig('Server',newServer);
-                await writeConfig('Database',newDatabase);
-                const orig1Server = config.get('Server', '') ;
-                const orig1Database = config.get('Database', '');
-                this.ConnPool = await new mssql.ConnectionPool(getDbConfig()).connect();
+                try {
+                    this.ConnPool = await new mssql.ConnectionPool(getDbConfig()).connect();
+                    errorMessage = '';
+                  } catch (error: unknown) {
+                      errorMessage = 'An unknown error occurred';
+                      if (error instanceof Error) {
+                          errorMessage = error.message; // Safe to access if error is an Error
+                      }
+                      
+
+                      const config = GetConfig();
+                      const origServer = config.get('Server', '') ;
+                      const origDatabase = config.get('Database', '');
+                      const newServer = await vscode.window.showInputBox({ prompt: 'Enter Cabinet Vision SQL Server Name', value: origServer}) || origServer;
+                      const newDatabase = await vscode.window.showInputBox({ prompt: 'Enter Cabinet Vision SQL Database Name', value: origDatabase }) || origDatabase;
+      
+                      await writeConfig('Server',newServer);
+                      await writeConfig('Database',newDatabase);
+                  }
+
+                
+                // const orig1Server = config.get('Server', '') ;
+                // const orig1Database = config.get('Database', '');
+                tryCount++;
             }
 
+            if (errorMessage != '')
+                vscode.window.showErrorMessage(errorMessage);
 
-        }
         return this.ConnPool;
     }
 

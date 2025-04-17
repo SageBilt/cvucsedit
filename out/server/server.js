@@ -215,6 +215,10 @@ class LanguageServer {
                     this.ucsmHandler.AddDoors(items, false);
                     return items;
                 }
+                else if (this.languageId == 'ucsm' && prefixWord == '_CONNID') {
+                    this.ucsmHandler.AddConnections(items, false);
+                    return items;
+                }
                 else if (showDataType.paramType == 'ucsmSyntax' || this.languageId == 'ucsm') {
                     /*Check show only properties for special objects like _M: and _CV: */
                     for (const spObj of this.ucsmHandler.specialObjects) {
@@ -272,6 +276,10 @@ class LanguageServer {
                     return items;
                 if (this.ucsjsHandler.isLibraryClassInstances(items, linePrefix))
                     return items;
+                if (prefixWord == '_CONNID') {
+                    this.ucsmHandler.AddConnections(items, false);
+                    return items;
+                }
                 this.ucsjsHandler.AddMethods(items);
                 this.ucsjsHandler.AddAllConstants(items);
                 this.ucsjsHandler.AddObjects(items);
@@ -311,15 +319,16 @@ class LanguageServer {
         const remainText = document.getText(rangeAfterCursor);
         const firstSpaceIndex = remainText.indexOf(' ');
         const endOfTextIndex = firstSpaceIndex == -1 ? Number.MAX_SAFE_INTEGER : firstSpaceIndex + cursorPosition.character;
-        console.log(`remainText "${remainText}" endOfTextIndex "${endOfTextIndex}" Cursorcharacter "${cursorPosition.character}"`);
+        //console.log(`remainText "${remainText}" endOfTextIndex "${endOfTextIndex}" Cursorcharacter "${cursorPosition.character}"`);
         const endOfTextAtCursor = { line: cursorPosition.line, character: endOfTextIndex };
         const rangeToEnd = { start: startOfLine, end: endOfTextAtCursor };
         const fullLine = document.getText(rangeToEnd);
         const offset = document.offsetAt(cursorPosition);
         const cursorChar = cursorPosition.character;
-        console.log(`fullLine "${fullLine}"`);
+        //console.log(`fullLine "${fullLine}"`);
         const wordRegex = this.languageId == 'ucsm' ? /<?[A-Za-z0-9_]+[:>]?/g : /\w+/g; ///<?[A-Za-z0-9_{}@]+[:>]?/g
-        const wordDelim = this.languageId == 'ucsm' ? ['.', ':', '=', ':=', '(', `('`] : ['.', '(', `('`];
+        const wordDelim = this.languageId == 'ucsm' ? ['.', ':', '=', ':=', '!=', '==', '>=', '<=', '>', '<', '(', `('`] : ['.', '(', `('`, '='];
+        const ucsmDataTypesRegex = /^<(crncy|meas|deg|int|bool|dec|text|style|desc)>$/;
         let match;
         let prevMatch = '';
         let prevStartOffset = 0;
@@ -340,8 +349,9 @@ class LanguageServer {
                 console.log(`prevChar "${fullLine[prevEndOffset]}" lastCharOfPrevMatch "${lastCharOfPrevMatch}" delimText "${delimText}"`);
                 return [match[0], wordRange, prefixWord];
             }
-            prevMatch = match[0];
-            //prevStartOffset = startOffset;
+            if (this.languageId == 'javascript' || !ucsmDataTypesRegex.test(match[0])) {
+                prevMatch = match[0];
+            }
             prevEndOffset = endOffset;
         }
         return [undefined, undefined, prevMatch];
@@ -366,6 +376,9 @@ class LanguageServer {
             const showDataType = this.languageId == 'javascript'
                 ? this.getMethodParamType(this.ucsjsHandler.ucsjsMethods, linePrefix, fullLine, cursorPosition)
                 : { paramType: 'All', insideStr: false };
+            if (prefixWord.toUpperCase() == '_CONNID') {
+                return this.ucsmHandler.getHoverConnectionFromID(word);
+            }
             if (showDataType) {
                 this.connection.console.log(`Hover parameter "${word}" -> data type "${showDataType.paramType}"`);
                 if (showDataType.paramType == 'materials' || prefixWord.toUpperCase() == 'MATID' && !isNaN(Number(word))) {
