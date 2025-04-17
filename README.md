@@ -87,7 +87,13 @@ Addition to VSCode's built in features, this extension provides these features.
 In additional to the standard language features for JavaScript provided by VSCode, the below UCSJS features exist.
 
 - **Snippet completion**
-  - Snippets to come.
+  - Snippets for
+    - new part
+    - new route
+    - new dado
+    - new hole
+    - new linebore
+    - new connection
 - **Code completions**
   - All documented constants, types, functions for UCSJS have been added to the code completion for JavaScript along with the CVAsmManaged objects with their associated properties and methods.
   - Context aware code completion exists based on the parameter type of specific CVAsmManaged object methods. For example when the cursor is placed inside a string for the method Evaluate(), which evaluates an equation written in UCSM, the completion list will populate USCM parameters. 
