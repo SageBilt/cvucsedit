@@ -615,8 +615,8 @@ class ucsmValidation {
                     else {
                         // if (mustBeComparision && ['dataType','assignmentOperators'].includes(wordT.name))
                         //     return {valid: false,notValidText: 'Connot be a data type declaration or assignment operator.'};
-                        if (mustBeAssignment && ['dataType', 'comparisonOperators'].includes(wordT.name))
-                            return { valid: false, notValidText: 'Connot be a comparison operator.' };
+                        if (mustBeAssignment && ['dataType', 'comparisonOperators'].includes(wordT.name) && word != '!')
+                            return { valid: false, notValidText: 'Cannot be a comparison operator.' };
                         console.log(`curMatch: "${wordT.name}" checkDataType: "${checkDataType}" wordT.dataType: "${wordT.dataType}" prevWord.dataType: "${prevWord.dataType}"`);
                         if (!CompareDataType(wordT.dataType, checkDataType) && word != `'list'`)
                             return { valid: false, notValidText: 'Invalid data type.' }; //<lst>

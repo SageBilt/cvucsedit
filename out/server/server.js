@@ -81,7 +81,7 @@ class LanguageServer {
             this.ucsmHandler.dynamicData = dynamicData;
             this.ucsjsHandler.dynamicData = dynamicData;
             this.ucsmValid.dynamicData = dynamicData;
-            console.log(`partDefs.length ${dynamicData.partDefs.length}`);
+            //console.log(`partDefs.length ${dynamicData.partDefs.length}`);
             return {
                 capabilities: {
                     textDocumentSync: node_1.TextDocumentSyncKind.Incremental,
