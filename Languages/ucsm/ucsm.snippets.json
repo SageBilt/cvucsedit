@@ -1,23 +1,23 @@
 {
-    "If Then": {
-      "prefix": "IfThen",
-      "body": ["IF $1 THEN\n\t$2\nEND IF"],
-      "description": "If Then block"
-    },
-    "If Then Else": {
-        "prefix": "IfThenElse",
-        "body": ["IF $1 THEN\n\t$2\nELSE\n\t$3\nEND IF"],
-        "description": "If Then Else block"
-    },
-    "While Do": {
-        "prefix": "WhileDo",
-        "body": ["WHILE $1 DO\n\t$2\nEND WHILE"],
-        "description": "While Do block"
-    },
-    "While Do With Count": {
-      "prefix": "WhileDoWithCount",
-      "body": ["_Count<int> = 1\nWHILE _Count < $1 DO\n\t$2\n\t_Count<int> += 1\nEND WHILE\nDELETE _Count"],
+  "If Then": {
+    "prefix": "IfThen",
+    "body": ["IF $1 THEN\n\t$2\nEND IF"],
+    "description": "If Then block"
+  },
+  "If Then Else": {
+      "prefix": "IfThenElse",
+      "body": ["IF $1 THEN\n\t$2\nELSE\n\t$3\nEND IF"],
+      "description": "If Then Else block"
+  },
+  "While Do": {
+      "prefix": "WhileDo",
+      "body": ["WHILE $1 DO\n\t$2\nEND WHILE"],
       "description": "While Do block"
+  },
+  "While Do With Count": {
+    "prefix": "WhileDoWithCount",
+    "body": ["_Count<int> = 1\nWHILE _Count < $1 DO\n\t$2\n\t_Count<int> += 1\nEND WHILE\nDELETE _Count"],
+    "description": "While Do block"
   },
     "For Each ACAMDwg": {
       "prefix": "ForEachACAMDwg",
@@ -271,5 +271,68 @@
           "\t${1:NewConnection}._CONNREV<bool> = ${5:false}"
       ],
       "description": "Creates a new Linebore with customizable name"
-  }
+  },
+  "New Boolean Attribute": {
+    "prefix": "NewAttBoolean",
+    "body": ["IF this.$1 == NULL THEN",
+              "\t$1<bool> := ${2:0}",
+            "END IF",
+            "$1<style> = 1",
+            "$1<desc> = '$3'"],
+    "description": "Creates a new boolean attribute"
+  },
+  "New Integer Attribute": {
+    "prefix": "NewAttInteger",
+    "body": ["IF this.$1 == NULL THEN",
+              "\t$1<int> ${2::}= ${3:0}",
+            "END IF",
+            "$1<style> = 1",
+            "$1<desc> = '$4'"],
+    "description": "Creates a new integer attribute"
+  },
+  "New Measurement Attribute": {
+    "prefix": "NewAttMeasurement",
+    "body": ["IF this.$1 == NULL THEN",
+              "\t$1<meas> = ${2:0}",
+            "END IF",
+            "$1<style> = 1",
+            "$1<desc> = '$3'"],
+    "description": "Creates a new measurement attribute"
+    },
+  "New Currency Attribute": {
+    "prefix": "NewAttCurrency",
+    "body": ["IF this.$1 == NULL THEN",
+              "\t$1<crncy> = ${2:0}",
+            "END IF",
+            "$1<style> = 1",
+            "$1<desc> = '$3'"],
+    "description": "Creates a new currency attribute"
+    },
+  "New Degrees Attribute": {
+    "prefix": "NewAttDegrees",
+    "body": ["IF this.$1 == NULL THEN",
+              "\t$1<deg> = ${2:0}",
+            "END IF",
+            "$1<style> = 1",
+            "$1<desc> = '$3'"],
+    "description": "Creates a new degrees attribute"
+    },
+  "New Decimal Attribute": {
+    "prefix": "NewAttDecimal",
+    "body": ["IF this.$1 == NULL THEN",
+              "\t$1<dec> = ${2:0}",
+            "END IF",
+            "$1<style> = 1",
+            "$1<desc> = '$3'"],
+    "description": "Creates a new decimal attribute"
+    },
+  "New Text Attribute": {
+    "prefix": "NewAttText",
+    "body": ["IF this.$1 == NULL THEN",
+              "\t$1<text> = '$2'",
+            "END IF",
+            "$1<style> = 1",
+            "$1<desc> = '$3'"],
+    "description": "Creates a new text attribute"
+    }
 }
