@@ -147,6 +147,15 @@ Please report all issues on [Github](https://github.com/SageBilt/cvucsedit/issue
 
 ## Release Notes
 
+### 1.0.4
+
+#### Fixed
+- Invalid errors for For Each * {type}
+- Invalid error on (variable!=condition) where no space was after an equals sign.
+
+#### Added
+- ucsm snippets for attributes (by Streamlined)
+
 ### 1.0.3
 
 #### Changed

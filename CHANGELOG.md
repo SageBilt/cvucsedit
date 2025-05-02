@@ -7,9 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.4] - 2025-05-03
+
 ### Fixed
 - Invalid errors for For Each * {type}
 - Invalid error on (variable!=condition) where no space was after an equals sign.
+
+### Added
+- ucsm snippets for attributes (by Streamlined)
 
 ## [1.0.3] - 2025-04-22
 
