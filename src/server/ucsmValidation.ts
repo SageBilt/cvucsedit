@@ -169,7 +169,7 @@ export class ucsmValidation {
     
     private checkForEach(lineToEval: string, diagnostics: Diagnostic[], i: number, startOffset: number) {
 
-        const match = lineToEval.match(/^For\s+Each\s+([A-Za-z|_?][A-Za-z0-9|_?]*(?:\s*(?:\||\bOR\b)*\s*[A-Za-z|_?][A-Za-z0-9|_?]*)*)\s+([A-Za-z][A-Za-z0-9]*)/i);
+        const match = lineToEval.match(/^For\s+Each\s+([*A-Za-z|_?][A-Za-z0-9|_?]*(?:\s*(?:\||\bOR\b)*\s*[A-Za-z|_?][A-Za-z0-9|_?]*)*)\s+([A-Za-z][A-Za-z0-9]*)/i);
         if (!match) {
             this.addDiagnostic(
                 diagnostics,
@@ -547,7 +547,7 @@ export class ucsmValidation {
                 const prevChar = index > 0 ? part[index-1] : '';
                 const nextChar = index < part.length-1 ? part[index+1] : '';
 
-                if (/[\+|\-|\*|\/|%|!|\^]+/.test(curChar)) {
+                if (/[\+|\-|\*|\/|%|!|\^|=]+/.test(curChar)) {
                     if (!/\s/.test(prevChar)) {
                         newPart += ' ' ;
                     }

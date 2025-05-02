@@ -159,7 +159,7 @@ class ucsmValidation {
         }
     }
     checkForEach(lineToEval, diagnostics, i, startOffset) {
-        const match = lineToEval.match(/^For\s+Each\s+([A-Za-z|_?][A-Za-z0-9|_?]*(?:\s*(?:\||\bOR\b)*\s*[A-Za-z|_?][A-Za-z0-9|_?]*)*)\s+([A-Za-z][A-Za-z0-9]*)/i);
+        const match = lineToEval.match(/^For\s+Each\s+([*A-Za-z|_?][A-Za-z0-9|_?]*(?:\s*(?:\||\bOR\b)*\s*[A-Za-z|_?][A-Za-z0-9|_?]*)*)\s+([A-Za-z][A-Za-z0-9]*)/i);
         if (!match) {
             this.addDiagnostic(diagnostics, i, startOffset, lineToEval.length - startOffset, `Invalid 'For Each' syntax. Expected: For Each <object> [| or OR <object>]* <type>`);
         }
@@ -425,7 +425,7 @@ class ucsmValidation {
                 const curChar = part[index];
                 const prevChar = index > 0 ? part[index - 1] : '';
                 const nextChar = index < part.length - 1 ? part[index + 1] : '';
-                if (/[\+|\-|\*|\/|%|!|\^]+/.test(curChar)) {
+                if (/[\+|\-|\*|\/|%|!|\^|=]+/.test(curChar)) {
                     if (!/\s/.test(prevChar)) {
                         newPart += ' ';
                     }

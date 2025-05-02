@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- Invalid errors for For Each * {type}
+- Invalid error on (variable!=condition) where no space was after an equals sign.
+
 ## [1.0.3] - 2025-04-22
 
 ### Changed

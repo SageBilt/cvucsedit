@@ -149,19 +149,19 @@ Please report all issues on [Github](https://github.com/SageBilt/cvucsedit/issue
 
 ### 1.0.3
 
-### Changed
+#### Changed
 - Improved handling of SQL database connection issues so that upto 3 tries are allowed.
 
-### Fixed
+#### Fixed
 - Hover not finding prefix word when using some comparision chars and data types.
 - #2 corrected incorrect spelling of "Cannot" in "Cannot be a comparison operator." validation error message.
 - #2 allow '!' flip for assignments.
 
-### Added
+#### Added
 - Added connection information to autocomplete and hover. Also made context aware when next to "_CONNID" parameter in both UCS:M and UCS:JS.
 - Added snippets to UCS:JS for new part, new route, new dado, new hole, new linebore and new connection.
 
-### 1.0.0
+#### 1.0.0
 
 Initial release
 
