@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.5] - 2025-05-06
+
+### Fixed
+- Invalid error on (variable := value)
+
 ## [1.0.4] - 2025-05-03
 
 ### Fixed

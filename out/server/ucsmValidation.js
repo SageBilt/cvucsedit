@@ -425,7 +425,7 @@ class ucsmValidation {
                 const curChar = part[index];
                 const prevChar = index > 0 ? part[index - 1] : '';
                 const nextChar = index < part.length - 1 ? part[index + 1] : '';
-                if (/[\+|\-|\*|\/|%|!|\^|=]+/.test(curChar)) {
+                if (/[\+|\-|\*|\/|%|!|\^]+/.test(curChar)) {
                     if (!/\s/.test(prevChar)) {
                         newPart += ' ';
                     }
@@ -441,6 +441,11 @@ class ucsmValidation {
                         }
                     }
                     newPart += curChar;
+                    if (['='].includes(curChar)) {
+                        if (!/\s/.test(prevChar)) {
+                            newPart += ' ';
+                        }
+                    }
                 }
             }
             return newPart;

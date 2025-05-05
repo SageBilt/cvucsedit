@@ -147,6 +147,11 @@ Please report all issues on [Github](https://github.com/SageBilt/cvucsedit/issue
 
 ## Release Notes
 
+##3 1.0.5
+
+#### Fixed
+- Invalid error on (variable := value)
+
 ### 1.0.4
 
 #### Fixed
