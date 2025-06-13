@@ -84,27 +84,28 @@ class LanguageClientWrapper {
     //   }
     //   return undefined;
     // }
-    async handleDefinition(document, position, token, next) {
-        const result = await next(document, position, token);
-        if (this.languageId == 'ucsm')
-            return result;
-        else {
-            if (result) {
-                console.log('is array:', Array.isArray(result));
-                if (Array.isArray(result) && result.length > 0 && 'targetUri' in result[0]) {
-                    const firstLink = result[0];
-                    this.ScriptProvider.openUCSByURI(firstLink.targetUri.toString(), firstLink.targetRange);
-                    console.log('Manually opened document:', firstLink.targetUri.toString());
-                }
-                else if ('uri' in result) {
-                    const location = result;
-                    this.ScriptProvider.openUCSByURI(location.uri.toString(), location.range);
-                    console.log('Manually opened document:', location.uri.toString());
-                }
-            }
-            return undefined;
-        }
-    }
+    // private async handleDefinition(
+    //    document: TextDocument, position: Position, token: CancellationToken, next: ProvideDefinitionSignature
+    // ) : Promise<Definition | LocationLink[] | null | undefined> {
+    //   const result = await next(document, position, token);
+    //   if (this.languageId == 'ucsm')
+    //     return result;
+    //   else {
+    //     if (result) {
+    //       console.log('is array:', Array.isArray(result));
+    //       if (Array.isArray(result) && result.length > 0 && 'targetUri' in result[0]) {
+    //         const firstLink = result[0] as LocationLink;
+    //         this.ScriptProvider.openUCSByURI(firstLink.targetUri.toString(),firstLink.targetRange);
+    //         console.log('Manually opened document:', firstLink.targetUri.toString());
+    //       } else if ('uri' in result) {
+    //         const location = result as Location;
+    //         this.ScriptProvider.openUCSByURI(location.uri.toString(),location.range);
+    //         console.log('Manually opened document:', location.uri.toString());
+    //       }
+    //     }
+    //     return undefined;
+    //   }
+    // }
     isRelevantDocument(document) {
         // Check if the changed document matches this language server's scope
         return document.languageId === 'javascript'; //&& document.uri.scheme === 'cvucs';

@@ -488,6 +488,7 @@ class ucsmLanguageHandler {
                 range: wordRange // Optional: Highlight the word
             };
         }
+        console.log(typeof this.dynamicData.materialParams);
         const MatParams = this.dynamicData.materialParams.find(param => param.paramName.toUpperCase() === word);
         if (MatParams && prefixWord == '_M:') {
             return {

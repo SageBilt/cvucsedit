@@ -162,10 +162,11 @@ class LookupTreeDataProvider {
                 const treeItem = new CustomTreeItem(result.UCSID, result.label, result.label, result.FileType, result.isJSLibrary, result.Code, -1, this.searchTerm && result.Code.toLowerCase().includes(this.searchTerm)
                     ? vscode.TreeItemCollapsibleState.Expanded
                     : vscode.TreeItemCollapsibleState.None, this.context);
+                const UCSContext = { uri: treeItem.docURI, searchCodeLine: -1, contextValue: '', searchText: '' };
                 treeItem.command = {
                     command: 'cvucsedit.onUCSItemClick',
                     title: 'Item Clicked',
-                    arguments: [treeItem],
+                    arguments: [UCSContext],
                 };
                 return treeItem;
             }));
@@ -181,10 +182,11 @@ class LookupTreeDataProvider {
                         index, vscode.TreeItemCollapsibleState.None, this.context);
                         // Store the line number in contextValue or another property
                         childItem.contextValue = line;
+                        const UCSContext = { uri: childItem.docURI, searchCodeLine: index, contextValue: line.toLowerCase(), searchText: this.searchTerm.toLowerCase() };
                         childItem.command = {
                             command: 'cvucsedit.onUCSItemClick',
                             title: 'Open Line',
-                            arguments: [childItem],
+                            arguments: [UCSContext],
                         };
                         //element.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;  
                         return childItem;

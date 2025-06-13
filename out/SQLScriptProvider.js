@@ -46,7 +46,18 @@ class SQLScriptProvider {
     UCSListlookupProvider;
     UCSLibListlookupProvider;
     SQLConn = new SQLConnection_1.SQLConnection();
-    USCMDynamicData = {};
+    USCMDynamicData = {
+        partDefs: [],
+        materialParams: [], // Initialize with an empty array
+        constructionParams: [],
+        scheduleParams: [],
+        materials: [],
+        constructions: [],
+        schedules: [],
+        caseStandards: [],
+        doors: [],
+        connections: []
+    };
     UCSJSLibRefParser = new referenceParser_1.referenceParser;
     textProvider = new DatabaseFileSystemProvider_1.DatabaseFileSystemProvider();
     constructor(context) {
@@ -190,12 +201,17 @@ class SQLScriptProvider {
     //     if (treeItem)
     //         this.openUCS(treeItem,position);
     // }
-    openUCSByURI(uri, position) {
-        const treeItem = this.findTreeItemByUri(uri);
-        if (treeItem)
-            this.openUCS(treeItem, position);
-    }
-    async openUCS(item, highlightRange) {
+    // public openUCSByURI(uri:string,position:vscode.Range) {
+    //     const treeItem = this.findTreeItemByUri(uri);
+    //     if (treeItem)
+    //         this.openUCS(treeItem.docURI,position);
+    // }
+    async openUCS(UCSContex, highlightRange) {
+        let item = this.UCSListlookupProvider.getTreeItemByDocumentUri(UCSContex.uri.toString());
+        if (!item)
+            item = this.UCSLibListlookupProvider.getTreeItemByDocumentUri(UCSContex.uri.toString());
+        if (!item)
+            return;
         if (item.FileType.FileTypeName === "Divider") {
             vscode.window.showWarningMessage('This is a divider. There is no code associated with this!');
             return;
@@ -261,11 +277,11 @@ class SQLScriptProvider {
             });
         }
         //this.UCSListlookupProvider.storeTreeItem(document.uri.toString(), item);
-        if (item.searchCodeLine > -1) {
-            const lineNumber = item.searchCodeLine + (item.isJSLibrary ? 1 : 0); // Offset for class line
-            const startChar = item.contextValue?.indexOf(item.label) || 0;
+        if (UCSContex.searchCodeLine > -1) {
+            const lineNumber = UCSContex.searchCodeLine + (item.isJSLibrary ? 1 : 0); // Offset for class line
+            const startChar = UCSContex.contextValue?.indexOf(UCSContex.searchText) || 0;
             const startPos = new vscode.Position(lineNumber, startChar);
-            const endPos = new vscode.Position(lineNumber, startChar + item.label.length);
+            const endPos = new vscode.Position(lineNumber, startChar + UCSContex.searchText.length);
             editor.selection = new vscode.Selection(startPos, endPos);
             editor.revealRange(new vscode.Range(startPos, endPos));
         }

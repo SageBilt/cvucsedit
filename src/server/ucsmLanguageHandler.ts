@@ -516,6 +516,7 @@ export class ucsmLanguageHandler {
               };
           }
 
+          console.log(typeof this.dynamicData.materialParams);
           const MatParams = this.dynamicData.materialParams.find(param => param.paramName.toUpperCase() === word);
           if (MatParams && prefixWord == '_M:') {
               return {
@@ -560,7 +561,6 @@ export class ucsmLanguageHandler {
               };
           } 
 
-          
           const caseStd = this.dynamicData.caseStandards.find(std => std.id.toString() === word);
           if (caseStd  && (prefixWord == '_CB:' || prefixWord == '_CV:')) {
               return {

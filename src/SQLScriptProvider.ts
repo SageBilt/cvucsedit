@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as CLT from './CustomLookupTree';
 import { DatabaseFileSystemProvider } from './DatabaseFileSystemProvider';
 import { SQLConnection } from './SQLConnection';
-import { DynamicData } from './interfaces';
+import { DynamicData, UCSOpenContex } from './interfaces';
 import { referenceParser } from './referenceParser';
 import { TextDocument } from 'vscode';
 
@@ -12,7 +12,18 @@ export class SQLScriptProvider {
     public UCSListlookupProvider: CLT.LookupTreeDataProvider;
     public UCSLibListlookupProvider: CLT.LookupTreeDataProvider;
     public SQLConn = new SQLConnection();
-    public USCMDynamicData: DynamicData = {} as DynamicData;
+    public USCMDynamicData: DynamicData = {
+        partDefs: [],
+        materialParams: [], // Initialize with an empty array
+        constructionParams: [],
+        scheduleParams: [],
+        materials: [],
+        constructions: [],
+        schedules: [],
+        caseStandards: [],
+        doors: [],
+        connections: []
+    } as DynamicData;
     public UCSJSLibRefParser = new referenceParser;
     public textProvider = new DatabaseFileSystemProvider();
 
@@ -195,13 +206,19 @@ export class SQLScriptProvider {
     //         this.openUCS(treeItem,position);
     // }
 
-    public openUCSByURI(uri:string,position:vscode.Range) {
-        const treeItem = this.findTreeItemByUri(uri);
-        if (treeItem)
-            this.openUCS(treeItem,position);
-    }
+    // public openUCSByURI(uri:string,position:vscode.Range) {
+    //     const treeItem = this.findTreeItemByUri(uri);
+    //     if (treeItem)
+    //         this.openUCS(treeItem.docURI,position);
+    // }
 
-    public async openUCS(item: CLT.CustomTreeItem,highlightRange?:vscode.Range) {
+    public async openUCS(UCSContex: UCSOpenContex,highlightRange?:vscode.Range) {
+
+        let item = this.UCSListlookupProvider.getTreeItemByDocumentUri(UCSContex.uri.toString());
+        if (!item)
+            item = this.UCSLibListlookupProvider.getTreeItemByDocumentUri(UCSContex.uri.toString());
+
+        if (!item) return;
 
         if (item.FileType.FileTypeName === "Divider") {
             vscode.window.showWarningMessage('This is a divider. There is no code associated with this!');
@@ -284,11 +301,11 @@ export class SQLScriptProvider {
     
         //this.UCSListlookupProvider.storeTreeItem(document.uri.toString(), item);
     
-        if (item.searchCodeLine > -1) {
-            const lineNumber = item.searchCodeLine + (item.isJSLibrary ? 1 : 0); // Offset for class line
-            const startChar = item.contextValue?.indexOf(item.label) || 0;
+        if (UCSContex.searchCodeLine > -1) {
+            const lineNumber = UCSContex.searchCodeLine + (item.isJSLibrary ? 1 : 0); // Offset for class line
+            const startChar = UCSContex.contextValue?.indexOf(UCSContex.searchText) || 0;
             const startPos = new vscode.Position(lineNumber, startChar);
-            const endPos = new vscode.Position(lineNumber, startChar + item.label.length);
+            const endPos = new vscode.Position(lineNumber, startChar + UCSContex.searchText.length);
             editor.selection = new vscode.Selection(startPos, endPos);
             editor.revealRange(new vscode.Range(startPos, endPos));
         }

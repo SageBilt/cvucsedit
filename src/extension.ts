@@ -6,6 +6,7 @@ import * as CLT from './CustomLookupTree';
 import { SQLScriptProvider } from './SQLScriptProvider';
 import { LanguageClientWrapper } from './client/client';
 import { CustomLanguageFoldingProvider } from './ucsmFoldingProvider';
+import { UCSOpenContex } from './interfaces';
 
 interface SemanticTokenColorCustomizations {
     enabled?: boolean;
@@ -70,7 +71,7 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('cvucsedit.onUCSItemClick', async (item: CLT.CustomTreeItem) => SQLProvider.openUCS(item))
+        vscode.commands.registerCommand('cvucsedit.onUCSItemClick', async (docURI: UCSOpenContex) => SQLProvider.openUCS(docURI))
 
     );
 

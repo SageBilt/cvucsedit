@@ -67,7 +67,7 @@ async function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.loadUCSLists', async () => SQLProvider.loadSideBarMenus()));
     context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.refreshUCSList', async () => SQLProvider.loadUCSListSideBarMenu()));
     context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.refreshUCSLibList', async () => SQLProvider.loadUCSLibraryListSideBarMenu()));
-    context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.onUCSItemClick', async (item) => SQLProvider.openUCS(item)));
+    context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.onUCSItemClick', async (docURI) => SQLProvider.openUCS(docURI)));
     context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.searchUCSList', async () => SQLProvider.filterUCSList(false)));
     context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.clearSearchUCSList', async () => SQLProvider.clearFilterUCSList(false)));
     context.subscriptions.push(vscode.commands.registerCommand('cvucsedit.searchUCSLibList', async () => SQLProvider.filterUCSList(true)));

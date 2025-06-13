@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import { UCSOpenContex } from './interfaces';
 
 interface UCSFileType {
   FileTypeName: string,
@@ -153,10 +154,11 @@ export class LookupTreeDataProvider implements vscode.TreeDataProvider<CustomTre
               : vscode.TreeItemCollapsibleState.None,
             this.context,
           );
+          const UCSContext : UCSOpenContex = {uri : treeItem.docURI, searchCodeLine : -1, contextValue : '', searchText : ''};
           treeItem.command = {
             command: 'cvucsedit.onUCSItemClick',
             title: 'Item Clicked',
-            arguments: [treeItem],
+            arguments: [UCSContext],
           };
           return treeItem;
         })
@@ -181,10 +183,11 @@ export class LookupTreeDataProvider implements vscode.TreeDataProvider<CustomTre
             );
             // Store the line number in contextValue or another property
             childItem.contextValue = line;
+            const UCSContext : UCSOpenContex = {uri : childItem.docURI, searchCodeLine : index, contextValue : line.toLowerCase(), searchText : this.searchTerm.toLowerCase()};
             childItem.command = {
               command: 'cvucsedit.onUCSItemClick',
               title: 'Open Line',
-              arguments: [childItem],
+              arguments: [UCSContext],
             };
             //element.collapsibleState = vscode.TreeItemCollapsibleState.Expanded;  
 

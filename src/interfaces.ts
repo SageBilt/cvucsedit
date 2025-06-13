@@ -1,4 +1,4 @@
-import { Position } from 'vscode';
+import { Position, Uri } from 'vscode';
 import { Range, CompletionItemKind } from 'vscode-languageserver/node';
 
 // Define an interface for the language configuration
@@ -7,6 +7,13 @@ export interface LanguageConfig {
   systemJsonPath: string;
   syntaxJsonPath: string;
   controlStructuresJsonPath: string;
+}
+
+export interface UCSOpenContex {
+  uri : Uri;
+  searchCodeLine : number;
+  contextValue : string;
+  searchText : string;
 }
 
 export interface SymbolInfo {
