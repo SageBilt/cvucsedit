@@ -347,14 +347,14 @@ class LanguageServer {
                 const prefixWord = wordDelim.includes(delimText) || this.languageId == 'ucsm' && lastCharOfPrevMatch == ':' ? prevMatch : ''; //prevEndOffset == startOffset-1 && propDelim.includes(prevChar) 
                 //const prefixWord = this.languageId == 'ucsm' && prevChar == ':' ? prefixWordMatch+':' : prefixWordMatch;
                 console.log(`prevChar "${fullLine[prevEndOffset]}" lastCharOfPrevMatch "${lastCharOfPrevMatch}" delimText "${delimText}"`);
-                return [match[0], wordRange, prefixWord];
+                return [match[0], wordRange, prefixWord.toUpperCase()];
             }
             if (this.languageId == 'javascript' || !ucsmDataTypesRegex.test(match[0])) {
                 prevMatch = match[0];
             }
             prevEndOffset = endOffset;
         }
-        return [undefined, undefined, prevMatch];
+        return [undefined, undefined, prevMatch.toUpperCase()];
     }
     setupHover() {
         this.connection.onHover((params) => {
