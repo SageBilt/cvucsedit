@@ -7,8 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.6] - 2025-06-16
+
 ### Fixed
-- Fixed "Cannot read properties of undefined" when hovering or invoking completion with databases that don't specific data.
+- Fixed "Cannot read properties of undefined" when hovering or invoking completion with databases that don't contain specific data.
 - #7 circular reference of CustomTreeItem when opening a UCS from the list.
 
 ## [1.0.5] - 2025-05-06

@@ -147,7 +147,11 @@ Please report all issues on [Github](https://github.com/SageBilt/cvucsedit/issue
 
 ## Release Notes
 
-##3 1.0.5
+### 1.0.6
+
+#### Fixed
+- Fixed "Cannot read properties of undefined" when hovering or invoking completion with databases that don't contain specific data.
+- #7 circular reference of CustomTreeItem when opening a UCS from the list.
 
 #### Fixed
 - Invalid error on (variable := value)
