@@ -26,7 +26,7 @@ This extension adds features to VS Code for loading, editing and saving Cabinet 
 
 #### Supported Versions
 
-Currently supports all Cabinet Versions from 2021 through to 2024. 
+Currently supports all Cabinet Versions from 2021 through to 2025. 
 > **Note:** Version 12 may work but it has not been tested.
 
 ### Main Features
