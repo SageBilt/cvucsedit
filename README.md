@@ -147,7 +147,25 @@ Please report all issues on [Github](https://github.com/SageBilt/cvucsedit/issue
 
 ## Release Notes
 
-### 1.0.6
+#### 1.1.0
+
+### Added
+- **new CV 2025 ucsjs objects and methods**
+  - GetChildren() and GetChildren(string filter) Method
+  - _cvSystem API added
+  - _cvMath API expanded
+  - _cvString API added
+  - Shape Objects (Assemblies, Parts, Operations) 
+  - GetShape() Method added 
+  - IsShaped() Method added 
+  - SetShape() Method added
+
+
+### Fixed
+- Make Prefix word for autocompletion not case sensitive.
+- Fixed null error on property "type" in preferenceParser class.
+
+#### 1.0.6
 
 #### Fixed
 - Fixed "Cannot read properties of undefined" when hovering or invoking completion with databases that don't contain specific data.
