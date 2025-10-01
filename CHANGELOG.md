@@ -7,8 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- new CV 2025 ucsjs objects and methods
+  - GetChildren() and GetChildren(string filter) Method
+  - _cvSystem API added
+  - _cvMath API expanded
+  - _cvString API added
+  - Shape Objects (Assemblies, Parts, Operations) 
+  - GetShape() Method added 
+  - IsShaped() Method added 
+  - SetShape() Method added
+
+
 ### Fixed
 - Make Prefix word for autocompletion not case sensitive.
+- Fixed null error on property "type" in preferenceParser class.
 
 ## [1.0.6] - 2025-06-16
 

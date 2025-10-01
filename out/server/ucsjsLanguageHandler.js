@@ -49,6 +49,7 @@ class ucsjsLanguageHandler {
     dynamicData = {};
     classLibraries = [];
     CVAsmManagedReferences = [];
+    CVShapeManagedReferences = [];
     // private AssemblyTypes: string[] = [];
     // private parameterModTypes: string[] = [];
     // private parameterModStyles: string[] = [];
@@ -80,12 +81,12 @@ class ucsjsLanguageHandler {
     AddObjects(items) {
         this.ucsjsObjects.forEach(obj => {
             items.push({
-                label: obj,
+                label: obj.name,
                 kind: node_1.CompletionItemKind.Keyword,
                 //detail: `**${obj}**\n\n (CV object)`
                 documentation: {
                     kind: 'markdown',
-                    value: `**${obj}**\n\n (CVAsmManaged object)`
+                    value: `**${obj}**\n\n (${obj.Type} object)`
                 }
             });
         });
@@ -163,15 +164,16 @@ class ucsjsLanguageHandler {
         if (!parameterDef)
             return '';
         let Result = '';
-        parameterDef.forEach(param => Result += `Type: ${param.ParamName}\n\n Description: ${param.ParamValue}\n\n`);
+        parameterDef.forEach(param => Result += `\n\nType: ${param.ParamName}\n\n Description: ${param.ParamValue}`);
         return Result;
     }
-    AddMethods(items, parentObject) {
+    AddMethods(items, parentObject, type) {
         this.ucsjsMethods.forEach(method => {
             const pObj = parentObject ? parentObject : '';
             const paramDefs = this.buildMethodParams(method.parameterDef);
-            const paramDefStr = paramDefs != '' ? `\n- **Parameters**: \n\n ${paramDefs}` : '';
-            if (!parentObject && !method.parentObject || method.parentObject.includes(pObj)) {
+            const paramDefStr = paramDefs != '' ? `\n **Parameters**: ${paramDefs}` : '';
+            //console.log(type , method.objectType, parentObject, method.parentObject);
+            if (!parentObject && !method.parentObject || method.parentObject.includes(pObj) || type && method.objectType == type) {
                 items.push({
                     label: method.name,
                     kind: node_1.CompletionItemKind.Method,
@@ -186,14 +188,20 @@ class ucsjsLanguageHandler {
             }
         });
     }
-    AddProperties(items, parentObject) {
+    AddProperties(items, parentObject, type) {
         const pObj = parentObject ? parentObject : '';
+        //console.log(parentObject, type);
         this.ucsjsProperties.forEach(prop => {
-            if (!parentObject && !prop.parentObject || prop.parentObject.includes(pObj)) {
+            if (!parentObject && !prop.parentObject || parentObject && prop.parentObject.includes(pObj) || type && prop.objectType == type) {
+                console.log(prop.name, type, prop.objectType, parentObject, '-', pObj, '-', prop.parentObject);
                 items.push({
                     label: prop.name,
                     kind: node_1.CompletionItemKind.Property,
-                    detail: `**${prop.name}**\n\n (${prop.Type} type)`,
+                    documentation: {
+                        kind: 'markdown',
+                        value: `**${prop.name}**\n\n (${prop.Type} type)`
+                    }
+                    //detail: `**${prop.name}**\n\n (${prop.Type} type)`,
                     //   documentation: {
                     //     kind: 'markdown',
                     //     value: `**${prop.name}**\n\n- **Description**: ${prop.description}\n- **Value**: ${prop.value}\n- **Example**: ${prop.example}\n- **ReturnType**: ${prop.returnType}$`
@@ -204,26 +212,35 @@ class ucsjsLanguageHandler {
     }
     isObject(items, lineText) {
         for (const spObj of this.ucsjsObjects) {
-            const wordRegex = new RegExp(`${spObj}[^\\s]*$`, 'i');
+            const wordRegex = new RegExp(`${spObj.name}[^\\s]*$`, 'i');
             if (wordRegex.test(lineText)) {
-                this.AddProperties(items, spObj);
-                this.AddMethods(items, spObj);
+                //console.log(lineText , spObj.name, spObj.Type);
+                this.AddProperties(items, spObj.name);
+                this.AddMethods(items, spObj.name);
                 return true;
             }
         }
         return false;
     }
-    isCVAsmManaged(items, linePrefix) {
-        for (const CVAsmObj of this.CVAsmManagedReferences) {
-            //console.log(linePrefix , CVAsmObj.variableName);
-            //const wordRegex = new RegExp(`${CVAsmObj.objectName}[^\\s]*$`, 'i');
-            if (linePrefix == CVAsmObj.variableName) {
-                this.AddProperties(items, CVAsmObj.objectName);
-                this.AddMethods(items, CVAsmObj.objectName);
-                console.log(linePrefix, CVAsmObj.variableName, CVAsmObj.objectName);
-                return true;
+    isCVManaged(items, linePrefix) {
+        const findCVManObj = (list) => {
+            for (const CVManObj of list) {
+                //console.log(linePrefix , CVManObj.variableName);
+                //const wordRegex = new RegExp(`${CVAsmObj.objectName}[^\\s]*$`, 'i');
+                if (linePrefix == CVManObj.variableName.toUpperCase()) {
+                    //console.log(linePrefix , CVManObj.variableName);
+                    this.AddProperties(items, CVManObj.objectName, CVManObj.type);
+                    this.AddMethods(items, CVManObj.objectName, CVManObj.type);
+                    //console.log(linePrefix , CVManObj.variableName, CVManObj.objectName);
+                    return true;
+                }
             }
-        }
+            return false;
+        };
+        if (findCVManObj(this.CVAsmManagedReferences))
+            return true;
+        if (findCVManObj(this.CVShapeManagedReferences))
+            return true;
         return false;
     }
     // isObject() : boolean {
@@ -260,12 +277,12 @@ class ucsjsLanguageHandler {
         });
     }
     getHoverWord(word, wordRange, prefixWord) {
-        const object = this.ucsjsObjects.find(obj => obj === word);
+        const object = this.ucsjsObjects.find(obj => obj.name === word);
         if (object) {
             return {
                 contents: {
                     kind: 'markdown',
-                    value: `**${object}**\n\n (CVAsmManaged object)`
+                    value: `**${object.name}**\n\n (${object.Type} object)`
                 },
                 range: wordRange // Optional: Highlight the word
             };
@@ -280,10 +297,16 @@ class ucsjsLanguageHandler {
                 range: wordRange // Optional: Highlight the word
             };
         }
-        const varRefMatch = this.CVAsmManagedReferences.find(varRef => varRef.variableName == prefixWord);
+        const CVAsmManVarRefMatch = this.CVAsmManagedReferences.find(varRef => varRef.variableName.toUpperCase() == prefixWord);
+        const CVShapeManVarRefMatch = this.CVShapeManagedReferences.find(varRef => varRef.variableName.toUpperCase() == prefixWord);
+        //this.connection.console.log(`variableName "${this.CVShapeManagedReferences[0].variableName}" objectName "${this.CVShapeManagedReferences[0].objectName}"`);
+        //this.connection.console.log(`prefixWord "${prefixWord}" objectType "${CVShapeManVarRefMatch?.type}" variableName "${CVShapeManVarRefMatch?.variableName}"`);
         const property = this.ucsjsProperties.find(prop => prop.name === word);
         if (property) { // 
-            if (property.parentObject.includes(prefixWord) || varRefMatch && property.parentObject.includes(varRefMatch.objectName)) {
+            const parObjUpper = property.parentObject ? property.parentObject.map(o => o.toUpperCase()) : [];
+            if (parObjUpper.includes(prefixWord)
+                || CVAsmManVarRefMatch && property.parentObject.includes(CVAsmManVarRefMatch.objectName)
+                || CVShapeManVarRefMatch && property.objectType == CVShapeManVarRefMatch.type) {
                 //this.connection.console.log(`prefixWord "${prefixWord}" parentObject "${property.parentObject}"`);
                 return {
                     contents: {
@@ -297,10 +320,14 @@ class ucsjsLanguageHandler {
         const method = this.ucsjsMethods.find(method => method.name === word);
         if (method) {
             //this.connection.console.log(`prefixWord "${prefixWord}" parentObject "${method.parentObject}"`);
-            if (method.parentObject.includes(prefixWord) || varRefMatch && method.parentObject.includes(varRefMatch.objectName)) {
+            const parObjUpper = method.parentObject.map(o => o.toUpperCase());
+            //this.connection.console.log(`prefixWord "${prefixWord}" parentObject "${method.parentObject}" parObjUpper "${parObjUpper}" objectName "${CVAsmManVarRefMatch?.objectName}"`);
+            if (parObjUpper.includes(prefixWord)
+                || CVAsmManVarRefMatch && method.parentObject.includes(CVAsmManVarRefMatch.objectName)
+                || CVShapeManVarRefMatch && method.objectType == CVShapeManVarRefMatch.type) {
                 const paramDefs = this.buildMethodParams(method.parameterDef);
                 const paramDefStr = paramDefs != '' ? `\n- **Parameters**: \n\n- ${paramDefs}` : '';
-                //this.connection.console.log(`Hover parameter data type "${method.name}"`);
+                this.connection.console.log(`Hover parameter data type "${method.name}"`);
                 return {
                     contents: {
                         kind: 'markdown',
@@ -342,6 +369,17 @@ class ucsjsLanguageHandler {
                     contents: {
                         kind: 'markdown',
                         value: `**${CVAsmObj.variableName}**\n\n (CVAsmManaged object "${CVAsmObj.objectName}")`
+                    },
+                    range: wordRange // Optional: Highlight the word
+                };
+            }
+        }
+        for (const CVManObj of this.CVShapeManagedReferences) {
+            if (CVManObj.variableName == word) {
+                return {
+                    contents: {
+                        kind: 'markdown',
+                        value: `**${CVManObj.variableName}**\n\n (CVShapeManaged object "${CVManObj.objectName}")`
                     },
                     range: wordRange // Optional: Highlight the word
                 };

@@ -280,6 +280,7 @@ class LanguageServer {
           if (split.length == 2) {
             if (split[0] == 'constants') { //For example 'constants.parameterTypes'
               const key = split[1] as keyof UCSJSSystemConstants;
+              items.length = 0;
               this.ucsjsHandler.AddConstants(items,this.ucsjsHandler.ucsjsConstants[key],split[1]); 
             } 
           } else {
@@ -294,7 +295,7 @@ class LanguageServer {
 
         if (this.ucsjsHandler.isObject(items,linePrefix)) 
            return items;
-        if (this.ucsjsHandler.isCVAsmManaged(items,prefixWord)) 
+        if (this.ucsjsHandler.isCVManaged(items,prefixWord)) 
           return items;
         if (this.ucsjsHandler.isLibraryClassInstances(items,linePrefix))
           return items;
@@ -547,6 +548,7 @@ class LanguageServer {
 
       this.ucsjsHandler.classLibraries = params.classRefs;
       this.ucsjsHandler.CVAsmManagedReferences = params.CVAsmManagedRefs;
+      this.ucsjsHandler.CVShapeManagedReferences = params.CVShapeManagedRefs;
       //console.log(`Received data updated references for libraries`);
     })
   }

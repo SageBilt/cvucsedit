@@ -4771,6 +4771,15 @@
       "visibility": "Visible with user override"
     },
     {
+      "name": "MULLION",
+      "description": "Specifies the Mullion width for Section Editor defined glass doors.",
+      "type": "User Definable",
+      "validRange": "Unlimited",
+      "appliesTo": "DOR",
+      "values": "Numeric (Measurement) - Minimum value is 0.5, values less than 0.5 default to 0.75.",
+      "visibility": "Visible with user override"
+    },
+    {
       "name": "NAME",
       "description": "Specifies the Name of the Object. In the case of an Assembly this parameter will control the Assemblies Name, in the case of a Part it will control the Parts Description.",
       "type": "System and/or User Definable",

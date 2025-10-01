@@ -8,7 +8,7 @@
     "constants": {
         "patterns": [
           {
-            "match": "_(cab|this|cvMath)",
+            "match": "_(cab|this|cvMath|cvSystem|cvString)",
             "name": "variable.other.constant.object.js"
           },
           {
@@ -41,6 +41,22 @@
           },
           {
             "match": "ID_(ASSEMBLYCONSTRUCTION|ASEMBLYESCHEDULE|CLOSETRODSCHEDULE|COLORSCHEDULE|CONNECTION|DOORSCHEDULE|DOORSTYLE|DRAWERCONSTRUCTION|DRAWERSCHEDULE|FINISH|GUIDESCHEDULE|HINGESCHEDULE|IJOINT|MATERIAL|MOLDINGSCHEDULE|PULLSCHEDULE|ROLLOUTCONSTRUCTION|ROLLOUTSCHEDULE|ROOMSCHEDULE|SLIDERAILSCHEDULE|TEXTURE|TOPCONSTRUTION|TOPSCHEDULE|WIREBASKETSCHEDULE)",
+            "name": "variable.other.constant.object.js"
+          },
+              {
+            "match": "AXIS_(XY|XZ|ZY)",
+            "name": "variable.other.constant.object.js"
+          },
+          {
+            "match": "ASM_SIDE_(Face|FinEnd|UnfinEnd|UnfinBack|FinBack|Top|Bottom|PanelizedEnd|None|Filler|ExtendedEnd|ReturnEnd|AppliedEnd|AppliedDoor|AutoEnd|AutoBack|FinPartition|ClippedBack|NoEnd|NoBack|SkinEnd)",
+            "name": "variable.other.constant.object.js"
+          },
+          {
+            "match": "DOOR_SIDE_(TopRail|BottomRail|LeftStile|RightStile)",
+            "name": "variable.other.constant.object.js"
+          },
+          {
+            "match": "TOP_SIDE_(Unfinished|Finished|Molding|Splash|Butt)",
             "name": "variable.other.constant.object.js"
           }
         ]

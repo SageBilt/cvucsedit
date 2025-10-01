@@ -118,6 +118,7 @@ class LanguageClientWrapper {
         const dynamicData = {};
         dynamicData.classRefs = this.ScriptProvider.UCSJSLibRefParser.classReferences;
         dynamicData.CVAsmManagedRefs = this.ScriptProvider.UCSJSLibRefParser.CVAsmManagedReferences;
+        dynamicData.CVShapeManagedRefs = this.ScriptProvider.UCSJSLibRefParser.CVShapeManagedReferences;
         // Send notification once the client is ready
         this.client.start().then(() => {
             this.client.sendNotification('updateJSReferences', dynamicData); //updateJSLibraryClassRef

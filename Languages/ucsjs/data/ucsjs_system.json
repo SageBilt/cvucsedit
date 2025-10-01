@@ -1,8 +1,10 @@
 {
     "objects": [
-        "_this",
-        "_cab",
-        "_cvMath"
+        {"name":"_this","type":"CVAsmManaged"},
+        {"name":"_cab","type":"CVAsmManaged"},
+        {"name":"_cvMath"},
+        {"name":"_cvSystem"},
+        {"name":"_cvString"}
     ],
     "constants": {
         "AssemblyTypes": [
@@ -35,6 +37,43 @@
             "OBJ_ACAMDWG",
             "OBJ_LINE",
             "OBJ_ARC"
+        ],
+        "ShapeSideType": [
+            "ASM_SIDE_Face",
+            "ASM_SIDE_FinEnd",
+            "ASM_SIDE_UnfinEnd",
+            "ASM_SIDE_UnfinBack",
+            "ASM_SIDE_FinBack",
+            "ASM_SIDE_Top",
+            "ASM_SIDE_Bottom",
+            "ASM_SIDE_PanelizedEnd",
+            "ASM_SIDE_None",
+            "ASM_SIDE_Filler",
+            "ASM_SIDE_ExtendedEnd",
+            "ASM_SIDE_ReturnEnd",
+            "ASM_SIDE_AppliedEnd",
+            "ASM_SIDE_AppliedDoor",
+            "ASM_SIDE_AutoEnd",
+            "ASM_SIDE_AutoBack",
+            "ASM_SIDE_FinPartition",
+            "ASM_SIDE_ClippedBack",
+            "ASM_SIDE_NoEnd",
+            "ASM_SIDE_NoBack",
+            "ASM_SIDE_SkinEnd",
+            "DOOR_SIDE_TopRail",
+            "DOOR_SIDE_BottomRail",
+            "DOOR_SIDE_LeftStile",
+            "DOOR_SIDE_RightStile",
+            "TOP_SIDE_Unfinished",
+            "TOP_SIDE_Finished",
+            "TOP_SIDE_Molding",
+            "TOP_SIDE_Splash",
+            "TOP_SIDE_Butt"
+        ],
+        "ShapeAxis": [
+            "AXIS_XY",
+            "AXIS_XZ",
+            "AXIS_ZY"
         ],
         "parameterModTypes": [
             "PARMOD_DESC",
@@ -347,9 +386,119 @@
             "value": "_CONNID",
             "description": "Connection ID",
             "Type": "VAL_INTEGER"
+        },
+        {
+            "name": "Axis",
+            "parentObject": "",
+            "value": "Axis",
+            "description": "Shape axis (AXIS_XY, AXIS_XZ, AXIS_ZY)",
+            "Type": "int",
+            "objectType": "CVShapeManaged"
+        },
+        {
+            "name": "Closed",
+            "parentObject": "",
+            "value": "Closed",
+            "description": "Shape is closed loop",
+            "Type": "bool",
+            "objectType": "CVShapeManaged"
+        },
+        {
+            "name": "Count",
+            "parentObject": "",
+            "value": "Count",
+            "description": "Number of edges",
+            "Type": "int",
+            "objectType": "CVShapeManaged"
         }
     ],
     "methods": [
+        {
+            "name": "Alert",
+            "parentObject": ["_cvSystem"],
+            "definition": "Alert(string message)",
+            "value": "Alert(${1:value})",
+            "description": "Displays a message box with the given message",
+            "example": "var name = ‘John Doe’;\n_cvSystem.Alert('Hello ' + name);",
+            "returnType": "void",
+            "parameterDef": [{"ParamName": "string message", "ParamValue": "Text to display","DataType": "string"}]
+        },
+        {
+            "name": "CopyToClipboard",
+            "parentObject": ["_cvSystem"],
+            "definition": "CopyToClipboard(string text)",
+            "value": "CopyToClipboard(${1:value})",
+            "description": "Copy text to the clipboard",
+            "example": "_cvSystem.CopyToClipboard('Hello World!');",
+            "returnType": "bool",
+            "parameterDef": [{"ParamName": "string text", "ParamValue": "Text to copy to the clipboard","DataType": "string"}]
+        },
+        {
+            "name": "CreateObject",
+            "parentObject": ["_cvSystem"],
+            "definition": "CreateObject(string class)",
+            "value": "CreateObject('cvShape')",
+            "description": "Creates an object of the requested class type. Currently only one object type is supported.",
+            "example": "var tmpl = _cvSystem.CreateObject('cvShape');",
+            "returnType": "Object of the requested type else null on failure.\nCurrent supported values [CVShapeManaged]",
+            "parameterDef": [{"ParamName": "string class", "ParamValue": "Object Type","DataType": "string"}]
+        },
+        {
+            "name": "Degrees",
+            "parentObject": ["_cvMath"],
+            "definition": "Degrees(double value)",
+            "value": "Degrees(${1:value})",
+            "description": "Convert an angle value to degrees",
+            "example": "var degrees = _cvMath.Degrees(90);",
+            "returnType": "double - value as degrees ",
+            "parameterDef": [{"ParamName": "double value", "ParamValue": "Angle to convert to degrees","DataType": "double"}]
+        },
+        {
+            "name": "Epsilon",
+            "parentObject": ["_cvMath"],
+            "definition": "Epsilon()",
+            "value": "Epsilon()",
+            "description": "Return the internal Epsilon value CV uses for floating point tolerance",
+            "example": "var epsilon = _cvMath.Epsilon();",
+            "returnType": " double - 1.19e-04 "
+        },
+        {
+            "name": "FieldString",
+            "parentObject": ["_cvString"],
+            "definition": "FieldString(string vlaue, int field)",
+            "value": "FieldString(${1:value}, ${2:value})",
+            "description": "Extract a sub string from a comma delimited list",
+            "example": "var sub = _cvString.FieldString('ab,cd,ef,gh', 3); // returns ‘ef’",
+            "returnType": " string - contents of the specified field",
+            "parameterDef": [
+                {"ParamName": "string value", "ParamValue": "Comma delimted list of values","DataType": "string"},
+                {"ParamName": "int field", "ParamValue": "Field to extract from comma delimited list ","DataType": "int"}
+            ]
+        },
+        {
+            "name": "Imperial",
+            "parentObject": ["_cvMath"],
+            "definition": "Imperial(double value)",
+            "value": "Imperial(${1:value}",
+            "description": "Convert a value to imperial (value / 25.4)",
+            "example": "var result = _cvMath.Imperial(32);",
+            "returnType": "double - 1.19e-04",
+            "parameterDef": [{"ParamName": "double value", "ParamValue": "Convert to an imperial value","DataType": "double"}]
+        },
+        {
+            "name": "isEQ",
+            "parentObject": ["_cvString"],
+            "definition": "isEQ(string value1, string value2…[optional],bool case)",
+            "value": "isEQ(${1:value1}, ${2:value2}'${3:, 'case[optional]'})",
+            "description": "Determine if value1 equals value2 ignoring case with optional case check",
+            "example": "var iseq = _cvString.isEQ('abc', 'ABC');          // returns true\nvar iseq = _cvString.isEQ('abc', 'ABC', true);    // returns false",
+            "returnType": "bool",
+            "parameterDef": [
+                {"ParamName": "string value1", "ParamValue": "Left comparator ","DataType": "string"},
+                {"ParamName": "string value2", "ParamValue": "Right comparator","DataType": "string"},
+                {"ParamName": "bool case (optional - default = false)", "ParamValue": "True for case match else false to ignore case","DataType": "bool"}
+            ]
+        },
         {
             "name": "isEQ",
             "parentObject": ["_cvMath"],
@@ -358,6 +507,35 @@
             "description": "Determines if the 2 values are equal within the Epsilon tolerance.",
             "example": "var isequal = _cvMath.isEQ(5.12, 5.12);",
             "returnType": "bool"
+        },
+        {
+            "name": "isEQN",
+            "parentObject": ["_cvString"],
+            "definition": "isEQN(string value1, string value2, int chars…[optional], bool case)",
+            "value": "isEQN(${1:value1}, ${2:value2}', ${3:chars}' ${4:, 'case[optional]'})",
+            "description": "Determine if value1 equals value2 limited to the first number of characters with optional case check",
+            "example": "var iseqn = _cvString.isEQN('abc123', 'ABC', 3);            // returns true\nvar iseqn = _cvString.isEQN('abc123', 'ABC', 3, true);      // returns false",
+            "returnType": "bool",
+            "parameterDef": [
+                {"ParamName": "string value1", "ParamValue": "Left comparator ","DataType": "string"},
+                {"ParamName": "string value2", "ParamValue": "Right comparator","DataType": "string"},
+                {"ParamName": "int chars", "ParamValue": "Number of characters to compare","DataType": "int"},
+                {"ParamName": "bool case (optional - default = false)", "ParamValue": "True for case match else false to ignore case","DataType": "bool"}
+            ]
+        },
+        {
+            "name": "isEQWC",
+            "parentObject": ["_cvString"],
+            "definition": "isEQWC(string value1, string value2…[optional], bool case)",
+            "value": "isEQN(${1:value1}, ${2:value2}'${3:, 'case[optional]'})",
+            "description": "Determine if value1 equals value2 with wild cards with optional case check",
+            "example": "var iseqwc = _cvString.isEQWC('abcd', 'A*D');           // return true\nvar iseqwc = _cvString.isEQWC('abcd', 'A*D', true);     // return false",
+            "returnType": "bool",
+            "parameterDef": [
+                {"ParamName": "string value1", "ParamValue": "Left comparator ","DataType": "string"},
+                {"ParamName": "string value2", "ParamValue": "Right comparator with wild cards (* or ?)\n* multiple characters\n? single character","DataType": "string"},
+                {"ParamName": "bool case (optional - default = false)", "ParamValue": "True for case match else false to ignore case","DataType": "bool"}
+            ]
         },
         {
             "name": "isGT",
@@ -403,6 +581,26 @@
             "description": "Determines if value is equal to 0 within an Epsilon tolerance.",
             "example": "var zero = _cvMath.isZero(0.01);",
             "returnType": "bool"
+        },
+        {
+            "name": "Metric",
+            "parentObject": ["_cvMath"],
+            "definition": "Metric(double value)",
+            "value": "Metric(${1:value}",
+            "description": "Convert a value to metric (value * 25.4)",
+            "example": "var result = _cvMath.Metric(1);",
+            "returnType": "double - value as metric",
+            "parameterDef": [{"ParamName": "double value", "ParamValue": "Convert to a metric value","DataType": "double"}]
+        },
+        {
+            "name": "Radians",
+            "parentObject": ["_cvMath"],
+            "definition": "Radians(double value)",
+            "value": "Radians(${1:value}",
+            "description": "Convert an angle value to radians",
+            "example": "var rad = _cvMath.Radians(3.14);",
+            "returnType": "double - value as radians",
+            "parameterDef": [{"ParamName": "double value", "ParamValue": "Angle to convert to radians","DataType": "double"}]
         },
         {
             "name": "CreateChild",
@@ -486,6 +684,28 @@
             ]
         },
         {
+            "name": "GetChildren",
+            "parentObject": ["_this", "_cab"],
+            "definition": "GetChildren()",
+            "value": "GetChildren()",
+            "description": "Return a collection of object tree children of the current object.\n For a basic cabinet this will return [Case, Interior, Face]",
+            "example": "var result = _this.GetChildren();",
+            "returnType": "System::Collections::Generic::List - array of CVAsmManaged child objects",
+            "parameterDef": []
+        },
+        {
+            "name": "GetChildren",
+            "parentObject": ["_this", "_cab"],
+            "definition": "GetChildren(string filter)",
+            "value": "GetChildren('${1:format}')",
+            "description": "Return a collection of object tree children of the current object using a filter. The filter can include wild cards ? and *. There can also be multiple filters separated by the | symbol.\n Note: as CV exposes a .NET API this will return a .NET List object and not the native JavaScript Array.\n For a basic cabinet this will return [Case, Face]",
+            "example": "var result = _this.GetChildren('face|?c*');",
+            "returnType": "System::Collections::Generic::List - array of CVAsmManaged child objects",
+            "parameterDef": [
+                {"ParamName": "string filter", "ParamValue": "Name filter, optionally separated with a pipe, using full names or wild card characters","DataType": "ucsmSyntax"}
+            ]
+        },
+        {
             "name": "GetFirstChild",
             "parentObject": ["_this", "_cab"],
             "definition": "GetFirstChild()",
@@ -528,6 +748,16 @@
             "parameterDef": []
         },
         {
+            "name": "GetShape",
+            "parentObject": ["_this", "_cab"],
+            "definition": "GetShape()",
+            "value": "GetShape()",
+            "description": "Return the shape of the current object. For an object without a shape the shape will be a rectangle.\nNote: This function requires a xShaping license and will return null if not licensed.",
+            "example": "var shape = _this.GetShape();",
+            "returnType": "CVShapeManaged - reference to a shape object",
+            "parameterDef": []
+        },
+        {
             "name": "HasParameter",
             "parentObject": ["_this", "_cab"],
             "definition": "HasParameter(string name)",
@@ -538,6 +768,16 @@
             "parameterDef": [
                 {"ParamName": "string name", "ParamValue": "Parameter name","DataType": "ucsmSyntax"}
             ]
+        },
+        {
+            "name": "IsShaped",
+            "parentObject": ["_this", "_cab"],
+            "definition": "IsShaped()",
+            "value": "IsShaped()",
+            "description": "Determine if the object is shaped",
+            "example": "var result = _this.IsShaped();",
+            "returnType": "bool - true if object is shaped else false",
+            "parameterDef": []
         },
         {
             "name": "ModifyParameter",
@@ -676,6 +916,160 @@
             "parameterDef": [
                 {"ParamName": "CVAsmManaged parent", "ParamValue": "CV object representing the new parent","DataType": "any"}
             ]
+        },
+        {
+            "name": "SetShape",
+            "parentObject": ["_this", "_cab"],
+            "definition": "SetShape(int axis, CVShapeManaged shape)",
+            "value": "SetShape(${1:axis}, ${2:shape})",
+            "description": "Set a shape on the current object\nNote: This function requires a xShaping license and will return false if not licensed.",
+            "example": "_this.SetShape(AXIS_XY, shape);",
+            "returnType": "bool - true on success else false for invalid shape",
+            "parameterDef": [
+                {"ParamName": "int axis", "ParamValue": "The object axis the shape is applied to (see CVShapeManaged)","DataType": "int"},
+                {"ParamName": "CVManagedShape shape", "ParamValue": "Object representing a shape to apply to the current object","DataType": "CVShapeManaged"}
+            ]
+        },
+        {
+            "name": "AddArc3Pt",
+            "parentObject": [],
+            "objectType": "CVShapeManaged",
+            "definition": "AddArc3Pt(double x1, double y1, double x2, double y2, double x3, double y3)",
+            "value": "AddArc3Pt(${1:x1}, ${2:y1}, ${3:x2}, ${4:y2}, ${5:x3}, ${6:y3})",
+            "description": "Add an arc to the current shape specified by a start, arc and end position",
+            "example": "shape.AddArc3Pt(0, 10, 14, 12, 18, 10);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x1", "ParamValue": "Arc start X position","DataType": "double"},
+                {"ParamName": "double y1", "ParamValue": "Arc start Y position","DataType": "double"},
+                {"ParamName": "double x2", "ParamValue": "Point on arc X position","DataType": "double"},
+                {"ParamName": "double y2", "ParamValue": "Point on arc Y position","DataType": "double"},
+                {"ParamName": "double x3", "ParamValue": "Arc end X position","DataType": "double"},
+                {"ParamName": "double y3", "ParamValue": "Arc end Y position","DataType": "double"}
+            ]
+        },
+        {
+            "name": "AddArcRad",
+            "parentObject": [],
+            "objectType": "CVShapeManaged",
+            "definition": "AddArcRad(double x, double y, double radius, double a1, double a2)",
+            "value": "AddArcRad(${1:x}, ${2:y}, ${3:radius}, ${4:a1}, ${5:a2})",
+            "description": "Add an arc to the current shape specified by the center X.Y position, radius and start and end angle",
+            "example": "shape.AddArcRad(6, 9, 1, 90, 180); ",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x", "ParamValue": "Arc center X position","DataType": "double"},
+                {"ParamName": "double y", "ParamValue": "Arc center Y position","DataType": "double"},
+                {"ParamName": "double radius", "ParamValue": "Arc radius","DataType": "double"},
+                {"ParamName": "double a1", "ParamValue": "Arc start angle (degrees)","DataType": "double"},
+                {"ParamName": "double a2", "ParamValue": "Arc end angle (degrees)","DataType": "double"}
+            ]
+        },
+        {
+            "name": "AddLine",
+            "parentObject": [],
+            "objectType": "CVShapeManaged",
+            "definition": "AddLine(double x1, double y1, double x2, double y2)",
+            "value": "AddLine(${1:x1}, ${2:y1}, ${3:x2}, ${4:y2})",
+            "description": "Add a line to the shape specified by start and end X,Y position",
+            "example": "shape.AddLine(5, 9, 5, 6); ",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x1", "ParamValue": "Value representing the line start X position","DataType": "double"},
+                {"ParamName": "double y1", "ParamValue": "Value representing the line start Y position","DataType": "double"},
+                {"ParamName": "double x2", "ParamValue": "Value representing the line end X position","DataType": "double"},
+                {"ParamName": "double y2", "ParamValue": "Value representing the line end Y position","DataType": "double"}
+            ]
+        },
+        {
+            "name": "Boolean",
+            "parentObject": [],
+            "objectType": "CVShapeManaged",
+            "definition": "Boolean(string action, cvShape shape)",
+            "value": "Boolean('${1:action}', ${2:shape},)",
+            "description": "Perform a geometry boolean operation between the current shape and a second shape.",
+            "example": "shape.Boolean('sub', notch);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "string action", "ParamValue": "Value representing the operation to perform\n•‘add’ - add shape to the current shape\n•'sub' - subtract shape from the current shape","DataType": "string"},
+                {"ParamName": "cvShape shape", "ParamValue": "Object representing operand geometry","DataType": "CVShapeManaged"}
+            ]
+        },
+        {
+            "name": "Check",
+            "parentObject": [],
+            "objectType": "CVShapeManaged",
+            "definition": "Check(bool closed…[optional], bool message)",
+            "value": "Check(${1:closed}, ${2: message[optional]})",
+            "description": "Check the shape geometry for validity with optional error message display.",
+            "example": "shape.Check(true, true);",
+            "returnType": "int - Error status (0 = no error)\n1.Empty - No geometry found\n2.Not Closed - closed specified but geometry is open\n3.Too Many - too many geometry loops located\n4.Geometry - error locating loops (likely crossed geometry)",
+            "parameterDef": [
+                {"ParamName": "bool closed", "ParamValue": "Geometry must form a closed loop","DataType": "bool"},
+                {"ParamName": "bool message (optional, default = false)", "ParamValue": "Display a message box indicating the error","DataType": "bool"}
+            ]
+        },
+        {
+            "name": "GetSideType",
+            "parentObject": [],
+            "objectType": "CVShapeManaged",
+            "definition": "GetSideType(int edge)",
+            "value": "GetSideType(${1:edge})",
+            "description": "Returns the object (assembly, door, counter top) side type as defined by the Constants above.",
+            "example": "var type = shape.GetSideType(2);",
+            "returnType": "int - Object side type as documented in the Constants above",
+            "parameterDef": [
+                {"ParamName": "int edge", "ParamValue": "Zero based index of the shape edge","DataType": "int"}
+            ]
+        },
+        {
+            "name": "Parse",
+            "parentObject": [],
+            "objectType": "CVShapeManaged",
+            "definition": "Parse(string xml)",
+            "value": "Parse('${1:xml}')",
+            "description": "Parse shape specified as XML data (see ToXML).",
+            "example": "shape.Parse(xml);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "string xml", "ParamValue": "XML data representing shape geometry","DataType": "string"}
+            ]
+        },
+        {
+            "name": "Reset",
+            "parentObject": [],
+            "objectType": "CVShapeManaged",
+            "definition": "Reset()",
+            "value": "Reset()",
+            "description": "Reset the shape removing all geometry",
+            "example": "shape.Reset(); ",
+            "returnType": "void",
+            "parameterDef": []
+        },
+        {
+            "name": "SetSideType",
+            "parentObject": [],
+            "objectType": "CVShapeManaged",
+            "definition": "SetSideType(int edge, int type)",
+            "value": "SetSideType(${1:edge}, ASM_SIDE_${2:type})",
+            "description": "Set the object side type as defined by the Constants above.",
+            "example": "shape.SetSideType(2, TOP_SIDE_Splash);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "int edge", "ParamValue": "Zero based index of the shape edge","DataType": "int"},
+                {"ParamName": "int type", "ParamValue": "Object side type as documented in the Constants above","DataType": "constants.ShapeSideType"}
+            ]
+        },
+        {
+            "name": "ToXML",
+            "parentObject": [],
+            "objectType": "CVShapeManaged",
+            "definition": "ToXML()",
+            "value": "ToXML()",
+            "description": "Write the shape to XML data format (the same as is used by CV to transfer geometry to S2M). This is useful for analyzing the core shape data.\nPro Tip: The XML data can be copied to the clipboard and then pasted into a text editor like Notepad for analysis",
+            "example": "var check = shape.Check(true);\nif ( var != 0 )\n{\n_cvSystem.CopyToClipboard(shape.ToXML());\nalert('Shape Error : ' + check + '\nThe shape has been copied to the clipboard ' +\n'and can be pasted into Notepad for analysis');\n}",
+            "returnType": "string - Shape data as XML format",
+            "parameterDef": []
         }
     ]
 }

@@ -8,7 +8,7 @@ import { ClassDeclaration as BabelClassDeclaration, ClassMethod, ClassProperty, 
     VariableDeclaration,
     VariableDeclarator,
     Expression} from '@babel/types';
-import { docClassRef, classElement, ElementParam, UCSJSSystemMethod, UCSJSSystemData, CVAsmManaged } from './interfaces';
+import { docClassRef, classElement, ElementParam, UCSJSSystemMethod, UCSJSSystemData, CVManaged, UCSJSObject } from './interfaces';
 import * as fs from 'fs';
 import * as CONSTANTS from './constants';
 import { Position, Range ,CompletionItemKind } from 'vscode-languageserver/node';
@@ -17,8 +17,9 @@ import { Position, Range ,CompletionItemKind } from 'vscode-languageserver/node'
 
 export class referenceParser {
     public classReferences: docClassRef[] = [];
-    public CVAsmManagedReferences : CVAsmManaged[] = [];
-    private ucsjsObjects: string[] = [];
+    public CVAsmManagedReferences : CVManaged[] = [];
+    public CVShapeManagedReferences : CVManaged[] = [];
+    private ucsjsObjects: UCSJSObject[] = [];
     public ucsjsMethods: UCSJSSystemMethod[] = [];
 
     constructor() {
@@ -100,9 +101,9 @@ export class referenceParser {
 
 
             // Extract methods from the class body
-            for (const bodyNode of node.body.body) {
+            for (const bodyNode of node?.body?.body) {
 
-                if (bodyNode.type == 'ClassMethod') {
+                if (bodyNode?.type == 'ClassMethod') {
                     const classMethod = bodyNode as ClassMethod;
                     const key = classMethod.key as Identifier;
                     const startPos = key.loc ? Position.create(key.loc.start.line-1,key.loc.start.column) : Position.create(0,0);
@@ -120,7 +121,7 @@ export class referenceParser {
                     classElems.push(element);
                 }
 
-                if (bodyNode.type == 'ClassProperty') {
+                if (bodyNode?.type == 'ClassProperty') {
                     const classProp = bodyNode as ClassMethod | ClassProperty;
                     const key = classProp.key as Identifier;
                     const startPos = key.loc ? Position.create(key.loc.start.line-1,key.loc.start.column) : Position.create(0,0);
@@ -165,7 +166,7 @@ export class referenceParser {
 
         traverse(ast, {
             CallExpression: ({ node }: { node: CallExpression }) => {
-                if (node.callee.type === 'MemberExpression') {
+                if (node?.callee?.type === 'MemberExpression') {
                   const memberExpr = node.callee as MemberExpression;
                   const objectName = (memberExpr.object as Identifier)?.name || 'unknown';
                   const propertyName = (memberExpr.property as Identifier)?.name;
@@ -196,7 +197,28 @@ export class referenceParser {
         });
     }
 
-    private extractVariableAssignments(docURI: string, ast: ParseResult) {
+    private refExistsInList(list: CVManaged[],varName: string, docURI: string, type: string) {
+        return list.some(varRef => varRef.variableName == varName && varRef.uri == docURI && varRef.type == type);
+    }
+
+    private extractVariableAssignments(docURI: string, ast: ParseResult,) {
+
+        const findCVManagedRef = (list: CVManaged[], varName: string, assignName: string, objName: string, type: string,loc: SourceLocation | null | undefined) => {
+            const CVManVarRef = list.find(varRef => varRef.variableName == assignName
+                && varRef.variableName != varName 
+            );
+
+            if (CVManVarRef && !this.refExistsInList(list,varName,docURI,type)) {
+                list.push({
+                        variableName: varName,
+                        objectName: objName,//CVShapeManVarRef ? CVShapeManVarRef.objectName : calleeObj.name,
+                        type: type,
+                        uri: docURI,
+                        range: this.getRange(loc),
+                    });
+            }  
+        } 
+
         traverse(ast, {
             VariableDeclaration: ({ node }: { node: VariableDeclaration }) => {
                 node.declarations.forEach((declarator: VariableDeclarator) => {
@@ -206,58 +228,78 @@ export class referenceParser {
 
             
                     const init = (declarator.init as Expression);
-                    if (init.type === 'Identifier') {
-                        this.ucsjsObjects.forEach(obj =>{
+                    if (init?.type === 'Identifier') {
+                        const variableName = (declarator?.id as Identifier).name;
 
-                            if (obj == init.name) {
-                                const variableName = (declarator.id as Identifier).name;
-
-                                this.CVAsmManagedReferences.push({
-                                    variableName,
-                                    objectName: obj,
-                                    uri: docURI,
-                                    range: this.getRange(declarator.loc),
-                                });
-                            }
-                        });
-                    }
-
-                    if (init.type === 'CallExpression') {
-                        const variableName = (declarator.id as Identifier).name;
-                        const callee = (init.callee as MemberExpression);
-                        const calleeObj = (callee.object as Identifier);
-                        const calleeProp = (callee.property as Identifier);
-
-                        const varRef = this.CVAsmManagedReferences.find(varRef => varRef.variableName == calleeObj?.name
-                                && varRef.variableName != variableName 
-                            );
-                        //callee.object.name should be _this
-                        //callee.property.name should be the method name
-                        this.ucsjsMethods.forEach(meth => {
-                            if (meth.name == calleeProp?.name && meth.parentObject.includes(calleeObj?.name) || varRef) {
-                                if (meth.returnType.includes('CVAsmManaged')) {
-             
-
+                        this.ucsjsObjects.forEach(obj =>{ 
+                            if (obj.name == init.name) {
+                                const type = obj.Type ?? '';
+                                if (!this.refExistsInList(this.CVAsmManagedReferences,variableName,docURI,type)) {
                                     this.CVAsmManagedReferences.push({
                                         variableName,
-                                        objectName: varRef ? varRef.objectName : calleeObj.name,
+                                        objectName: obj.name,
+                                        type: type,
                                         uri: docURI,
                                         range: this.getRange(declarator.loc),
                                     });
                                 }
                             }
                         });
-                        // this.CVAsmManagedReferences.forEach(varRef => {
-                        //     const variableName = (declarator.id as Identifier).name;
-                        //     if (varRef.objectName == calleeObj?.name && varRef.variableName != variableName) {
-                        //         this.CVAsmManagedReferences.push({
-                        //             variableName,
-                        //             objectName: calleeObj.name,
-                        //             uri: docURI,
-                        //             range: this.getRange(declarator.loc),
-                        //         });
-                        //     }
-                        // });
+
+                        const CVAsmManVarRef = this.CVAsmManagedReferences.find(varRef => varRef.variableName == init.name
+                                && varRef.variableName != variableName 
+                            );
+
+                        findCVManagedRef(this.CVAsmManagedReferences,variableName,init.name,CVAsmManVarRef?.objectName ?? '','CVAsmManaged',declarator.loc);
+                        findCVManagedRef(this.CVShapeManagedReferences,variableName,init.name,'','CVShapeManaged',declarator.loc);
+                    }
+
+                    if (init?.type === 'CallExpression') {
+                        const variableName = (declarator.id as Identifier).name;
+                        const callee = (init.callee as MemberExpression);
+                        const calleeObj = (callee.object as Identifier);
+                        const calleeProp = (callee.property as Identifier);
+
+                        const CVAsmManVarRef = this.CVAsmManagedReferences.find(varRef => varRef.variableName == calleeObj?.name
+                                && varRef.variableName != variableName 
+                            );
+
+                        const CVShapeManVarRef = this.CVShapeManagedReferences.find(varRef => varRef.variableName == calleeObj?.name
+                                && varRef.variableName != variableName 
+                            );    
+                        //callee.object.name should be _this
+                        //callee.property.name should be the method name
+                        this.ucsjsMethods.forEach(meth => {
+                            const isCalleeObj = meth.name == calleeProp?.name && meth.parentObject.includes(calleeObj?.name);
+
+                            if (isCalleeObj || CVAsmManVarRef ) {
+                                if (meth.returnType.includes('CVAsmManaged')) {
+                                    if (!this.refExistsInList(this.CVAsmManagedReferences,variableName,docURI,'CVAsmManaged')) {
+                                        this.CVAsmManagedReferences.push({
+                                            variableName,
+                                            objectName: CVAsmManVarRef ? CVAsmManVarRef.objectName : calleeObj.name,
+                                            type: 'CVAsmManaged',
+                                            uri: docURI,
+                                            range: this.getRange(declarator.loc),
+                                        });
+                                    }
+                                }
+                            }
+
+                            if (isCalleeObj || CVShapeManVarRef) {    
+                                if (meth.returnType.includes('CVShapeManaged')) {
+                                    if (!this.refExistsInList(this.CVShapeManagedReferences,variableName,docURI,'CVShapeManaged')) {
+                                        this.CVShapeManagedReferences.push({
+                                                variableName,
+                                                objectName: '',//CVShapeManVarRef ? CVShapeManVarRef.objectName : calleeObj.name,
+                                                type: 'CVShapeManaged',
+                                                uri: docURI,
+                                                range: this.getRange(declarator.loc),
+                                            });
+                                    }
+                                }
+                            } 
+                        });
                     }
                 });
             },

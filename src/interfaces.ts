@@ -87,6 +87,11 @@ export interface UCSMSyntaxData {
 
 /*----------------- UCS JS -------------------*/
 
+export interface UCSJSObject {
+    name: string;
+    Type?: string;
+}
+
 export interface UCSJSSystemFunction {
     name: string;
     definition: string;
@@ -95,12 +100,13 @@ export interface UCSJSSystemFunction {
     example: string;
 }
 
-export interface UCSJSSystemPropertie {
+export interface UCSJSSystemProperty {
     name: string;
     parentObject: string[],
     value: string;
     description: string;
     Type: string;
+    objectType?:string;
 }
 
 export interface UCSJSParameterDef {
@@ -117,6 +123,7 @@ export interface UCSJSSystemMethod {
     example: string;
     returnType: string;
     parameterDef: UCSJSParameterDef[];
+    objectType?:string;
 }
 
 export interface UCSJSSystemConstants {
@@ -128,12 +135,13 @@ export interface UCSJSSystemConstants {
     objectClass: string[];
     objectTypes: string[];
     assemblyEndTypes: string[];
+    ShapeSideType: string[];
 }
 
 export interface UCSJSSystemData {
-    objects: string[];
+    objects: UCSJSObject[];
     constants: UCSJSSystemConstants;
-    properties: UCSJSSystemPropertie[];
+    properties: UCSJSSystemProperty[];
     functions: UCSJSSystemFunction[];
     methods: UCSJSSystemMethod[];
   }
@@ -241,15 +249,17 @@ export interface UCSJSSystemData {
       isEnabled: boolean;
   }
 
-  export interface CVAsmManaged {
+  export interface CVManaged {
     variableName: string;
     objectName: string;
+    type: string;
     uri: string;
     range: Range;
   }
 
   export interface docReferences {
     classRefs : docClassRef[];
-    CVAsmManagedRefs : CVAsmManaged[];
+    CVAsmManagedRefs : CVManaged[];
+    CVShapeManagedRefs : CVManaged[];
   }
 
