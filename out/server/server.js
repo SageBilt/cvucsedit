@@ -273,7 +273,7 @@ class LanguageServer {
             else if (this.languageId == 'javascript') {
                 if (this.ucsjsHandler.isObject(items, linePrefix))
                     return items;
-                if (this.ucsjsHandler.isCVManaged(items, prefixWord))
+                if (this.ucsjsHandler.isCVManaged(items, linePrefix, prefixWord))
                     return items;
                 if (this.ucsjsHandler.isLibraryClassInstances(items, linePrefix))
                     return items;
@@ -371,9 +371,9 @@ class LanguageServer {
                 return undefined;
             // const word = document.getText(wordRange).toUpperCase();
             // if (!word) return undefined;
-            console.log(`Hover text "${word}" prefixWord "${prefixWord}"`);
             const cursorPosition = this.getCursorPosition(position);
             const [linePrefix, fullLine] = this.getLineTextToCursor(document, position, cursorPosition);
+            console.log(`Hover text "${word}" prefixWord "${prefixWord}" linePrefix "${linePrefix}"`);
             const showDataType = this.languageId == 'javascript'
                 ? this.getMethodParamType(this.ucsjsHandler.ucsjsMethods, linePrefix, fullLine, cursorPosition)
                 : { paramType: 'All', insideStr: false };
@@ -397,11 +397,11 @@ class LanguageServer {
                         return ucsmhover;
                 }
                 else if (!['ucsmSyntax', 'string'].includes(showDataType.paramType) && this.languageId == 'javascript') {
-                    return this.ucsjsHandler.getHoverWord(word, wordRange, prefixWord);
+                    return this.ucsjsHandler.getHoverWord(word, wordRange, prefixWord, linePrefix);
                 }
             }
             else
-                return this.ucsjsHandler.getHoverWord(word, wordRange, prefixWord);
+                return this.ucsjsHandler.getHoverWord(word, wordRange, prefixWord, linePrefix);
         });
     }
     findSymbolAtPosition(doc, pos) {

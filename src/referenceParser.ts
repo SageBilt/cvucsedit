@@ -278,7 +278,7 @@ export class referenceParser {
                                         this.CVAsmManagedReferences.push({
                                             variableName,
                                             objectName: CVAsmManVarRef ? CVAsmManVarRef.objectName : calleeObj.name,
-                                            type: 'CVAsmManaged',
+                                            type: meth.returnType.includes('array') ? 'CVShapeManaged[]' : 'CVShapeManaged',
                                             uri: docURI,
                                             range: this.getRange(declarator.loc),
                                         });
@@ -292,7 +292,7 @@ export class referenceParser {
                                         this.CVShapeManagedReferences.push({
                                                 variableName,
                                                 objectName: '',//CVShapeManVarRef ? CVShapeManVarRef.objectName : calleeObj.name,
-                                                type: 'CVShapeManaged',
+                                                type: meth.returnType.includes('array') ? 'CVShapeManaged[]' : 'CVShapeManaged',
                                                 uri: docURI,
                                                 range: this.getRange(declarator.loc),
                                             });

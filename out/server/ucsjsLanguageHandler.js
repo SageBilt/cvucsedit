@@ -210,6 +210,8 @@ class ucsjsLanguageHandler {
             }
         });
     }
+    isArrayOfCVManaged(lineText) {
+    }
     isObject(items, lineText) {
         for (const spObj of this.ucsjsObjects) {
             const wordRegex = new RegExp(`${spObj.name}[^\\s]*$`, 'i');
@@ -222,12 +224,15 @@ class ucsjsLanguageHandler {
         }
         return false;
     }
-    isCVManaged(items, linePrefix) {
+    isCVManaged(items, lineText, wordPrefix) {
+        const isArrayVariable = lineText.endsWith('].');
         const findCVManObj = (list) => {
             for (const CVManObj of list) {
-                //console.log(linePrefix , CVManObj.variableName);
+                //console.log(wordPrefix , CVManObj.variableName);
                 //const wordRegex = new RegExp(`${CVAsmObj.objectName}[^\\s]*$`, 'i');
-                if (linePrefix == CVManObj.variableName.toUpperCase()) {
+                //console.log(CVManObj.variableName , isArrayVariable , CVManObj.type , lineText.includes(CVManObj.variableName));
+                if (wordPrefix == CVManObj.variableName.toUpperCase() && !isArrayVariable
+                    || isArrayVariable && CVManObj.type.endsWith('[]') && lineText.includes(CVManObj.variableName)) {
                     //console.log(linePrefix , CVManObj.variableName);
                     this.AddProperties(items, CVManObj.objectName, CVManObj.type);
                     this.AddMethods(items, CVManObj.objectName, CVManObj.type);
@@ -276,7 +281,7 @@ class ucsjsLanguageHandler {
             });
         });
     }
-    getHoverWord(word, wordRange, prefixWord) {
+    getHoverWord(word, wordRange, prefixWord, lineText) {
         const object = this.ucsjsObjects.find(obj => obj.name === word);
         if (object) {
             return {
@@ -297,7 +302,9 @@ class ucsjsLanguageHandler {
                 range: wordRange // Optional: Highlight the word
             };
         }
-        const CVAsmManVarRefMatch = this.CVAsmManagedReferences.find(varRef => varRef.variableName.toUpperCase() == prefixWord);
+        const isArrayVariable = lineText.includes('].');
+        const CVAsmManVarRefMatch = this.CVAsmManagedReferences.find(varRef => varRef.variableName.toUpperCase() == prefixWord
+            || isArrayVariable && varRef.type.endsWith('[]') && lineText.includes(`${varRef.variableName}[`));
         const CVShapeManVarRefMatch = this.CVShapeManagedReferences.find(varRef => varRef.variableName.toUpperCase() == prefixWord);
         //this.connection.console.log(`variableName "${this.CVShapeManagedReferences[0].variableName}" objectName "${this.CVShapeManagedReferences[0].objectName}"`);
         //this.connection.console.log(`prefixWord "${prefixWord}" objectType "${CVShapeManVarRefMatch?.type}" variableName "${CVShapeManVarRefMatch?.variableName}"`);
