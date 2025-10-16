@@ -6,6 +6,9 @@ import { DynamicData, UCSOpenContex } from './interfaces';
 import { referenceParser } from './referenceParser';
 import { TextDocument } from 'vscode';
 
+import * as fs from 'fs';
+import * as path from 'path';
+
 export class SQLScriptProvider {
     private UCS: Map<string, string> = new Map();
     private DBVersion: number = 0;
@@ -32,7 +35,7 @@ export class SQLScriptProvider {
         vscode.window.registerTreeDataProvider('CVUCSList', this.UCSListlookupProvider);
         this.UCSLibListlookupProvider = new CLT.LookupTreeDataProvider(this.context);
         vscode.window.registerTreeDataProvider('CVUCSLibList', this.UCSLibListlookupProvider);
-        vscode.workspace.registerFileSystemProvider('cvucs', this.textProvider, { isCaseSensitive: false });
+        vscode.workspace.registerFileSystemProvider('cvucs', this.textProvider,  { isCaseSensitive: false, });
 
         this.setupLanguageHandler();
     }
@@ -151,6 +154,12 @@ export class SQLScriptProvider {
         
             this.textProvider.writeFile(item.docURI, Buffer.from(wrappedCode, 'utf8'), { create: true, overwrite: true });
         });
+
+        const definitionsPath = this.context.asAbsolutePath('Languages/ucsjs/uscjs_definitions.d.ts');
+        const doc = path.normalize(definitionsPath).replace(/\\/g, '/');
+        const docURI = vscode.Uri.parse(`cvucs:/uscjs_definitions.d.ts`);
+        const contents = fs.readFileSync(doc, 'utf8');
+        this.textProvider.writeFile(docURI,Buffer.from(contents, 'utf8'), { create: true, overwrite: true });
     }
 
     private addClassRefs(list: CLT.CustomTreeItem[]) {

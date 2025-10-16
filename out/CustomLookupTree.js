@@ -41,9 +41,9 @@ const path = __importStar(require("path"));
 const UCSFileTypes = [
     { FileTypeName: "None", Extension: "", IconName: "" },
     { FileTypeName: "Divider", Extension: "", IconName: "Divider.png" },
-    { FileTypeName: "UCSJS", Extension: "ucsjs", IconName: "UCSJS.png" },
+    { FileTypeName: "UCSJS", Extension: "js", IconName: "UCSJS.png" },
     { FileTypeName: "UCSM", Extension: "ucsm", IconName: "UCSM.png" },
-    { FileTypeName: "UCSJS-Disabled", Extension: "ucsjs", IconName: "UCSJS-disabled.png" },
+    { FileTypeName: "UCSJS-Disabled", Extension: "js", IconName: "UCSJS-disabled.png" },
     { FileTypeName: "UCSM-Disabled", Extension: "ucsm", IconName: "UCSM-disabled.png" }
 ];
 function GetFileTypeByName(FileTypeName) {

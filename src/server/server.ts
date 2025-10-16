@@ -25,6 +25,7 @@ import { ucsmLanguageHandler } from './ucsmLanguageHandler';
 import { ucsjsLanguageHandler } from './ucsjsLanguageHandler';
 import { ucsmValidation } from './ucsmValidation';
 import * as CONSTANTS from '.././constants';
+import * as ts from 'typescript';
 
 
 class LanguageServer {
@@ -551,7 +552,15 @@ class LanguageServer {
       this.ucsjsHandler.CVAsmManagedReferences = params.CVAsmManagedRefs;
       this.ucsjsHandler.CVShapeManagedReferences = params.CVShapeManagedRefs;
       //console.log(`Received data updated references for libraries`);
-    })
+    });
+
+    this.connection.onNotification('typescriptCompletions', (params) => {
+        this.ucsjsHandler.addTypeScriptCompletions(params);
+    });
+
+    this.connection.onNotification('typescriptHover', (params : { uri: string; hover: ts.QuickInfo }) => {
+          console.log(`kind "${params.hover.kind}" displayParts "${params.hover.displayParts?.[0].text}" documentation "${params.hover.documentation}"`);
+    });
   }
 
   private tokenTypeIndex(type: string): number {

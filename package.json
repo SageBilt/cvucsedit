@@ -28,6 +28,10 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "typescriptServerPlugins": [{
+            "name": "virtual-files-plugin",
+            "enableForWorkspaceType": ["cvucs"]
+        }],
     "languages": [
       {
         "id": "ucsm",

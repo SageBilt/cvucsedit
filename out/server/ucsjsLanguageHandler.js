@@ -50,6 +50,7 @@ class ucsjsLanguageHandler {
     classLibraries = [];
     CVAsmManagedReferences = [];
     CVShapeManagedReferences = [];
+    typescriptCompletions = new Map();
     // private AssemblyTypes: string[] = [];
     // private parameterModTypes: string[] = [];
     // private parameterModStyles: string[] = [];
@@ -447,6 +448,21 @@ class ucsjsLanguageHandler {
                 }
             }
         }
+    }
+    addTypeScriptCompletions(params) {
+        const tsItems = params.completions.map(entry => ({
+            label: entry.name,
+            kind: node_1.CompletionItemKind.Function, // Or map entry.kind to CompletionItemKind
+            detail: entry.kindModifiers, // Optional
+            documentation: {
+                kind: 'markdown',
+                value: `**${entry.name}** (from TypeScript definitions)`
+            }
+        }));
+        params.completions.forEach(item => {
+            console.log(`kind "${item.kind}" name "${item.name}"`);
+        });
+        this.typescriptCompletions.set(params.uri, tsItems); // Now CompletionItem[]
     }
 }
 exports.ucsjsLanguageHandler = ucsjsLanguageHandler;

@@ -13,6 +13,7 @@ import {
 import { UCSJSSystemConstants, UCSJSSystemProperty, UCSJSSystemFunction, UCSJSSystemData,UCSJSSystemMethod, UCSJSParameterDef, DynamicData, docClassRef, classElement, ElementParam, CVManaged, UCSJSObject } from '../interfaces';
 import * as CONSTANTS from '../constants';
 import { Position, Uri } from 'vscode';
+import * as ts from 'typescript';
 
 
 export class ucsjsLanguageHandler {
@@ -32,6 +33,8 @@ export class ucsjsLanguageHandler {
     public CVAsmManagedReferences: CVManaged[] = [];
 
     public CVShapeManagedReferences: CVManaged[] = [];
+
+    private typescriptCompletions = new Map<string, CompletionItem[]>();
 
     // private AssemblyTypes: string[] = [];
     // private parameterModTypes: string[] = [];
@@ -494,4 +497,25 @@ export class ucsjsLanguageHandler {
         }
 
     }
+
+
+    addTypeScriptCompletions(params: { uri: string; completions: ts.CompletionEntry[] }) {
+        const tsItems: CompletionItem[] = params.completions.map(entry => ({
+            label: entry.name,
+            kind: CompletionItemKind.Function,  // Or map entry.kind to CompletionItemKind
+            detail: entry.kindModifiers,  // Optional
+            documentation: {
+                kind: 'markdown',
+                value: `**${entry.name}** (from TypeScript definitions)`
+            }
+        }));
+
+        params.completions.forEach( item => {
+            console.log(`kind "${item.kind}" name "${item.name}"`);
+        });
+
+        
+        this.typescriptCompletions.set(params.uri, tsItems);  // Now CompletionItem[]
+    }
+
 }

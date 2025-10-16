@@ -39,6 +39,8 @@ const CLT = __importStar(require("./CustomLookupTree"));
 const DatabaseFileSystemProvider_1 = require("./DatabaseFileSystemProvider");
 const SQLConnection_1 = require("./SQLConnection");
 const referenceParser_1 = require("./referenceParser");
+const fs = __importStar(require("fs"));
+const path = __importStar(require("path"));
 class SQLScriptProvider {
     context;
     UCS = new Map();
@@ -66,7 +68,7 @@ class SQLScriptProvider {
         vscode.window.registerTreeDataProvider('CVUCSList', this.UCSListlookupProvider);
         this.UCSLibListlookupProvider = new CLT.LookupTreeDataProvider(this.context);
         vscode.window.registerTreeDataProvider('CVUCSLibList', this.UCSLibListlookupProvider);
-        vscode.workspace.registerFileSystemProvider('cvucs', this.textProvider, { isCaseSensitive: false });
+        vscode.workspace.registerFileSystemProvider('cvucs', this.textProvider, { isCaseSensitive: false, });
         this.setupLanguageHandler();
     }
     setupLanguageHandler() {
@@ -152,6 +154,11 @@ class SQLScriptProvider {
                 : item.Code;
             this.textProvider.writeFile(item.docURI, Buffer.from(wrappedCode, 'utf8'), { create: true, overwrite: true });
         });
+        const definitionsPath = this.context.asAbsolutePath('Languages/ucsjs/uscjs_definitions.d.ts');
+        const doc = path.normalize(definitionsPath).replace(/\\/g, '/');
+        const docURI = vscode.Uri.parse(`cvucs:/uscjs_definitions.d.ts`);
+        const contents = fs.readFileSync(doc, 'utf8');
+        this.textProvider.writeFile(docURI, Buffer.from(contents, 'utf8'), { create: true, overwrite: true });
     }
     addClassRefs(list) {
         list.forEach(item => {
