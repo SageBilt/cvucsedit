@@ -27,7 +27,7 @@ This extension adds features to VS Code for loading, editing and saving Cabinet 
 
 #### Supported Versions
 
-Currently supports all Cabinet Versions from 2021 through to 2025. 
+Currently supports all Cabinet Versions from 2021 through to 2026. 
 > **Note:** Version 12 may work but it has not been tested.
 
 ### Main Features
@@ -149,7 +149,7 @@ UCS code is mirrored to real files on disk, and VS Code's JavaScript language fe
 
 #### Available Setttings
 
-* `cvucsedit.Server`: The Cabinet Vision database SQL server instance name (defaults to **localhost\CV24**).
+* `cvucsedit.Server`: The Cabinet Vision database SQL server instance name (defaults to **localhost\CV26**). The instance name tracks the Cabinet Vision version, so set this if you are running an earlier one — `localhost\CV24` for 2024, and so on.
 * `cvucsedit.Database`: The name of the Cabinet Vision SQL database (defaults to **CVData**).
 * `cvucsedit.AutoStart`: Connect automatically when a workspace that has used the extension before is opened (defaults to **true**). A workspace that has never connected is never started automatically, whatever this is set to.
 * `cvucsedit.MirrorLocation`: Where UCS code is mirrored — **dedicated** (a folder of the extension's own, outside your projects) or **workspace** (the folder you have open). Leave it unset to let the extension decide per workspace: one that already contains a mirror keeps using it, anything else uses the dedicated folder.
@@ -190,6 +190,9 @@ Cabinet Vision can launch VS Code on its own `Temp\UCSJS` folder and attach its 
 - Those folders also get an `AGENTS.md` and `CLAUDE.md` explaining what the files are, so an AI agent asked to edit one knows that the `function fn<Name>() { … }` wrapper is Cabinet Vision's rather than part of the standard, that the folder is emptied when Cabinet Vision restarts, and where the durable copy of the same standard lives.
 - `cvucsedit.DebugFolderSuffix` controls the folder ending that is recognised (default `Temp/UCSJS`). Clear it to turn the whole thing off.
 - **Cabinet Vision UCS: Forget This Workspace** clears every answer a workspace has given — whether to connect here, where to mirror, and whether `AGENTS.md` may be written at its root — and offers a window reload. This is the way back after disconnecting somewhere you later want the extension again, since disconnecting is remembered and stops it starting there.
+
+##### Changed
+- **Cabinet Vision 2026 is now supported**, and the default SQL server instance is `localhost\CV26` rather than `localhost\CV24`. The instance name tracks the Cabinet Vision version, so set `cvucsedit.Server` if you are running an earlier one. If you were relying on the old default rather than setting it yourself, the first connection after upgrading will fail and prompt you for the server and database; what you enter there is kept.
 
 ##### Fixed
 - The mirror is no longer placed inside Cabinet Vision's debug folder. Because Cabinet Vision empties that folder on restart, `manifest.json` went with it — and that file is the merge base, so the next sync had nothing to compare against, let the database win and silently discarded any edit made on disk but not yet saved. Debug windows now always mirror to the dedicated folder.

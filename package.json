@@ -59,7 +59,7 @@
       "properties": {
         "cvucsedit.Server": {
           "type": "string",
-          "default": "localhost\\CV24",
+          "default": "localhost\\CV26",
           "description": "The Cabinet Vision database SQL server instance name"
         },
         "cvucsedit.Database": {

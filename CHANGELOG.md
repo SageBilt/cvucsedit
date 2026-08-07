@@ -36,6 +36,14 @@ ever writing to them.
   after disconnecting somewhere you later want back, since disconnecting is
   remembered and no longer auto-connects there.
 
+### Changed
+- **Cabinet Vision 2026 is now supported**, and the default SQL server instance is
+  `localhost\CV26` rather than `localhost\CV24`. The instance name tracks the
+  Cabinet Vision version, so set `cvucsedit.Server` if you are running an earlier
+  one. If you were relying on the old default rather than setting it yourself,
+  the first connection after upgrading will fail and prompt you for the server
+  and database; what you enter there is kept.
+
 ### Fixed
 - The mirror is no longer placed inside Cabinet Vision's debug folder. Because
   Cabinet Vision empties that folder on restart, `manifest.json` went with it —
