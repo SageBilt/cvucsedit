@@ -54,6 +54,11 @@ Addition to VSCode's built in features, this extension provides these features.
   - Every mirrored file also carries a short generated header, so an agent is warned in the file it is editing even if it never opens the documentation. The header is not part of your standard and is never saved to the database.
   - A short pointer to all of this is kept in `AGENTS.md` and `CLAUDE.md` at the root of the folder holding the mirror, since most agent tools only look there. In the dedicated UCS folder that is written straight away; if you are mirroring into a project of your own you are asked first, per workspace. Only the marked block is ever rewritten, anything you write around it is left alone, `cvucsedit.WriteRootAgentFiles` turns it off, and **Cabinet Vision UCS: Remove UCS Files from This Workspace** takes it back out again.
   - The mirrored copies are regenerated on activation and on each list refresh, and are ignored by git along with the rest of the folder.
+- **Cabinet Vision's UCS debugging window**
+  - When Cabinet Vision launches VS Code on its `Temp\UCSJS` folder to run a standard with breakpoints, the extension recognises that window and connects there without being asked.
+  - The plain `.js` files Cabinet Vision puts there get the same language support as mirrored UCS:JS — the Cabinet Vision API, completion, hover, signature help, the constants, and UCS:M inside `Evaluate('…')` strings.
+  - Nothing in that folder is watched or written back. Cabinet Vision extracted those files and Cabinet Vision saves them; the extension only reads them. Your UCS code still mirrors as usual, to the dedicated folder rather than into Cabinet Vision's temporary one.
+  - The folder gets its own `AGENTS.md` and `CLAUDE.md`, since an AI agent looking at it would otherwise see ordinary JavaScript and have no way to tell that the `function fn<Name>() { … }` wrapper is Cabinet Vision's, that the folder is emptied on restart, or that a durable copy of the same standard lives elsewhere.
 - **Syntax highlighting**
   - Different elements like keywords, constraints, data types etc. are styled accordingly.
   - Syntax highlighting follows VSCode theming and can be customized by the user.
@@ -152,6 +157,7 @@ UCS code is mirrored to real files on disk, and VS Code's JavaScript language fe
 * `cvucsedit.MirrorFolder`: The folder name used when `cvucsedit.MirrorLocation` is **workspace** (defaults to **cvucs**). Deliberately not hidden — some AI agent tools skip dot-prefixed folders. A mirror left in the old `.cvucs` folder is moved here automatically.
 * `cvucsedit.WriteRootAgentFiles`: Keep a short Cabinet Vision UCS section in `AGENTS.md` and `CLAUDE.md` at the root of the folder holding the mirror, pointing AI agents at it (defaults to **true**). In your own project you are asked before this is written for the first time. Existing files are appended to between markers, never overwritten.
 * `cvucsedit.CheckJs`: Report JavaScript type errors in mirrored UCS:JS files (defaults to **false**). Completion, hover, go to definition and rename work either way; enabling this also surfaces type errors, which can be noisy.
+* `cvucsedit.DebugFolderSuffix`: The end of the folder path Cabinet Vision opens when it launches VS Code to debug a UCS (defaults to **Temp/UCSJS**). A window opened on a folder ending this way connects automatically and gets UCS:JS language support on its plain `.js` files. Only the ending is matched, since the install path and version differ per machine. Clear it to turn that off.
 
 #### Available Commands
 
@@ -159,6 +165,7 @@ UCS code is mirrored to real files on disk, and VS Code's JavaScript language fe
 * `cvucsedit.stop`: Disconnect. Stops the language servers and the file watcher, so no further save reaches the database.
 * `cvucsedit.openMirrorWorkspace`: Open the dedicated UCS folder as its own window.
 * `cvucsedit.removeFromWorkspace`: Remove the UCS pointer block, and optionally the mirror folder, from this workspace.
+* `cvucsedit.forgetWorkspace`: Forget every answer this workspace has given — whether to connect, where to mirror, and whether `AGENTS.md` may be written at its root — and offer a reload. Use it to undo a disconnect, or to see what a first visit does.
 * `cvucsedit.loadUCSLists`: Reload Cabinet Vision UCS & library lists.
 * `cvucsedit.searchUCSList`: Search UCS List.
 * `cvucsedit.clearSearchUCSList`: Clear UCS Search.
@@ -173,6 +180,19 @@ Please report all issues on [Github](https://github.com/SageBilt/cvucsedit/issue
 
 
 ## Release Notes
+
+#### 2.2.0
+
+Cabinet Vision can launch VS Code on its own `Temp\UCSJS` folder and attach its script engine's debugger, so a standard can be run with breakpoints. The extension did nothing in that window, because the files Cabinet Vision puts there are plain `.js` rather than the `.ucs.js` of the mirror. It now recognises the window and gives those files the same language support the mirror gets, without ever writing to them.
+
+##### Added
+- **Support for Cabinet Vision's UCS debugging window.** The plain `.js` files Cabinet Vision extracts there get the full Cabinet Vision API — completion, hover, signature help and the constants — along with UCS:M completion and validation inside `Evaluate('…')` strings, the same as mirrored UCS:JS. Cabinet Vision keeps sole control of saving those files back to the database; the extension never writes to them and never syncs them.
+- Those folders also get an `AGENTS.md` and `CLAUDE.md` explaining what the files are, so an AI agent asked to edit one knows that the `function fn<Name>() { … }` wrapper is Cabinet Vision's rather than part of the standard, that the folder is emptied when Cabinet Vision restarts, and where the durable copy of the same standard lives.
+- `cvucsedit.DebugFolderSuffix` controls the folder ending that is recognised (default `Temp/UCSJS`). Clear it to turn the whole thing off.
+- **Cabinet Vision UCS: Forget This Workspace** clears every answer a workspace has given — whether to connect here, where to mirror, and whether `AGENTS.md` may be written at its root — and offers a window reload. This is the way back after disconnecting somewhere you later want the extension again, since disconnecting is remembered and stops it starting there.
+
+##### Fixed
+- The mirror is no longer placed inside Cabinet Vision's debug folder. Because Cabinet Vision empties that folder on restart, `manifest.json` went with it — and that file is the merge base, so the next sync had nothing to compare against, let the database win and silently discarded any edit made on disk but not yet saved. Debug windows now always mirror to the dedicated folder.
 
 #### 2.1.0
 

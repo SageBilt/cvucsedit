@@ -5,7 +5,14 @@ All notable changes to the "cvucsedit" extension will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.2.0] - 2026-08-08
+
+Cabinet Vision can launch VS Code on its own `Temp\UCSJS` folder and attach its
+script engine's debugger, so a standard can be run with breakpoints. The
+extension did nothing in that window, because the files Cabinet Vision puts there
+are plain `.js` rather than the `.ucs.js` of the mirror. It now recognises the
+window and gives those files the same language support the mirror gets, without
+ever writing to them.
 
 ### Added
 - **Support for Cabinet Vision's UCS debugging window.** When Cabinet Vision
