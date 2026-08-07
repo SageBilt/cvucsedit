@@ -7,8 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-08-07
+
+A major release. UCS code is no longer held in virtual documents — every UCS is
+now mirrored as a real file in the workspace, UCS:JS is served by VS Code's own
+TypeScript service instead of by this extension's language server, and the
+mirror carries its own documentation so that AI coding agents working in it know
+what they are editing.
+
 ### Added
-- **The mirror folder now documents itself for AI agents.** Four generated files
+- **Mirrored workspace folder.** Every UCS and library is written as a real file
+  under `<workspace>/cvucs/<Database>/`, as `<Name>.ucs.js` or `<Name>.ucsm`.
+  Because UCS code now lives at a real path it can be read by AI coding agents,
+  found with search across all UCS's at once, and opened by any external editor
+  or tool. The folder ignores itself in git, so your own `.gitignore` is never
+  touched.
+- **Two-way sync.** Saving in the editor, an AI agent writing the file and an
+  external tool writing the file all take the same route back to the database.
+  On startup, disk and database are reconciled: a change made only on disk is
+  pushed to SQL, a change made only in Cabinet Vision rewrites the file, and a
+  file changed on both sides is reported as a conflict with neither side
+  overwritten.
+- **Full TypeScript language support for UCS:JS.** The Cabinet Vision API is
+  compiled into a generated `cv-api.d.ts`, giving completion, hover, go to
+  definition, find all references, rename and (optionally) type checking for the
+  whole API, your own libraries and your own code alike. Your libraries are
+  covered exactly as your own code is: `_MyLib.Method()` completes, hovers, goes
+  to definition, and can be renamed across every UCS that calls it.
+- Parameters are now filled in automatically when a method is picked from the
+  completion list, for library methods as well as documented Cabinet Vision
+  methods. Constant arguments show their group as the placeholder, e.g.
+  `ModifyParameter(name, PARMOD_, PARSTYLE_)`.
+- **The mirror folder documents itself for AI agents.** Four generated files
   are written next to `cv-api.d.ts`: `AGENTS.md` with the rules that cannot be
   inferred from the files themselves — a save is an immediate write to the live
   database, a new file is silently ignored, the first and last lines of a
@@ -32,7 +62,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     between the markers is ever rewritten; an existing file is appended to.
     `cvucsedit.WriteRootAgentFiles` turns this off, and the notification shown
     the first time it happens offers to undo it.
-
 - **Dynamic 2D CAD for UCS:JS.** The nine CAD entity
   classes — Arc, Circle, Dimension, Leader, Line, Rectangle, Symbol, Text and
   TextBox — are described to TypeScript with all of their properties, methods
@@ -46,61 +75,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The CAD constant groups: line type, line weight, arrow type, vertical and
   horizontal text alignment, and dimension text position. Assigning one to the
   wrong property — an arrow type to `LineType`, say — is reported.
-
-### Fixed
-- **A library's properties and methods now appear in IntelliSense.** UCS code
-  calls a library as `_MyLib.Method()`, but the mirrored file wrapped it in a
-  bare class, whose members live on the prototype and so never resolved off the
-  name. Libraries are now wrapped as an instance, and their members complete,
-  hover, go to definition and rename from every UCS.
-- **`return` at the top level of a UCS:JS file is no longer an error.** Cabinet
-  Vision executes a UCS as a function body, which is why `return` works there,
-  but the mirrored file presented it to TypeScript as a plain script. UCS files
-  are now wrapped in `(function () { … })();`, matching how the code actually
-  runs. Only visible with `cvucsedit.CheckJs` on.
-
-### Changed
-- **The mirror folder is no longer hidden.** `cvucsedit.MirrorFolder` now
-  defaults to `cvucs` rather than `.cvucs`, because some AI agent tools skip
-  dot-prefixed folders when looking for context. An existing mirror is moved on
-  the next activation rather than abandoned — it is renamed, so `manifest.json`
-  travels with it and any edit made on disk but not yet pushed is still merged
-  rather than lost. A folder name you set yourself is left alone.
-- The trailing `export {};` line on mirrored UCS files is gone. The function
-  wrapper gives each UCS its own scope, so the marker is no longer needed —
-  existing mirrors are migrated on the next refresh, and nothing changes in the
-  database either way.
-
-## [2.0.0] - 2026-08-07
-
-A major release. UCS code is no longer held in virtual documents — every UCS is
-now mirrored as a real file in the workspace, and UCS:JS is served by VS Code's
-own TypeScript service instead of by this extension's language server.
-
-### Added
-- **Mirrored workspace folder.** Every UCS and library is written as a real file
-  under `<workspace>/.cvucs/<Database>/`, as `<Name>.ucs.js` or `<Name>.ucsm`.
-  Because UCS code now lives at a real path it can be read by AI coding agents,
-  found with search across all UCS's at once, and opened by any external editor
-  or tool. The folder ignores itself in git, so your own `.gitignore` is never
-  touched.
-- **Two-way sync.** Saving in the editor, an AI agent writing the file and an
-  external tool writing the file all take the same route back to the database.
-  On startup, disk and database are reconciled: a change made only on disk is
-  pushed to SQL, a change made only in Cabinet Vision rewrites the file, and a
-  file changed on both sides is reported as a conflict with neither side
-  overwritten.
-- **Full TypeScript language support for UCS:JS.** The Cabinet Vision API is
-  compiled into a generated `cv-api.d.ts`, giving completion, hover, go to
-  definition, find all references, rename and (optionally) type checking for the
-  whole API, your own libraries and your own code alike — including renaming a
-  library method across every UCS that calls it.
-- Parameters are now filled in automatically when a method is picked from the
-  completion list, for library methods as well as documented Cabinet Vision
-  methods. Constant arguments show their group as the placeholder, e.g.
-  `ModifyParameter(name, PARMOD_, PARSTYLE_)`.
 - New setting `cvucsedit.MirrorFolder` — the workspace folder UCS code is
-  mirrored into (defaults to **.cvucs**).
+  mirrored into (defaults to **cvucs**). Deliberately not dot prefixed, because
+  some AI agent tools skip hidden folders when looking for context.
+- New setting `cvucsedit.WriteRootAgentFiles` — maintain the pointer block in
+  the workspace root `AGENTS.md` and `CLAUDE.md` (defaults to **true**).
 - New setting `cvucsedit.CheckJs` — report TypeScript type errors in mirrored
   UCS:JS files (defaults to **false**, as it can be noisy). Completion, hover,
   go to definition and rename work either way.
@@ -111,10 +90,12 @@ own TypeScript service instead of by this extension's language server.
   know: UCS:M completion and error checking inside string arguments such as
   `Evaluate()`, live material and connection lists, and constant groups narrowed
   to the argument being typed.
-- Libraries are wrapped on disk so that TypeScript reproduces Cabinet Vision's
-  scoping exactly — a library is visible from every UCS, a UCS is not visible
-  from another UCS. The wrapper lines are stripped before anything is written
-  back, so they never reach the database.
+- Mirrored files are wrapped on disk so that TypeScript reproduces Cabinet
+  Vision's scoping and execution model exactly — a library is visible from every
+  UCS, a UCS is not visible from another UCS, and a top-level `return` is legal,
+  because Cabinet Vision executes a UCS as a function body. The wrapper lines
+  and the generated header are stripped before anything is written back, so they
+  never reach the database, and the editor reverts edits made to them.
 - An open folder is strongly recommended. With no folder open the mirror falls
   back to a location outside the workspace, with a warning — editing still
   works, but search, AI agents and the TypeScript project cannot reach it.
