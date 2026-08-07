@@ -39,6 +39,7 @@ const CLT = __importStar(require("./CustomLookupTree"));
 const SQLConnection_1 = require("./SQLConnection");
 const MirrorFileStore_1 = require("./MirrorFileStore");
 const dtsGenerator_1 = require("./dtsGenerator");
+const agentDocs_1 = require("./agentDocs");
 class SQLScriptProvider {
     context;
     DBVersion = 0;
@@ -93,15 +94,18 @@ class SQLScriptProvider {
             if (!item)
                 return;
             const kind = CLT.GetSentinelKind(item.FileType, item.isJSLibrary);
-            if (kind === 'ucsm')
-                return;
             const doc = event.document;
+            // Which lines are guarded comes from whether each sentinel returns a value, not from
+            // the kind: UCS:M has no wrapper but does carry the generated header, so a `kind`
+            // test here would leave those lines unprotected.
+            const expectedFirst = (0, MirrorFileStore_1.leadingSentinel)(kind, item.UCSName);
+            const expectedLast = (0, MirrorFileStore_1.trailingSentinel)(kind);
+            const leadRange = this.leadingRange(doc, expectedFirst);
             const guarded = [];
-            if (kind === 'jsLibrary') {
-                guarded.push(doc.lineAt(0).rangeIncludingLineBreak);
-                guarded.push(doc.lineAt(doc.lineCount - 1).range);
+            if (leadRange) {
+                guarded.push(leadRange);
             }
-            else {
+            if (expectedLast) {
                 guarded.push(doc.lineAt(doc.lineCount - 1).range);
             }
             const touched = event.contentChanges.some(change => guarded.some(range => change.range.intersection(range)));
@@ -110,11 +114,9 @@ class SQLScriptProvider {
             const editor = vscode.window.visibleTextEditors.find(e => e.document === doc);
             if (!editor)
                 return;
-            const expectedFirst = (0, MirrorFileStore_1.leadingSentinel)(kind, item.UCSName);
-            const expectedLast = (0, MirrorFileStore_1.trailingSentinel)(kind);
             void editor.edit(builder => {
-                if (expectedFirst && doc.lineAt(0).text !== expectedFirst) {
-                    builder.replace(doc.lineAt(0).range, expectedFirst);
+                if (expectedFirst && leadRange && doc.getText(leadRange) !== expectedFirst) {
+                    builder.replace(leadRange, expectedFirst);
                 }
                 const last = doc.lineCount - 1;
                 if (expectedLast && doc.lineAt(last).text !== expectedLast) {
@@ -123,15 +125,29 @@ class SQLScriptProvider {
             }, { undoStopBefore: false, undoStopAfter: false });
         }));
     }
+    /**
+     * The document range covered by the leading sentinel, which is a block rather than a line since
+     * the generated header was added. Clamped to the document: a file truncated by something outside
+     * the editor must not throw here.
+     */
+    leadingRange(doc, leading) {
+        if (!leading) {
+            return undefined;
+        }
+        const lastLine = Math.min(leading.split('\n').length, doc.lineCount) - 1;
+        return new vscode.Range(0, 0, lastLine, doc.lineAt(lastLine).text.length);
+    }
     /** Decorate the sentinel lines so it is obvious they are not part of the UCS. */
     applySentinelDecoration(editor, item) {
         const kind = CLT.GetSentinelKind(item.FileType, item.isJSLibrary);
-        if (kind === 'ucsm')
-            return;
         const doc = editor.document;
-        const ranges = [doc.lineAt(doc.lineCount - 1).range];
-        if (kind === 'jsLibrary') {
-            ranges.unshift(doc.lineAt(0).range);
+        const ranges = [];
+        const leadRange = this.leadingRange(doc, (0, MirrorFileStore_1.leadingSentinel)(kind, item.UCSName));
+        if (leadRange) {
+            ranges.push(leadRange);
+        }
+        if ((0, MirrorFileStore_1.trailingSentinel)(kind)) {
+            ranges.push(doc.lineAt(doc.lineCount - 1).range);
         }
         editor.setDecorations(this.sentinelDecoration, ranges);
     }
@@ -178,6 +194,65 @@ class SQLScriptProvider {
         await this.mirror.initialize();
         const generator = new dtsGenerator_1.DtsGenerator();
         await this.mirror.writeProjectFiles(generator.build(this.USCMDynamicData), generator.buildJsConfig());
+        // The mirror is reachable by AI agents, so it has to carry its own instructions. `cv-api.d.ts`
+        // covers the UCS:JS API and nothing else: not the sync rules, and not UCS:M at all.
+        const config = vscode.workspace.getConfiguration('cvucsedit');
+        const docs = new agentDocs_1.AgentDocsGenerator();
+        await this.mirror.writeAgentDocs({
+            'AGENTS.md': docs.buildAgentsMd(config.get('Database', 'CVData'), config.get('Server', '(unknown server)'), this.mirror.rootLabel),
+            'CLAUDE.md': docs.buildClaudeMd(),
+            'ucsjs-reference.md': docs.buildUcsjsReference(),
+            'ucsm-reference.md': docs.buildUcsmReference()
+        });
+        // ...and a pointer at the workspace root, which is the only place most agent tools look.
+        await this.mirror.writeRootPointer(docs.buildRootPointer(this.mirror.rootLabel), agentDocs_1.AgentDocsGenerator.mergeRootPointer, () => this.announceRootPointer());
+    }
+    /**
+     * Say so, once ever, the first time we touch a file at the root of someone's project. Silently
+     * editing a repository's own AGENTS.md would be a nasty surprise however useful it is.
+     */
+    announceRootPointer() {
+        if (this.context.globalState.get('cvucsedit.announcedRootPointer')) {
+            return;
+        }
+        void this.context.globalState.update('cvucsedit.announcedRootPointer', true);
+        void vscode.window.showInformationMessage('Added a Cabinet Vision UCS section to AGENTS.md and CLAUDE.md in your workspace root, ' +
+            'so AI agents find the mirrored UCS folder. Only the marked block is ever rewritten.', 'Undo and disable').then(choice => {
+            if (choice) {
+                void vscode.workspace.getConfiguration('cvucsedit')
+                    .update('WriteRootAgentFiles', false, vscode.ConfigurationTarget.Global);
+                void this.removeRootPointer();
+            }
+        });
+    }
+    /** Take the block back out again, leaving anything the user wrote around it untouched. */
+    async removeRootPointer() {
+        const root = this.mirror.workspaceRoot;
+        if (!root) {
+            return;
+        }
+        for (const name of ['AGENTS.md', 'CLAUDE.md']) {
+            const uri = vscode.Uri.joinPath(root, name);
+            try {
+                const text = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf8');
+                const begin = text.indexOf(agentDocs_1.AgentDocsGenerator.BLOCK_BEGIN);
+                const end = text.indexOf(agentDocs_1.AgentDocsGenerator.BLOCK_END);
+                if (begin === -1 || end < begin) {
+                    continue;
+                }
+                const rest = (text.slice(0, begin) + text.slice(end + agentDocs_1.AgentDocsGenerator.BLOCK_END.length)).trim();
+                // A file that was nothing but our block is ours to remove; anything else is the user's.
+                if (rest) {
+                    await vscode.workspace.fs.writeFile(uri, Buffer.from(`${rest}\n`, 'utf8'));
+                }
+                else {
+                    await vscode.workspace.fs.delete(uri);
+                }
+            }
+            catch {
+                // Not there, or not writable. Nothing to undo.
+            }
+        }
     }
     /** UCS:M has no `Divider` code to mirror, so those rows stay in the tree but get no file. */
     hasCode(FileType) {
@@ -262,7 +337,7 @@ class SQLScriptProvider {
         this.applySentinelDecoration(editor, item);
         // Tree line numbers are relative to the database code, the editor also shows the leading
         // sentinel, so shift by however many sentinel lines precede the code.
-        const lineOffset = (0, MirrorFileStore_1.leadingSentinelLines)(CLT.GetSentinelKind(item.FileType, item.isJSLibrary));
+        const lineOffset = (0, MirrorFileStore_1.leadingSentinelLines)(CLT.GetSentinelKind(item.FileType, item.isJSLibrary), item.UCSName);
         if (UCSContex.searchCodeLine > -1) {
             const lineNumber = UCSContex.searchCodeLine + lineOffset;
             const startChar = UCSContex.contextValue?.indexOf(UCSContex.searchText) || 0;

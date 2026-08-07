@@ -13,18 +13,93 @@ import { SQLConnection } from './SQLConnection';
  *               from every UCS. It has to be an *instance* rather than a bare class declaration:
  *               UCS code calls `_<Name>.Method()` directly, and the members of `class _<Name> {}`
  *               live on the prototype, so they would not resolve off the class itself.
- *   js        - a trailing `export {};`. That makes TypeScript treat the file as a *module* with its
- *               own scope, so one UCS cannot see another UCS's declarations. It is appended rather
- *               than prepended so that line numbers are unaffected.
+ *   js        - wrapped in `(function () { ... })();`, mirroring what Cabinet Vision does at
+ *               runtime: a UCS is executed as a function body, which is why a top level `return` is
+ *               legal in one. Presenting it to TypeScript as a bare script instead was a lie that
+ *               cost a TS1108 on every `return`. The wrapper also gives the file its own scope, so
+ *               one UCS still cannot see another's declarations - the job the earlier trailing
+ *               `export {};` module marker did, now done by function scope instead.
  *   ucsm      - no sentinels, UCS:M is not part of the TypeScript project.
  */
 export type SentinelKind = 'jsLibrary' | 'js' | 'ucsm';
 
+/** The module marker written by 2.0.0. Only still recognised so those mirrors round trip. */
 export const MODULE_MARKER = 'export {};';
 
-/** Number of sentinel lines inserted *before* the code, i.e. the line offset for reveal/highlight. */
-export function leadingSentinelLines(kind: SentinelKind): number {
-    return kind === 'jsLibrary' ? 1 : 0;
+/**
+ * The generated header carried by every mirrored file.
+ *
+ * `AGENTS.md` in the mirror root only helps an agent that goes looking for it, and that turns out
+ * to depend entirely on the tool: nested instruction files are discovered lazily, at the project
+ * root only, or not at all, and a folder that is both dot prefixed and git ignored is skipped
+ * outright by some. The header sidesteps discovery altogether - it is in the file the agent was
+ * asked to edit, so it is in context the moment the file is read, in any tool.
+ *
+ * It is part of the sentinel block, not part of the code: stripped before hashing, never pushed to
+ * the database, and reverted by the editor guard.
+ */
+const BANNER_PREFIX_JS = '//~';
+const BANNER_PREFIX_UCSM = ';~';
+
+/**
+ * Required on the first banner line for the block to be recognised on the way back out. Without it
+ * a run of lines that merely happen to start with the prefix could be silently eaten from someone's
+ * code, and stripping is destructive - it decides what is *not* written to the database.
+ */
+const BANNER_MARKER = 'cvucsedit';
+
+function bannerPrefix(kind: SentinelKind): string {
+    return kind === 'ucsm' ? BANNER_PREFIX_UCSM : BANNER_PREFIX_JS;
+}
+
+function escapeRegExp(text: string): string {
+    return text.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+}
+
+/**
+ * Kept to four lines. This sits at the top of every UCS the user opens, so it has to earn its space:
+ * only the things that are both invisible from the file and expensive to get wrong.
+ */
+function bannerLines(kind: SentinelKind): string[] {
+    return [
+        `Cabinet Vision UCS - generated header (${BANNER_MARKER}). Not part of this standard.`,
+        'Saving this file writes straight to the live database. There is no undo and no git history.',
+        kind === 'ucsm'
+            ? 'These ~ lines belong to the extension. The standard itself starts below them.'
+            : 'These ~ lines and the last line belong to the extension. Edit only between them.',
+        'Creating a file here does NOT create a UCS. Read ../AGENTS.md before changing anything.'
+    ];
+}
+
+export function leadingBanner(kind: SentinelKind): string {
+    const prefix = bannerPrefix(kind);
+    return bannerLines(kind).map(line => `${prefix} ${line}`).join('\r\n');
+}
+
+/**
+ * Remove the generated header. Tolerant in the same way as `stripSentinels`, and for the same
+ * reason: something that bypasses the editor guard may have mangled it, and that must not corrupt
+ * the round trip. Only a block that starts on the first line *and* identifies itself is removed, so
+ * a comment of the user's own is never mistaken for one.
+ */
+export function stripBanner(text: string, kind: SentinelKind): string {
+    const prefix = bannerPrefix(kind);
+    const firstLine = /^[^\r\n]*/.exec(text)?.[0] ?? '';
+    if (!firstLine.trimStart().startsWith(prefix) || !firstLine.includes(BANNER_MARKER)) {
+        return text;
+    }
+    const block = new RegExp(`^(?:[ \\t]*${escapeRegExp(prefix)}[^\\r\\n]*(?:\\r?\\n|$))+`);
+    return text.replace(block, '');
+}
+
+/**
+ * Number of sentinel lines inserted *before* the code, i.e. the line offset for reveal/highlight.
+ * Derived from `leadingSentinel` rather than stated separately, so the two cannot drift - the count
+ * does not depend on the UCS name, which only ever appears within a line.
+ */
+export function leadingSentinelLines(kind: SentinelKind, ucsName = ''): number {
+    const leading = leadingSentinel(kind, ucsName);
+    return leading ? leading.split('\n').length : 0;
 }
 
 export interface ManifestEntry {
@@ -61,6 +136,13 @@ const MANIFEST_VERSION = 1;
 const MANIFEST_NAME = 'manifest.json';
 const WRITE_DEBOUNCE_MS = 300;
 
+/**
+ * Not dot prefixed, deliberately. A hidden folder is skipped outright by some AI agent tools when
+ * they look for context and instruction files, which defeats the entire point of mirroring to disk.
+ */
+const DEFAULT_MIRROR_FOLDER = 'cvucs';
+const LEGACY_MIRROR_FOLDER = '.cvucs';
+
 const WINDOWS_RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
 
 /** Canonical form used for every hash and comparison: sentinel free, LF line endings. */
@@ -88,7 +170,7 @@ function sanitiseFileName(name: string): string {
 
 /** The identifier a library is bound to. This is the name UCS code calls it by. */
 export function libraryClassName(ucsName: string): string {
-    return `_${ucsName}`;
+    return `_${ucsName.toLowerCase()}`;
 }
 
 export function isValidIdentifier(name: string): boolean {
@@ -108,26 +190,44 @@ const LIBRARY_CLOSE = /(\r?\n)?[ \t]*\}[ \t]*\([ \t]*\)[ \t]*;?[ \t]*(\r?\n)*$/;
 /** The legacy bare `}`. Only safe to strip when the leading sentinel was the legacy one too. */
 const LIBRARY_CLOSE_LEGACY = /(\r?\n)?[ \t]*\}[ \t]*(\r?\n)*$/;
 
+/** `(function () {`, allowing a name so a hand edited wrapper is still recognised. */
+const UCS_OPEN = new RegExp(
+    `^[ \\t]*\\([ \\t]*function[ \\t]*(?:${IDENTIFIER})?[ \\t]*\\([ \\t]*\\)[ \\t]*\\{[ \\t]*\\r?\\n?`
+);
+
+/** The matching `})();`. Specific enough that a body ending in a brace is never mistaken for it. */
+const UCS_CLOSE = /(\r?\n)?[ \t]*\}[ \t]*\)[ \t]*\([ \t]*\)[ \t]*;?[ \t]*(\r?\n)*$/;
+
+/** The trailing `export {};` written by 2.0.0, before the function wrapper replaced it. */
+const MODULE_MARKER_PATTERN = /(\r?\n)?[ \t]*export[ \t]*\{[ \t]*\}[ \t]*;?[ \t]*(\r?\n)*$/;
+
 /**
  * The sentinel line written before the code, if any. Single source of truth for the editor guard.
  *
- * The class expression is named after the UCS wherever that is a legal identifier, purely so hovers
- * and errors read `const _MyLib: MyLib` rather than `(Anonymous class)`. The name is local to the
- * expression, so it adds no global of its own.
+ * The library's class expression is named after the UCS wherever that is a legal identifier, purely
+ * so hovers and errors read `const _MyLib: MyLib` rather than `(Anonymous class)`. The name is local
+ * to the expression, so it adds no global of its own. The UCS wrapper stays anonymous - nothing
+ * refers to it, and a name would only be one more thing to keep in step with a rename.
  */
 export function leadingSentinel(kind: SentinelKind, ucsName: string): string | undefined {
-    if (kind !== 'jsLibrary') {
-        return undefined;
+    const banner = leadingBanner(kind);
+    switch (kind) {
+        case 'jsLibrary': {
+            const typeName = isValidIdentifier(ucsName) ? ` ${ucsName}` : '';
+            return `${banner}\r\nconst ${libraryClassName(ucsName)} = new class${typeName.toLowerCase()} {`;
+        }
+        case 'js': return `${banner}\r\n(function () {`;
+        // UCS:M has no wrapper - it is not in the TypeScript project and needs no scoping - but it
+        // does get the header, which is the whole point of the header.
+        default: return banner;
     }
-    const typeName = isValidIdentifier(ucsName) ? ` ${ucsName}` : '';
-    return `const ${libraryClassName(ucsName)} = new class${typeName} {`;
 }
 
 /** The sentinel line written after the code, if any. */
 export function trailingSentinel(kind: SentinelKind): string | undefined {
     switch (kind) {
         case 'jsLibrary': return '}();';
-        case 'js': return MODULE_MARKER;
+        case 'js': return '})();';
         default: return undefined;
     }
 }
@@ -147,12 +247,24 @@ export function applySentinels(code: string, kind: SentinelKind, ucsName: string
  * change. Anything that does not look like a sentinel is left alone.
  */
 export function stripSentinels(text: string, kind: SentinelKind): string {
+    // The header always comes off first: it sits above the wrapper, so the wrapper patterns below
+    // are all anchored to the start of what is left. A mirror from an earlier version has no header
+    // and this is a no-op, which is what keeps those files round tripping.
+    text = stripBanner(text, kind);
+
     if (kind === 'ucsm') {
         return text;
     }
 
     if (kind === 'js') {
-        return text.replace(/(\r?\n)?[ \t]*export[ \t]*\{[ \t]*\}[ \t]*;?[ \t]*(\r?\n)*$/, '');
+        // Current form: the function wrapper. Its closing line is only stripped when the opening one
+        // was found, so a UCS that merely ends in `})();` of its own is left alone.
+        const open = UCS_OPEN.exec(text);
+        if (open) {
+            return text.slice(open[0].length).replace(UCS_CLOSE, '');
+        }
+        // Otherwise a mirror written by 2.0.0, or a wrapper someone has deleted.
+        return text.replace(MODULE_MARKER_PATTERN, '');
     }
 
     // jsLibrary: drop the leading wrapper and its matching trailing line. Both the current
@@ -177,6 +289,8 @@ export function stripSentinels(text: string, kind: SentinelKind): string {
  */
 export class MirrorFileStore implements vscode.Disposable {
     public root: vscode.Uri | undefined;
+    /** The workspace folder the mirror sits in, if any. Where the root pointer files are written. */
+    public workspaceRoot: vscode.Uri | undefined;
 
     private manifest: Manifest = { version: MANIFEST_VERSION, database: '', entries: {} };
     private watcher: vscode.FileSystemWatcher | undefined;
@@ -185,6 +299,7 @@ export class MirrorFileStore implements vscode.Disposable {
     private output: vscode.OutputChannel;
     private initialised = false;
     private warnedAboutStrayFile = false;
+    private label = '';
 
     /** Called after an external edit has been pushed to the database, so the tree stays current. */
     public onCodePushed: ((ucsId: number, code: string) => void) | undefined;
@@ -208,17 +323,33 @@ export class MirrorFileStore implements vscode.Disposable {
         }
 
         const config = vscode.workspace.getConfiguration('cvucsedit');
-        const folderName = config.get('MirrorFolder', '.cvucs');
+        const folderName = config.get<string>('MirrorFolder', DEFAULT_MIRROR_FOLDER);
         const database = config.get('Database', 'CVData');
 
+        this.label = `${folderName}/${sanitiseFileName(database)}/`;
+
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-        if (workspaceFolder) {
-            this.root = vscode.Uri.joinPath(workspaceFolder.uri, folderName, sanitiseFileName(database));
-        } else {
-            this.root = vscode.Uri.joinPath(this.fallbackRoot(), folderName, sanitiseFileName(database));
+        const base = workspaceFolder ? workspaceFolder.uri : this.fallbackRoot();
+        if (!workspaceFolder) {
             vscode.window.showWarningMessage(
                 'No folder is open, so Cabinet Vision UCS files are being mirrored outside the workspace. ' +
                 'Open a folder for AI agents and search to be able to reach them.'
+            );
+        }
+        this.workspaceRoot = workspaceFolder?.uri;
+        this.root = vscode.Uri.joinPath(base, folderName, sanitiseFileName(database));
+
+        // The default folder name lost its dot in 2.1. Move an existing mirror rather than leaving
+        // it behind: the manifest inside it is the three way merge base, so starting fresh would
+        // silently discard any edit made on disk but not yet pushed.
+        // `get` falls back to the package.json default, so only `inspect` can tell "unset" from
+        // "set to the default"; a folder the user chose explicitly is never moved out from under them.
+        const chosen = config.inspect<string>('MirrorFolder');
+        const explicit = chosen?.globalValue ?? chosen?.workspaceValue ?? chosen?.workspaceFolderValue;
+        if (explicit === undefined && folderName !== LEGACY_MIRROR_FOLDER) {
+            await this.migrateLegacyRoot(
+                vscode.Uri.joinPath(base, LEGACY_MIRROR_FOLDER, sanitiseFileName(database)),
+                vscode.Uri.joinPath(base, LEGACY_MIRROR_FOLDER)
             );
         }
 
@@ -236,6 +367,45 @@ export class MirrorFileStore implements vscode.Disposable {
     }
 
     /**
+     * Move a mirror written under the old dot prefixed folder name to the new one. Renaming keeps
+     * `manifest.json` with it, which matters more than it looks: `syncedHash` is the three way merge
+     * base, and without it `syncFromDb` has nothing to merge against and lets the database win,
+     * silently discarding any edit made on disk since the last sync.
+     *
+     * Best effort throughout. A failure here is not worth blocking activation for - the worst case
+     * is the old folder being left behind, which is inert.
+     */
+    private async migrateLegacyRoot(legacyRoot: vscode.Uri, legacyParent: vscode.Uri): Promise<void> {
+        try {
+            await vscode.workspace.fs.stat(legacyRoot);
+        } catch {
+            return; // nothing to migrate
+        }
+
+        try {
+            await vscode.workspace.fs.stat(this.root!);
+            return; // the new location already exists; leave the old one alone rather than merge
+        } catch {
+            // Expected: the new location is where we are moving to.
+        }
+
+        try {
+            await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(this.root!, '..'));
+            await vscode.workspace.fs.rename(legacyRoot, this.root!, { overwrite: false });
+            this.log(`Mirror moved from ${LEGACY_MIRROR_FOLDER}/ to ${this.label}`);
+
+            // Only remove the old parent if we emptied it - another database may still be mirrored there.
+            const remaining = await vscode.workspace.fs.readDirectory(legacyParent);
+            if (!remaining.length) {
+                await vscode.workspace.fs.delete(legacyParent, { recursive: true });
+            }
+        } catch (error) {
+            this.log(`Could not move the mirror out of ${LEGACY_MIRROR_FOLDER}/ - ${
+                error instanceof Error ? error.message : String(error)}. The old folder can be deleted by hand.`);
+        }
+    }
+
+    /**
      * Write the generated TypeScript project files. These are what give mirrored UCS:JS full
      * IntelliSense, rename and find-references from VS Code's own JavaScript service.
      */
@@ -245,6 +415,74 @@ export class MirrorFileStore implements vscode.Disposable {
         }
         await this.writeIfChanged(vscode.Uri.joinPath(this.root, 'cv-api.d.ts'), dts);
         await this.writeIfChanged(vscode.Uri.joinPath(this.root, 'jsconfig.json'), jsconfig);
+    }
+
+    /**
+     * Write the agent facing documentation. Separate from `writeProjectFiles` because these are for
+     * a reader rather than for the TypeScript service: they describe the rules an agent cannot infer
+     * from the files themselves - that a save goes straight to SQL, that a new file is ignored, that
+     * the sentinel lines are not code - and they are the only UCS:M reference anywhere in the
+     * workspace.
+     */
+    public async writeAgentDocs(docs: { [fileName: string]: string }): Promise<void> {
+        if (!this.root) {
+            return;
+        }
+        for (const [name, content] of Object.entries(docs)) {
+            await this.writeIfChanged(vscode.Uri.joinPath(this.root, name), content);
+        }
+    }
+
+    /** The mirror root as it reads in the workspace, e.g. `cvucs/CVData/`. For display only. */
+    public get rootLabel(): string {
+        return this.label;
+    }
+
+    /**
+     * Maintain the pointer block in the workspace root `AGENTS.md` and `CLAUDE.md`.
+     *
+     * This is the only thing the extension writes outside its own folder, so it is conservative:
+     * off with one setting, additive between markers, and it announces itself the first time it
+     * creates or changes one of these files.
+     *
+     * `merge` returns undefined when the file already says the right thing, so a workspace that is
+     * up to date is never written to at all.
+     */
+    public async writeRootPointer(
+        block: string,
+        merge: (existing: string | undefined, block: string) => string | undefined,
+        announce: () => void
+    ): Promise<void> {
+        if (!this.workspaceRoot) {
+            return; // mirroring outside the workspace; there is no project root to point from
+        }
+        if (!vscode.workspace.getConfiguration('cvucsedit').get('WriteRootAgentFiles', true)) {
+            return;
+        }
+
+        for (const name of ['AGENTS.md', 'CLAUDE.md']) {
+            const uri = vscode.Uri.joinPath(this.workspaceRoot, name);
+            let existing: string | undefined;
+            try {
+                existing = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf8');
+            } catch {
+                existing = undefined;
+            }
+
+            const merged = merge(existing, block);
+            if (merged === undefined) {
+                continue;
+            }
+
+            try {
+                await vscode.workspace.fs.writeFile(uri, Buffer.from(merged, 'utf8'));
+                this.log(`${name}: ${existing === undefined ? 'created' : 'updated'} the UCS pointer block.`);
+                announce();
+            } catch (error) {
+                this.log(`${name}: could not write the UCS pointer block - ${
+                    error instanceof Error ? error.message : String(error)}`);
+            }
+        }
     }
 
     /** Mirror root as a forward slashed absolute path, for building documentSelector globs. */

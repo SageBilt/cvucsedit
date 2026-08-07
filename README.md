@@ -38,11 +38,18 @@ Addition to VSCode's built in features, this extension provides these features.
   - UCS opens when clicked in tree view.
   - Search, clear search and reload list buttons for each list.
 - **Mirrored workspace folder**
-  - Every UCS and library is written as a real file under `.cvucs/<Database>/` in your workspace, as `<Name>.ucs.js` or `<Name>.ucsm`. This is what allows UCS code to be searched across every UCS at once, opened by external tools, and read and edited by AI coding agents.
+  - Every UCS and library is written as a real file under `cvucs/<Database>/` in your workspace, as `<Name>.ucs.js` or `<Name>.ucsm`. This is what allows UCS code to be searched across every UCS at once, opened by external tools, and read and edited by AI coding agents.
   - Sync is two way. Saving in the editor, an AI agent writing the file, and an external tool writing the file all take the same route back to the database.
   - On startup disk and database are reconciled. A change made only on disk is pushed to the database, a change made only in Cabinet Vision rewrites the file, and a file changed on both sides is reported as a conflict with neither side overwritten.
   - The folder ignores itself in git, so your own `.gitignore` is never touched.
   - Creating or deleting a UCS from the filesystem is not supported — use Cabinet Vision to add or remove a UCS.
+- **Documentation for AI coding agents**
+  - The mirrored folder documents itself. `AGENTS.md` (and a `CLAUDE.md` that imports it) tells an agent the things it cannot see from the files: that saving writes straight to the live database, that creating a file does not create a UCS, and which lines belong to the extension rather than to your code.
+  - `ucsjs-reference.md` covers how Cabinet Vision executes a UCS:JS — why `return` is legal at the top level, why a `var` cannot appear inside an equation string, and why measurements must be compared with `_cvMath`.
+  - `ucsm-reference.md` is a full UCS:M reference: the syntax, object tree navigation, value types, functions, object classes and types, and an index of all 683 system parameters grouped by the object they apply to. Written from Cabinet Vision's own help files, and generated from the same data the extension validates against, so it cannot drift.
+  - Every mirrored file also carries a short generated header, so an agent is warned in the file it is editing even if it never opens the documentation. The header is not part of your standard and is never saved to the database.
+  - A short pointer to all of this is kept in `AGENTS.md` and `CLAUDE.md` at the root of your workspace, since most agent tools only look there. Only the marked block is ever rewritten, anything you write around it is left alone, and `cvucsedit.WriteRootAgentFiles` turns it off.
+  - The mirrored copies are regenerated on activation and on each list refresh, and are ignored by git along with the rest of the folder.
 - **Syntax highlighting**
   - Different elements like keywords, constraints, data types etc. are styled accordingly.
   - Syntax highlighting follows VSCode theming and can be customized by the user.
@@ -135,7 +142,8 @@ UCS code is mirrored into the open workspace folder, which is created automatica
 
 * `cvucsedit.Server`: The Cabinet Vision database SQL server instance name (defaults to **localhost\CV24**).
 * `cvucsedit.Database`: The name of the Cabinet Vision SQL database (defaults to **CVData**).
-* `cvucsedit.MirrorFolder`: The folder inside the workspace that UCS code is mirrored into (defaults to **.cvucs**).
+* `cvucsedit.MirrorFolder`: The folder inside the workspace that UCS code is mirrored into (defaults to **cvucs**). Deliberately not hidden — some AI agent tools skip dot-prefixed folders. A mirror left in the old `.cvucs` folder is moved here automatically.
+* `cvucsedit.WriteRootAgentFiles`: Keep a short Cabinet Vision UCS section in `AGENTS.md` and `CLAUDE.md` at the root of the workspace, pointing AI agents at the mirrored folder (defaults to **true**). Existing files are appended to between markers, never overwritten.
 * `cvucsedit.CheckJs`: Report JavaScript type errors in mirrored UCS:JS files (defaults to **false**). Completion, hover, go to definition and rename work either way; enabling this also surfaces type errors, which can be noisy.
 
 #### Available Commands

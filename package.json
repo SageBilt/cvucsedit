@@ -69,8 +69,13 @@
         },
         "cvucsedit.MirrorFolder": {
           "type": "string",
-          "default": ".cvucs",
-          "description": "Folder inside the workspace where UCS code is mirrored as real files. The folder ignores itself in git, and is what makes UCS code reachable by AI agents, search and standard JavaScript tooling."
+          "default": "cvucs",
+          "description": "Folder inside the workspace where UCS code is mirrored as real files. The folder ignores itself in git, and is what makes UCS code reachable by AI agents, search and standard JavaScript tooling. Deliberately not dot prefixed: some AI agent tools skip hidden folders when looking for context. An existing '.cvucs' folder is moved here automatically."
+        },
+        "cvucsedit.WriteRootAgentFiles": {
+          "type": "boolean",
+          "default": true,
+          "description": "Maintain a short block in AGENTS.md and CLAUDE.md at the root of the workspace pointing AI agents at the mirrored UCS folder. Most agent tools only look for these files at the project root. Existing files are appended to between markers, never overwritten."
         },
         "cvucsedit.CheckJs": {
           "type": "boolean",

@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **Editing something under `cvucs/`?** Then you are writing Cabinet Vision UCS code, not extension
+> code, and this file does not apply — read `cvucs/<Database>/AGENTS.md` instead. Those files mirror
+> live database rows; saving one is an immediate `UPDATE` against the customer's database.
+
 ## Commands
 
 ```powershell
@@ -39,16 +43,27 @@ UCS:M completions.
 ### Documents are real files in a mirrored workspace folder
 
 [src/MirrorFileStore.ts](src/MirrorFileStore.ts) materialises every `UCS` row as a real file under
-`<workspace>/.cvucs/<Database>/` (`cvucsedit.MirrorFolder`), so UCS code has a `file:` URI. That is
+`<workspace>/cvucs/<Database>/` (`cvucsedit.MirrorFolder`), so UCS code has a `file:` URI. That is
 what makes it reachable by AI agents, `grep`, and — critically — VS Code's own TypeScript service,
 which only forms a project over `file:` documents inside a workspace folder.
 
+The folder name is **not** dot-prefixed, and that is deliberate: a hidden folder is skipped outright
+by some agent tools when they scan for context and instruction files, which defeats the point of
+mirroring to disk at all. `.cvucs` was the 2.0.0 default, so `migrateLegacyRoot` renames an existing
+one on activation — a rename rather than a fresh start, because the manifest inside it is the
+three-way merge base and losing it would silently discard unpushed disk edits. A folder the user set
+explicitly (`inspect`, not `get`) is never moved.
+
 ```
-.cvucs/<Database>/
-  .gitignore      "*" — the folder ignores itself, so we never touch the user's .gitignore
-  jsconfig.json   generated
-  cv-api.d.ts     generated
-  manifest.json   relPath -> { ucsId, ucsName, isLibrary, kind, syncedHash }
+cvucs/<Database>/
+  .gitignore           "*" — the folder ignores itself, so we never touch the user's .gitignore
+  jsconfig.json        generated
+  cv-api.d.ts          generated
+  AGENTS.md            generated — rules of the road for AI agents
+  CLAUDE.md            generated — one line, `@AGENTS.md`
+  ucsjs-reference.md   generated
+  ucsm-reference.md    generated
+  manifest.json        relPath -> { ucsId, ucsName, isLibrary, kind, syncedHash }
   ucs/<Name>.ucs.js | <Name>.ucsm
   lib/<Name>.ucs.js
 ```
@@ -67,37 +82,114 @@ Tree item lookup is still by URI string (`findTreeItemByUri`), so the URI remain
 linking editor ↔ tree item ↔ database row — it is now a `file:` URI assigned by `MirrorFileStore`
 (`planPaths`) rather than built in the `CustomTreeItem` constructor.
 
+### The mirror carries its own instructions
+
+Making UCS code reachable by AI agents means an agent will act on it, and everything that makes the
+mirror work is invisible from inside a UCS file: that a save is an immediate `UPDATE` against
+production, that a *new* file is silently dropped (it is not in the manifest — see the
+`warnedAboutStrayFile` branch, which logs to an output channel no agent reads), and that the first
+and last lines of a `.ucs.js` are not code. UCS:JS at least has `cv-api.d.ts`; UCS:M had nothing at
+all in the workspace, since all of its knowledge sits in `Languages/data/system.json` inside the
+extension's install directory.
+
+[src/agentDocs.ts](src/agentDocs.ts) fills that in, writing four files through
+`MirrorFileStore.writeAgentDocs` alongside `writeProjectFiles`:
+
+| file | |
+|---|---|
+| `AGENTS.md` | the rules of the road, cross-tool convention |
+| `CLAUDE.md` | `@AGENTS.md` — an import, not a copy, so the folder has one source of truth |
+| `ucsjs-reference.md` | the execution model and the traps a `.d.ts` cannot express |
+| `ucsm-reference.md` | the UCS:M language plus the full system reference — the `cv-api.d.ts` counterpart |
+
+The prose lives in `Languages/agent/*.md`, matching how the rest of the CV documentation is kept: it
+is content, not code, and editing it needs no recompile. `AgentDocsGenerator` only substitutes
+`{{PLACEHOLDER}}` tokens — the database and server names, and the tables built from the same
+`system.json` / `ucsm_syntax.json` / `control_structures.json` the language server reads, so the
+reference cannot drift from what the validator enforces. Substitution is `split`/`join` rather than
+`String.replace`, because CV's help text contains `$` sequences that a regex replacement would eat.
+
+**Writing the documentation was not enough — it has to be *found*.** Testing against OpenCode and
+Claude Code showed a mirror-local `AGENTS.md` is not reliably picked up: nested instruction files are
+discovered lazily, at the project root only, or not at all, depending on the tool. Three mechanisms
+now cover that, in decreasing order of how much they can be relied on:
+
+1. **The generated header on every mirrored file** (see Sentinels below). Depends on no discovery
+   mechanism whatsoever, because it is in the file the agent was asked to edit.
+2. **A pointer block at the workspace root.** `writeRootPointer` maintains a delimited block in the
+   root `AGENTS.md` and `CLAUDE.md` — the one place every tool that supports the convention reads.
+   This is the only thing the extension writes outside its own folder, so it is careful:
+   `AgentDocsGenerator.mergeRootPointer` rewrites only what lies between `BLOCK_BEGIN`/`BLOCK_END`
+   and appends when the markers are absent, it returns `undefined` when nothing changed so an
+   up-to-date workspace is never written to, `cvucsedit.WriteRootAgentFiles` turns it off, and
+   `announceRootPointer` says so once ever with an *Undo and disable* action.
+3. **The folder no longer being hidden**, covered above.
+
+The mirror `.gitignore` is still `*`: these are generated, per-database and rewritten on every
+activation, so committing them into the user's project would be churn.
+
 ### Sentinels, and why UCS:JS scoping depends on them
 
 Sentinel lines are the only difference between the on-disk form and the database form. They exist to
-make TypeScript reproduce UCS scoping exactly — a UCS is self-contained, a library is shared:
+make TypeScript reproduce how Cabinet Vision actually runs the code — a UCS is a function body and is
+self-contained, a library is shared:
 
 | kind | leading | trailing | TS sees | effect |
 |---|---|---|---|---|
-| `jsLibrary` | `const _<Name> = new class <Name> {` | `}();` | script | `_<Name>` is a project-wide global, callable/renameable from every UCS |
-| `js` | — | `export {};` | module | own scope; one UCS cannot see another's declarations |
-| `ucsm` | — | — | n/a | UCS:M is not in the TypeScript project |
+| `jsLibrary` | banner + `const _<Name> = new class <Name> {` | `}();` | script | `_<Name>` is a project-wide global, callable/renameable from every UCS |
+| `js` | banner + `(function () {` | `})();` | script | function scope: top-level `return` is legal, and one UCS cannot see another's declarations |
+| `ucsm` | banner | — | n/a | UCS:M is not in the TypeScript project |
 
-A file with any top-level `import`/`export` is a module; without one it is a script whose top-level
-declarations join the global scope. Both still see ambient globals. The `js` marker is **appended**
-so line numbers are unaffected — only libraries carry a **+1 offset** (`leadingSentinelLines`).
+Nothing in the mirror is a *module* — every file is a script, and scoping comes from the wrapper
+rather than from module semantics.
+
+**The banner is the four-line generated header**, `//~` for JS and `;~` for UCS:M, and it exists for
+agent discovery rather than for TypeScript — see above. It made the leading sentinel multi-line, so
+`leadingSentinelLines` is now **derived from `leadingSentinel` itself** rather than stated
+separately, and is 5 for both JS kinds and 4 for UCS:M. It also gave UCS:M a leading sentinel where
+it previously had none, which is why the editor guard and the dimming decoration no longer early-return
+on `kind === 'ucsm'` — as the paragraph below already said they should, they now derive *which* lines
+to protect purely from whether each sentinel function returns a value. `leadingRange` in
+`SQLScriptProvider` turns that into a document range and clamps it, so a file truncated outside the
+editor cannot throw.
+
+`stripBanner` runs before every wrapper pattern, which is why those patterns can all stay anchored to
+the start of the string. It removes a run of prefixed lines **only when the run starts on line 0 and
+the first line contains the marker `cvucsedit`** — stripping is destructive, since it decides what is
+*not* written to the database, so a `;~` comment of the user's own must never be mistaken for ours.
+The UCS:M validator is unaffected: it splits each line on `;` and skips what is then empty
+([ucsmValidation.ts:320](src/server/ucsmValidation.ts#L320)), so the banner does not shift the
+`firstNonCommentLine` that `checkForEach` keys on.
+
+The UCS wrapper replaced the trailing `export {};` module marker 2.0.0 wrote. The marker gave each UCS its
+own scope but left the file a top-level script, so every top-level `return` — legal in a UCS, since
+Cabinet Vision executes the body as a function — drew `TS1108: A 'return' statement can only be used
+within a function body`. That is a *semantic* diagnostic, so it is invisible while `cvucsedit.CheckJs`
+is off and unfixable by any compiler option; only reshaping the file fixes it. The function wrapper
+also subsumes the marker's scoping job, so one mechanism does both. Cost: regular UCS files carry the
+same reveal offset libraries already had.
 
 The library wrapper must produce an **instance**, not a bare class. UCS code calls
 `_<Name>.Method()` directly, and the members of `class _<Name> { … }` live on the prototype, so
 `_<Name>.Method` does not resolve off the class — the symptom is a library that hovers correctly but
 offers no members. The class expression is *named* only so hovers read `const _MyLib: MyLib` instead
-of `(Anonymous class)`; that name is local to the expression and adds no global. Both are still one
-line each, so the +1 offset is unchanged.
+of `(Anonymous class)`; that name is local to the expression and adds no global. Both wrappers are
+still one line each, so both JS kinds share one offset.
 
-`leadingSentinel` / `trailingSentinel` are the single source of truth — `applySentinels` and the
-editor's revert-on-edit guard in `SQLScriptProvider` both build from them.
+`leadingSentinel` / `trailingSentinel` are the single source of truth — `applySentinels`, the
+editor's revert-on-edit guard and the dimming decoration in `SQLScriptProvider` all build from them,
+and the guard/decoration derive *which* lines to protect from whether each returns a value rather
+than from the kind.
 
 `stripSentinels` is deliberately tolerant of a deleted or mangled sentinel, and **every hash and
 comparison runs on the stripped form**, so sentinel edits never trigger a spurious `UPDATE`. It also
-still accepts the older `class _<Name> {` / `}` pair so mirrors written by 2.0.0 round-trip without
-pushing the stale wrapper into SQL; `syncFromDb` rewrites those files even when the code matches.
-The trailing `()` is **required** when stripping the current form — without it a library whose own
-last line is `}` would lose that brace.
+still accepts both 2.0.0 forms — the `class _<Name> {` / `}` library pair and the trailing
+`export {};` — so mirrors written by that version round-trip without pushing a stale wrapper into
+SQL; `syncFromDb` rewrites those files even when the code matches, which is the whole migration.
+
+Each trailing sentinel is matched only when its **opening** line was found, and both are shaped so
+they cannot be confused with real code: `}();` requires the `()`, or a library whose own last line is
+`}` would lose that brace, and `})();` is specific enough that a UCS ending in its own IIFE survives.
 
 ### Where language knowledge lives
 
@@ -138,6 +230,21 @@ as `"System::Collections::Generic::List - array of CVAsmManaged child objects"`,
 rules, unmapped values fall back to `any` with a console warning) and `parameterDef[].DataType`
 (15 values). `ParamName` is `"<type> <name>"`, so the identifier is the **second** token, and may
 carry an `[optional]` / `(optional …)` marker.
+
+A `DataType` may list **several alternatives separated by `|`**, for a parameter the documentation
+declares as `Object` because its type depends on an earlier argument — `ModifyParameter`'s third
+argument is a description string, a `parameterTypes` constant or a `parameterModStyles` constant
+according to its second. Naming any one of them rejects the other two, and the alternative that
+TypeScript *could* discriminate on (an overload set keyed on the second argument) is not
+expressible: every constant in a group shares one branded type, so `PARMOD_DESC` and `PARMOD_STYLE`
+are the same type. Branding each constant individually would discriminate, but it would also break
+`[ASM_CLASS_BASE, …].includes(_cab.CLASS)`, which is the pattern the branding exists to serve.
+
+`|` is not a generator-only convention: `dataTypeAlternatives` in
+[ucsmValidation.ts](src/server/ucsmValidation.ts) splits it, and **every** consumer matches on the
+alternatives rather than on the raw string — the `ucsmSyntax`, `materials` and `constants.<group>`
+tests in `server.ts` completion and hover, and `FindUCSJSSyntaxMethods`. A union naming more than one
+constant group offers all of their constants at that argument.
 
 A method with `"factory": true` — only `CreateObject` — ignores `returnType` entirely and emits one
 overload per `classes[]` entry instead, plus a trailing `(className: string): any` so a computed or

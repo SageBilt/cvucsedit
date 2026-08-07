@@ -8,6 +8,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **The mirror folder now documents itself for AI agents.** Four generated files
+  are written next to `cv-api.d.ts`: `AGENTS.md` with the rules that cannot be
+  inferred from the files themselves — a save is an immediate write to the live
+  database, a new file is silently ignored, the first and last lines of a
+  `.ucs.js` are not code — plus `CLAUDE.md` importing it, `ucsjs-reference.md`
+  for the UCS:JS execution model, and `ucsm-reference.md`, which is the first
+  UCS:M reference to exist anywhere in the workspace. It covers the language and
+  indexes all 683 system parameters, grouped by the object they apply to.
+  Everything in them is drawn from Cabinet Vision's own help files and from the
+  same JSON the language server validates against.
+- **Agents are now pointed at that documentation three different ways**, because
+  testing showed a mirror-local `AGENTS.md` is not reliably found — depending on
+  the tool, instruction files in a subfolder are discovered late, only at the
+  project root, or not at all.
+  - Every mirrored file now opens with a four line generated header (`//~`, or
+    `;~` for UCS:M) carrying the rules that are expensive to get wrong. It needs
+    no discovery at all: it is in the file the agent was asked to edit. Like the
+    other sentinel lines it is stripped before anything is saved, so it never
+    reaches the database, and the editor reverts edits to it.
+  - A short pointer block is kept in `AGENTS.md` and `CLAUDE.md` at the
+    workspace root, which is where most tools actually look. Only the text
+    between the markers is ever rewritten; an existing file is appended to.
+    `cvucsedit.WriteRootAgentFiles` turns this off, and the notification shown
+    the first time it happens offers to undo it.
+
 - **Dynamic 2D CAD for UCS:JS.** The nine CAD entity
   classes — Arc, Circle, Dimension, Leader, Line, Rectangle, Symbol, Text and
   TextBox — are described to TypeScript with all of their properties, methods
@@ -21,6 +46,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The CAD constant groups: line type, line weight, arrow type, vertical and
   horizontal text alignment, and dimension text position. Assigning one to the
   wrong property — an arrow type to `LineType`, say — is reported.
+
+### Fixed
+- **A library's properties and methods now appear in IntelliSense.** UCS code
+  calls a library as `_MyLib.Method()`, but the mirrored file wrapped it in a
+  bare class, whose members live on the prototype and so never resolved off the
+  name. Libraries are now wrapped as an instance, and their members complete,
+  hover, go to definition and rename from every UCS.
+- **`return` at the top level of a UCS:JS file is no longer an error.** Cabinet
+  Vision executes a UCS as a function body, which is why `return` works there,
+  but the mirrored file presented it to TypeScript as a plain script. UCS files
+  are now wrapped in `(function () { … })();`, matching how the code actually
+  runs. Only visible with `cvucsedit.CheckJs` on.
+
+### Changed
+- **The mirror folder is no longer hidden.** `cvucsedit.MirrorFolder` now
+  defaults to `cvucs` rather than `.cvucs`, because some AI agent tools skip
+  dot-prefixed folders when looking for context. An existing mirror is moved on
+  the next activation rather than abandoned — it is renamed, so `manifest.json`
+  travels with it and any edit made on disk but not yet pushed is still merged
+  rather than lost. A folder name you set yourself is left alone.
+- The trailing `export {};` line on mirrored UCS files is gone. The function
+  wrapper gives each UCS its own scope, so the marker is no longer needed —
+  existing mirrors are migrated on the next refresh, and nothing changes in the
+  database either way.
 
 ## [2.0.0] - 2026-08-07
 
