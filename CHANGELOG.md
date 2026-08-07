@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Support for Cabinet Vision's UCS debugging window.** When Cabinet Vision
+  launches VS Code on its `Temp\UCSJS` folder to debug a standard, the extension
+  now recognises that window and connects to it. The plain `.js` files Cabinet
+  Vision puts there get the full Cabinet Vision API — completion, hover,
+  signature help and the constants — along with UCS:M completion and validation
+  inside `Evaluate('…')` strings, the same as mirrored UCS:JS. Cabinet Vision
+  keeps sole control of saving those files back to the database; the extension
+  never writes to them.
+- Those folders also get an `AGENTS.md` and `CLAUDE.md` explaining what the files
+  are, so an AI agent asked to edit one knows that the `function fn<Name>() { … }`
+  wrapper is Cabinet Vision's rather than part of the standard, that the folder is
+  emptied when Cabinet Vision restarts, and where the durable copy of the same
+  standard lives.
+- `cvucsedit.DebugFolderSuffix` controls the folder ending that is recognised
+  (default `Temp/UCSJS`). Clear it to turn the whole thing off.
+- **Cabinet Vision UCS: Forget This Workspace**, which clears every answer this
+  workspace has given — whether to connect here, where to mirror, and whether
+  `AGENTS.md` may be written at its root — and offers a window reload. Useful
+  after disconnecting somewhere you later want back, since disconnecting is
+  remembered and no longer auto-connects there.
+
+### Fixed
+- The mirror is no longer placed inside Cabinet Vision's debug folder. Because
+  Cabinet Vision empties that folder on restart, `manifest.json` went with it —
+  and that file is the merge base, so the next sync had nothing to compare
+  against, let the database win and silently discarded any edit made on disk but
+  not yet saved. Debug windows now always mirror to the dedicated folder.
+
 ## [2.1.0] - 2026-08-07
 
 2.0.0 assumed every VS Code window was a Cabinet Vision window. It activated in

@@ -8,7 +8,7 @@ class LanguageClientWrapper {
     languageId;
     /** Held so a disconnect/reconnect cycle does not leave a dead output channel behind each time. */
     output;
-    watcher;
+    watchers;
     constructor(config, context, dynamicData) {
         this.languageId = config.languageId;
         // Server module path
@@ -18,18 +18,14 @@ class LanguageClientWrapper {
             run: { module: serverModule, transport: node_1.TransportKind.ipc, args: [this.languageId] },
             debug: { module: serverModule, transport: node_1.TransportKind.ipc, args: [this.languageId] },
         };
-        // Scoped to the mirror. This matters most for UCS:JS: it registers against languageId
-        // 'javascript', so without the path restriction this server would serve every JavaScript
-        // document in the window.
-        const pattern = config.mirrorRoot
-            ? `${config.mirrorRoot}/**/*${config.fileExtension}`
-            : `**/*${config.fileExtension}`;
+        // Scoped by path. This matters most for UCS:JS: it registers against languageId 'javascript',
+        // so without the restriction this server would serve every JavaScript document in the window.
         this.output = vscode_1.window.createOutputChannel(`${this.languageId} Language Server`);
-        this.watcher = vscode_1.workspace.createFileSystemWatcher(pattern);
+        this.watchers = config.patterns.map(pattern => vscode_1.workspace.createFileSystemWatcher(pattern));
         const clientOptions = {
-            documentSelector: [{ scheme: 'file', language: this.languageId, pattern }],
+            documentSelector: config.patterns.map(pattern => ({ scheme: 'file', language: this.languageId, pattern })),
             synchronize: {
-                fileEvents: this.watcher
+                fileEvents: this.watchers
             },
             outputChannel: this.output,
             initializationOptions: dynamicData, // Pass dynamic data here
@@ -52,7 +48,7 @@ class LanguageClientWrapper {
         }
     }
     stop() {
-        this.watcher.dispose();
+        this.watchers.forEach(watcher => watcher.dispose());
         this.output.dispose();
         if (!this.client) {
             return undefined;

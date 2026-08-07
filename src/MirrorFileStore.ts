@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as os from 'os';
 import * as crypto from 'crypto';
 import { SQLConnection } from './SQLConnection';
+import { debugFolder } from './debugFolder';
 
 /**
  * The kind of sentinel decoration a mirrored file carries. Sentinels are the only difference
@@ -402,6 +403,17 @@ export class MirrorFileStore implements vscode.Disposable {
         const config = vscode.workspace.getConfiguration('cvucsedit');
 
         const decide = async (): Promise<MirrorLocation> => {
+            // Ahead of everything, including an explicit setting, because Cabinet Vision empties its
+            // debug folder on restart and that makes `workspace` there actively destructive rather
+            // than merely untidy: `manifest.json` holds `syncedHash`, the three way merge base, so
+            // losing it leaves `syncFromDb` nothing to merge against, the database silently wins and
+            // any disk edit not yet pushed goes with the folder. `MirrorLocation` is usually set
+            // globally too, so honouring it here would apply a choice made about someone's projects
+            // to a scratch directory they never think about.
+            if (debugFolder()) {
+                return 'dedicated';
+            }
+
             const chosen = config.inspect<string>('MirrorLocation');
             const explicit = chosen?.workspaceFolderValue ?? chosen?.workspaceValue ?? chosen?.globalValue;
             if (explicit === 'dedicated' || explicit === 'workspace') {
@@ -541,6 +553,45 @@ export class MirrorFileStore implements vscode.Disposable {
     }
 
     /**
+     * The same project files, written into Cabinet Vision's debug folder so its `fn*.js` copies get
+     * the CV API too. Disposable by design - they go when Cabinet Vision empties the folder, and are
+     * written again on the next connect.
+     */
+    public async writeDebugProjectFiles(root: vscode.Uri, dts: string, jsconfig: string): Promise<void> {
+        try {
+            await this.writeIfChanged(vscode.Uri.joinPath(root, 'cv-api.d.ts'), dts);
+            await this.writeIfChanged(vscode.Uri.joinPath(root, 'jsconfig.json'), jsconfig);
+        } catch (error) {
+            // Under ProgramData, so a locked down machine can refuse. Language support still works;
+            // only TypeScript's half of it is lost, and that is not worth failing the connect for.
+            this.log(`Could not write the TypeScript project files into ${root.fsPath} - ${
+                error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+
+    /**
+     * Where the mirrored libraries are, relative to `from`, as a jsconfig `include` entry.
+     *
+     * The debug folder holds one UCS at a time and none of the libraries, but the code in it still
+     * calls `_<Library>.Method()`, so without this every such call is an undefined global. Relative
+     * rather than absolute because `include` is resolved against the jsconfig's own folder;
+     * `path.relative` returns an absolute path anyway when the two are on different drives, which is
+     * the one case where a relative path could not be formed.
+     */
+    public libraryInclude(from: vscode.Uri): string | undefined {
+        if (!this.root) {
+            return undefined;
+        }
+        const rel = path.relative(from.fsPath, path.join(this.root.fsPath, 'lib'));
+        return `${rel.split(path.sep).join('/')}/*.ucs.js`;
+    }
+
+    /** Absolute path of the mirror root, for pointing somewhere outside it at where the real files are. */
+    public get rootPath(): string | undefined {
+        return this.root?.fsPath;
+    }
+
+    /**
      * Write the agent facing documentation. Separate from `writeProjectFiles` because these are for
      * a reader rather than for the TypeScript service: they describe the rules an agent cannot infer
      * from the files themselves - that a save goes straight to SQL, that a new file is ignored, that
@@ -594,6 +645,38 @@ export class MirrorFileStore implements vscode.Disposable {
         if (!this.pointerRoot) {
             return;
         }
+        await this.writePointerBlock(this.pointerRoot, block, merge, this.ownsRoot ? undefined : requestConsent);
+    }
+
+    /**
+     * The same block mechanism, pointed at Cabinet Vision's debug folder.
+     *
+     * No consent, and unlike `writeRootPointer` that needs no argument: this folder is Cabinet
+     * Vision's own scratch directory, emptied on every restart, so there is nothing here of the
+     * user's to overwrite and nothing written here that outlives the debug session.
+     *
+     * It is also the only thing that tells an agent what those `fn*.js` files are. Without it the
+     * folder looks like ordinary JavaScript, and the wrapper Cabinet Vision puts round each one
+     * looks like part of the standard.
+     */
+    public async writeDebugPointer(
+        root: vscode.Uri,
+        block: string,
+        merge: (existing: string | undefined, block: string) => string | undefined
+    ): Promise<void> {
+        await this.writePointerBlock(root, block, merge);
+    }
+
+    /**
+     * Splice a generated block into the `AGENTS.md` and `CLAUDE.md` of `root`, writing only the
+     * files that actually change and asking first when `requestConsent` is given.
+     */
+    private async writePointerBlock(
+        root: vscode.Uri,
+        block: string,
+        merge: (existing: string | undefined, block: string) => string | undefined,
+        requestConsent?: () => Promise<boolean>
+    ): Promise<void> {
         if (!vscode.workspace.getConfiguration('cvucsedit').get('WriteRootAgentFiles', true)) {
             return;
         }
@@ -601,7 +684,7 @@ export class MirrorFileStore implements vscode.Disposable {
         // Work out what would change before asking for anything.
         const planned: { uri: vscode.Uri; name: string; merged: string; existed: boolean }[] = [];
         for (const name of ['AGENTS.md', 'CLAUDE.md']) {
-            const uri = vscode.Uri.joinPath(this.pointerRoot, name);
+            const uri = vscode.Uri.joinPath(root, name);
             let existing: string | undefined;
             try {
                 existing = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf8');
@@ -618,7 +701,7 @@ export class MirrorFileStore implements vscode.Disposable {
         if (!planned.length) {
             return;
         }
-        if (!this.ownsRoot && !await requestConsent()) {
+        if (requestConsent && !await requestConsent()) {
             return;
         }
 

@@ -43,6 +43,7 @@ const SQLScriptProvider_1 = require("./SQLScriptProvider");
 const MirrorFileStore_1 = require("./MirrorFileStore");
 const client_1 = require("./client/client");
 const ucsmFoldingProvider_1 = require("./ucsmFoldingProvider");
+const debugFolder_1 = require("./debugFolder");
 /**
  * Whether this workspace has ever said yes to Cabinet Vision UCS.
  *
@@ -84,6 +85,7 @@ function registerCommands(context) {
     register('cvucsedit.stop', () => stop(context));
     register('cvucsedit.openMirrorWorkspace', () => openMirrorWorkspace());
     register('cvucsedit.removeFromWorkspace', () => removeFromWorkspace(context));
+    register('cvucsedit.forgetWorkspace', () => forgetWorkspace(context));
     // The list commands double as a way in: pressing refresh in a workspace that has not connected
     // yet plainly means "connect", and failing silently there would be baffling.
     register('cvucsedit.loadUCSLists', async () => {
@@ -134,6 +136,11 @@ async function isEnabledWorkspace(context) {
     if (contains(MirrorFileStore_1.MirrorFileStore.dedicatedBase(), folder)) {
         return true;
     }
+    // So is the folder Cabinet Vision opens to debug a UCS. It launches that window itself, so
+    // there is nobody to press connect, and the files in it are UCS:JS whether we start or not.
+    if ((0, debugFolder_1.debugFolder)()) {
+        return true;
+    }
     // A mirror already sitting in this workspace means an earlier version was used here on purpose.
     // Those setups keep working untouched - the point of the change is the workspaces where the
     // extension was never wanted, not the one where it was.
@@ -174,21 +181,28 @@ async function start(context, userInitiated = false) {
         const dynamicData = await provider.loadDBVariables();
         await provider.writeProjectFiles();
         const mirrorRoot = provider.mirror.globBase();
+        const scoped = (extension) => mirrorRoot ? [`${mirrorRoot}/**/*${extension}`] : [`**/*${extension}`];
         const UCSMClient = new client_1.LanguageClientWrapper({
             languageId: 'ucsm',
             serverModulePath: path.join('out', 'server', 'server.js'),
-            fileExtension: '.ucsm',
-            mirrorRoot
+            patterns: scoped('.ucsm')
         }, context, dynamicData);
         clients.push(UCSMClient);
         await UCSMClient.start();
         // Registered against 'javascript' because mirrored UCS:JS files really are JavaScript. The
-        // glob keeps this server off every other JavaScript document in the window.
+        // globs keep this server off every other JavaScript document in the window.
+        const jsPatterns = scoped('.ucs.js');
+        const debugRoot = (0, debugFolder_1.debugFolderGlobBase)();
+        if (debugRoot) {
+            // Cabinet Vision's debug copies are plain `.js`, so they are matched by location alone.
+            // Flat rather than `**`: CV writes them directly in the folder, and a mirror left there
+            // by an earlier version must not be picked up a second time through this pattern.
+            jsPatterns.push(`${debugRoot}/*.js`);
+        }
         const UCSJSClient = new client_1.LanguageClientWrapper({
             languageId: 'javascript',
             serverModulePath: path.join('out', 'server', 'server.js'),
-            fileExtension: '.ucs.js',
-            mirrorRoot
+            patterns: jsPatterns
         }, context, dynamicData);
         clients.push(UCSJSClient);
         await UCSJSClient.start();
@@ -207,9 +221,13 @@ async function start(context, userInitiated = false) {
  * one when the mirror is inside an open folder. In the dedicated location that means the UCS folder
  * has to actually be the window - opening a UCS from the tree still works, and so does UCS:M, but
  * UCS:JS completion and rename quietly will not.
+ *
+ * Not in Cabinet Vision's debug folder, though. That window is open on CV's own working copies and
+ * the mirror is deliberately somewhere else, so the offer is beside the point - and accepting it
+ * would replace the window CV just launched to debug in.
  */
 async function warnIfMirrorIsOutOfSight() {
-    if (provider.mirror.visibleToWorkspace) {
+    if (provider.mirror.visibleToWorkspace || (0, debugFolder_1.debugFolder)()) {
         return;
     }
     const choice = await vscode.window.showInformationMessage('Cabinet Vision UCS files are mirrored outside this window, so UCS:JS completion, rename and ' +
@@ -225,12 +243,43 @@ async function ensureRunning(context) {
 }
 async function stop(context) {
     await context.workspaceState.update(ENABLED_KEY, false);
+    await disconnect(context);
+}
+/** Tear the connection down without recording anything about whether we may start here again. */
+async function disconnect(context) {
     await stopClients();
     // The watcher is the write path to the database, so it has to go too: a disconnected window that
     // still pushed saves to production would be the worst of both.
     provider.mirror.shutdown();
     provider.clearLists();
     await setRunning(context, false);
+}
+/**
+ * Put this workspace back to never having been asked.
+ *
+ * Every answer the extension remembers is `workspaceState`, and nothing in VS Code clears one short
+ * of deleting the window's entire storage folder - which throws away every other extension's state
+ * as well, and needs the window closed to do it. So the first run, the path that most wants testing,
+ * was the one path that could not be tested twice.
+ *
+ * Deliberately not the same as disconnecting: `stop` records a decision - `false`, the user meant it
+ * - while this erases the question, which is the difference between `false` and `undefined` that
+ * `isEnabledWorkspace` turns on. Clearing before disconnecting rather than after so that the status
+ * bar item `setRunning` puts back is the one a never-asked workspace would get.
+ *
+ * The reload offer is not a nicety. `shouldAutoStart` only runs in `activate`, so none of this is
+ * visible until the window comes back.
+ */
+async function forgetWorkspace(context) {
+    await context.workspaceState.update(ENABLED_KEY, undefined);
+    await provider.forgetWorkspaceState();
+    await disconnect(context);
+    const choice = await vscode.window.showInformationMessage('Cabinet Vision UCS has forgotten this workspace: whether to connect here, where to mirror, ' +
+        'and whether AGENTS.md may be written at the root. Reload the window to see what a first ' +
+        'visit does.', 'Reload Window');
+    if (choice) {
+        await vscode.commands.executeCommand('workbench.action.reloadWindow');
+    }
 }
 async function stopClients() {
     const stopping = clients.map(client => {

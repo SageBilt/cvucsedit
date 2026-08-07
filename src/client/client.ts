@@ -5,9 +5,11 @@ import { DynamicData } from '.././interfaces';
 interface LanguageClientConfig {
   languageId: string;
   serverModulePath: string;
-  fileExtension: string;
-  /** Absolute, forward slashed path of the mirror root, or undefined if it could not be resolved. */
-  mirrorRoot: string | undefined;
+  /**
+   * Absolute, forward slashed globs this server is scoped to. More than one because UCS:JS lives in
+   * two places: the mirror, and Cabinet Vision's debug folder when a window is open on it.
+   */
+  patterns: string[];
 }
 
 export class LanguageClientWrapper {
@@ -15,7 +17,7 @@ export class LanguageClientWrapper {
     private languageId: string;
     /** Held so a disconnect/reconnect cycle does not leave a dead output channel behind each time. */
     private output: OutputChannel;
-    private watcher: ReturnType<typeof workspace.createFileSystemWatcher>;
+    private watchers: ReturnType<typeof workspace.createFileSystemWatcher>[];
 
     constructor(config: LanguageClientConfig,context: ExtensionContext,dynamicData:DynamicData) {
       this.languageId = config.languageId;
@@ -28,20 +30,16 @@ export class LanguageClientWrapper {
         debug: { module: serverModule, transport: TransportKind.ipc, args: [this.languageId] },
       };
 
-      // Scoped to the mirror. This matters most for UCS:JS: it registers against languageId
-      // 'javascript', so without the path restriction this server would serve every JavaScript
-      // document in the window.
-      const pattern = config.mirrorRoot
-        ? `${config.mirrorRoot}/**/*${config.fileExtension}`
-        : `**/*${config.fileExtension}`;
-
+      // Scoped by path. This matters most for UCS:JS: it registers against languageId 'javascript',
+      // so without the restriction this server would serve every JavaScript document in the window.
       this.output = window.createOutputChannel(`${this.languageId} Language Server`);
-      this.watcher = workspace.createFileSystemWatcher(pattern);
+      this.watchers = config.patterns.map(pattern => workspace.createFileSystemWatcher(pattern));
 
       const clientOptions: LanguageClientOptions = {
-          documentSelector: [{ scheme: 'file', language: this.languageId, pattern }],
+          documentSelector: config.patterns.map(pattern =>
+            ({ scheme: 'file', language: this.languageId, pattern })),
           synchronize: {
-              fileEvents: this.watcher
+              fileEvents: this.watchers
           },
           outputChannel: this.output,
           initializationOptions: dynamicData, // Pass dynamic data here
@@ -73,7 +71,7 @@ export class LanguageClientWrapper {
     }
 
     public stop(): Thenable<void> | undefined {
-      this.watcher.dispose();
+      this.watchers.forEach(watcher => watcher.dispose());
       this.output.dispose();
       if (!this.client) {
         return undefined;

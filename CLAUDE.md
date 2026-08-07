@@ -63,6 +63,18 @@ status bar item, and the refresh/reload commands, which call `ensureRunning` —
 workspace that has not connected plainly means "connect", and failing silently there would be
 baffling.
 
+The way back out of `false` is `cvucsedit.forgetWorkspace`, and the reason it exists is that `false`
+outranks every piece of evidence below it — including the debug folder and the dedicated mirror base,
+so one *Disconnect* (or one **Remove UCS Files from This Workspace**, which calls `stop`) permanently
+stops a window Cabinet Vision opens itself from connecting. Every answer the extension keeps is
+`workspaceState`, which nothing in VS Code clears short of deleting the window's whole storage folder,
+so the first run was also the one path that could not be tested twice. It clears `ENABLED_KEY` and
+delegates the rest to `SQLScriptProvider.forgetWorkspaceState` (`rootPointerConsent`, the session flag
+behind *Not now*, and `MirrorFileStore.forgetLocation`), then offers a reload — `shouldAutoStart` only
+runs in `activate`, so nothing about the cleared state shows until the window returns. `stop` was
+split into itself plus `disconnect` for it: forgetting must tear down the connection **without**
+writing the `false` that is the very thing being erased.
+
 ### Two processes
 
 [src/extension.ts](src/extension.ts) starts **two** language-server child processes from the same
@@ -197,6 +209,53 @@ now cover that, in decreasing order of how much they can be relied on:
 
 The mirror `.gitignore` is still `*`: these are generated, per-database and rewritten on every
 activation, so committing them into the user's project would be churn.
+
+### Cabinet Vision's debug folder is the other place UCS:JS lives
+
+Cabinet Vision can launch VS Code on `…\CV <version>\Temp\UCSJS\` and attach its script engine's
+debugger, so a UCS can be run with breakpoints. It extracts the standard it is about to debug into
+that folder as a plain `.js`, and takes edits back into the database on its own terms — that path is
+CV's, not ours, and the extension deliberately stays out of it (`startWatching` is a
+`RelativePattern` on the mirror root, so those files are never watched and never pushed).
+
+What it *is* is UCS:JS, so everything the extension knows about the language applies.
+[src/debugFolder.ts](src/debugFolder.ts) recognises the window by the **tail** of the folder path
+(`cvucsedit.DebugFolderSuffix`, default `Temp/UCSJS`) — only the tail is fixed, since the install
+root and version segment vary per machine — and returns the workspace folder's own `Uri` rather than
+a path rebuilt from the setting, because the result goes into a `documentSelector` glob and minimatch
+is case-sensitive. Four things key off it:
+
+- **`isEnabledWorkspace`** treats it as a UCS window, alongside the dedicated mirror base. CV opens
+  that window itself, so there is nobody to press connect.
+- **`resolveLocation` forces `dedicated`**, ahead of *everything* including an explicit
+  `MirrorLocation`. CV empties the folder on restart, which makes `workspace` there destructive
+  rather than untidy: `manifest.json` holds `syncedHash`, the three-way merge base, so losing it
+  leaves `syncFromDb` nothing to merge against, the database silently wins, and any disk edit not yet
+  pushed goes with the folder. `MirrorLocation` is also usually set globally, so honouring it would
+  apply a decision about someone's projects to a scratch directory.
+- **The UCS:JS `documentSelector` gains a second pattern**, `<debug folder>/*.js` — matched by
+  location alone, since these files have no `.ucs.` infix. `LanguageClientConfig` therefore takes
+  `patterns: string[]` rather than a root plus an extension, and `synchronize.fileEvents` takes the
+  matching array of watchers. Flat `*.js`, not `**`: CV writes the copies directly in the folder, and
+  a mirror left there by an earlier version must not be picked up through this pattern as well.
+- **`cv-api.d.ts` and a `jsconfig.json` are written into it** (`writeDebugProjectFiles`), so
+  TypeScript forms a project and gives the same completion and hover as the mirror gets. The include
+  list is flat `*.js` plus `libraryInclude(debugRoot)`, a relative path back to the mirror's `lib/`
+  — the debug copies still call `_<Library>.Method()`, and without it every such call is an undefined
+  global. Failure is logged, not thrown: this is under `ProgramData` and a locked-down machine may
+  refuse, which costs TypeScript's half of the support and is not worth failing a connect over.
+
+`warnIfMirrorIsOutOfSight` is suppressed there — the mirror is deliberately elsewhere, and accepting
+the offer would replace the window CV just launched to debug in.
+
+**The folder gets its own `AGENTS.md`/`CLAUDE.md` block** (`buildDebugPointer`,
+`Languages/agent/debug-pointer.template.md`), and it is the only thing in there that says what those
+files are: an agent otherwise sees ordinary JavaScript, reads CV's `function fn<Name>() { … }`
+wrapper as part of the standard, and cannot know the folder is wiped on restart or that a second,
+durable copy of the same standard is mirrored elsewhere. It reuses `mergeRootPointer`, so a stale
+mirror-pointer block written there by an earlier run is replaced rather than appended to. No consent
+— this is CV's scratch directory, so there is nothing of the user's to overwrite; `writePointerBlock`
+now takes `requestConsent` as optional and `writeRootPointer` passes it only when `!ownsRoot`.
 
 ### Sentinels, and why UCS:JS scoping depends on them
 

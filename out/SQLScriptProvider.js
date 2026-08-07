@@ -41,6 +41,7 @@ const SQLConnection_1 = require("./SQLConnection");
 const MirrorFileStore_1 = require("./MirrorFileStore");
 const dtsGenerator_1 = require("./dtsGenerator");
 const agentDocs_1 = require("./agentDocs");
+const debugFolder_1 = require("./debugFolder");
 class SQLScriptProvider {
     context;
     DBVersion = 0;
@@ -193,7 +194,8 @@ class SQLScriptProvider {
     async writeProjectFiles() {
         await this.mirror.initialize();
         const generator = new dtsGenerator_1.DtsGenerator();
-        await this.mirror.writeProjectFiles(generator.build(this.USCMDynamicData), generator.buildJsConfig());
+        const dts = generator.build(this.USCMDynamicData);
+        await this.mirror.writeProjectFiles(dts, generator.buildJsConfig());
         // The mirror is reachable by AI agents, so it has to carry its own instructions. `cv-api.d.ts`
         // covers the UCS:JS API and nothing else: not the sync rules, and not UCS:M at all.
         const config = vscode.workspace.getConfiguration('cvucsedit');
@@ -207,6 +209,14 @@ class SQLScriptProvider {
         // ...and a pointer at the root of the folder the mirror sits in, which is the only place
         // most agent tools look. In someone else's project that means asking first.
         await this.mirror.writeRootPointer(docs.buildRootPointer(this.mirror.pointerLabel), agentDocs_1.AgentDocsGenerator.mergeRootPointer, () => this.requestRootPointerConsent());
+        // Cabinet Vision's debug folder gets the same treatment, from the other direction: the API
+        // types so its `fn*.js` copies are more than plain JavaScript, and a notice saying what they
+        // are - which is the one thing nothing in that folder reveals on its own.
+        const debugRoot = (0, debugFolder_1.debugFolder)();
+        if (debugRoot) {
+            await this.mirror.writeDebugProjectFiles(debugRoot, dts, generator.buildDebugJsConfig(this.mirror.libraryInclude(debugRoot)));
+            await this.mirror.writeDebugPointer(debugRoot, docs.buildDebugPointer(this.mirror.rootPath ?? '(not resolved)'), agentDocs_1.AgentDocsGenerator.mergeRootPointer);
+        }
     }
     /** Remembered per workspace, so answering for one project says nothing about any other. */
     static CONSENT_KEY = 'cvucsedit.rootPointerConsent';
@@ -243,6 +253,16 @@ class SQLScriptProvider {
             await this.context.workspaceState.update(SQLScriptProvider.CONSENT_KEY, 'never');
         }
         return false;
+    }
+    /**
+     * Forget every answer this workspace has given except whether to connect, which belongs to the
+     * command in `extension.ts` that calls this: consent to write at the root, and which location the
+     * mirror resolved to. The session flag goes too, or "not now" would outlive the thing it answered.
+     */
+    async forgetWorkspaceState() {
+        await this.context.workspaceState.update(SQLScriptProvider.CONSENT_KEY, undefined);
+        this.consentAskedThisSession = false;
+        await this.mirror.forgetLocation();
     }
     /**
      * Take the block back out again, leaving anything the user wrote around it untouched.

@@ -104,6 +104,11 @@
           "type": "boolean",
           "default": false,
           "description": "Report TypeScript diagnostics in mirrored UCS:JS files. Completion, hover, go to definition and rename work either way; enabling this also surfaces type errors, which can be noisy."
+        },
+        "cvucsedit.DebugFolderSuffix": {
+          "type": "string",
+          "default": "Temp/UCSJS",
+          "description": "End of the folder path Cabinet Vision opens when it launches VS Code to debug a UCS, for example 'C:\\ProgramData\\Hexagon\\CABINET VISION\\CV 2025\\Temp\\UCSJS'. A window opened on a folder ending this way connects automatically and gets UCS:JS language support and the Cabinet Vision API on its plain .js files. Clear this to turn that off. Only the ending is matched, since the install path and version differ per machine."
         }
       }
     },
@@ -153,6 +158,11 @@
       {
         "command": "cvucsedit.removeFromWorkspace",
         "title": "Remove UCS Files from This Workspace",
+        "category": "Cabinet Vision UCS"
+      },
+      {
+        "command": "cvucsedit.forgetWorkspace",
+        "title": "Forget This Workspace",
         "category": "Cabinet Vision UCS"
       },
       {

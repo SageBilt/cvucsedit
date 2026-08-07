@@ -165,7 +165,21 @@ export class AgentDocsGenerator {
         });
     }
 
-    public static readonly BLOCK_BEGIN = '<!-- BEGIN cvucsedit - generated, edits here are lost -->';
+    /**
+     * The block written into the `AGENTS.md` / `CLAUDE.md` of Cabinet Vision's debug folder.
+     *
+     * Nothing else in that folder says what it is. The files look like ordinary JavaScript, the
+     * `function fn<Name>()` wrapper Cabinet Vision puts round each one looks like part of the
+     * standard, and an agent has no way to tell that the folder is emptied on the next restart or
+     * that a second copy of the same standard is mirrored elsewhere.
+     */
+    public buildDebugPointer(mirror: string): string {
+        return AgentDocsGenerator.fill(AgentDocsGenerator.template('debug-pointer.template.md'), {
+            MIRROR: mirror
+        });
+    }
+
+    public static readonly BLOCK_BEGIN ='<!-- BEGIN cvucsedit - generated, edits here are lost -->';
     public static readonly BLOCK_END = '<!-- END cvucsedit -->';
 
     /**
