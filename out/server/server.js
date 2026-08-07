@@ -183,7 +183,8 @@ class LanguageServer {
                 : { paramType: 'All', insideStr: false };
             if (showDataType) {
                 this.connection.console.log(`method parameter data type "${showDataType.paramType}" inStr "${showDataType.insideStr}"`);
-                if (showDataType.paramType == 'materials' || prefixWord == 'MATID' && !word) {
+                const paramTypes = (0, ucsmValidation_1.dataTypeAlternatives)(showDataType.paramType);
+                if (paramTypes.includes('materials') || prefixWord == 'MATID' && !word) {
                     this.ucsmHandler.AddMaterials(items, showDataType.insideStr);
                     return items;
                 }
@@ -203,7 +204,7 @@ class LanguageServer {
                     this.ucsmHandler.AddConnections(items, false);
                     return items;
                 }
-                else if (showDataType.paramType == 'ucsmSyntax' || this.languageId == 'ucsm') {
+                else if (paramTypes.includes('ucsmSyntax') || this.languageId == 'ucsm') {
                     /*Check show only properties for special objects like _M: and _CV: */
                     for (const spObj of this.ucsmHandler.specialObjects) {
                         const wordRegex = new RegExp(`${spObj.prefix}[^\\s]*$`, 'i');
@@ -222,7 +223,7 @@ class LanguageServer {
                             break;
                         }
                     }
-                    if (!FilterObjProps && (!showDataType.insideStr || showDataType.paramType == 'ucsmSyntax')) {
+                    if (!FilterObjProps && (!showDataType.insideStr || paramTypes.includes('ucsmSyntax'))) {
                         this.ucsmHandler.AddFunction(items);
                         this.ucsmHandler.AddVariables(items);
                         if (this.languageId == 'ucsm') {
@@ -237,20 +238,23 @@ class LanguageServer {
                     }
                 }
                 else {
-                    const split = showDataType.paramType.split('.');
-                    if (split.length == 2) {
-                        if (split[0] == 'constants') { //For example 'constants.parameterTypes'
-                            const key = split[1];
-                            items.length = 0;
-                            this.ucsjsHandler.AddConstants(items, this.ucsjsHandler.ucsjsConstants[key], split[1]);
+                    //A parameter may accept more than one constant group, so offer every group it lists.
+                    const groups = paramTypes
+                        .filter(t => t.startsWith('constants.')) //For example 'constants.parameterTypes'
+                        .map(t => t.slice('constants.'.length));
+                    if (groups.length) {
+                        items.length = 0;
+                        for (const group of groups) {
+                            const key = group;
+                            this.ucsjsHandler.AddConstants(items, this.ucsjsHandler.ucsjsConstants[key], group);
                         }
                     }
                     else {
                         //this.connection.console.log(`Javascript method parameter data type "${showDataType}"`);
-                        if (showDataType.paramType == 'any')
+                        if (paramTypes.includes('any'))
                             this.ucsjsHandler.AddObjects(items);
                         //else if (showDataType == 'string')
-                        //  this.ucsjsComp.AddAllConstants(items); 
+                        //  this.ucsjsComp.AddAllConstants(items);
                     }
                 }
             }
@@ -363,7 +367,7 @@ class LanguageServer {
             }
             if (showDataType) {
                 this.connection.console.log(`Hover parameter "${word}" -> data type "${showDataType.paramType}"`);
-                if (showDataType.paramType == 'materials' || prefixWord.toUpperCase() == 'MATID' && !isNaN(Number(word))) {
+                if ((0, ucsmValidation_1.dataTypeAlternatives)(showDataType.paramType).includes('materials') || prefixWord.toUpperCase() == 'MATID' && !isNaN(Number(word))) {
                     return this.ucsmHandler.getHoverMaterialFromID(word);
                 }
                 else if (this.languageId == 'ucsm' && prefixWord.toUpperCase() == 'CONSTID') {
@@ -372,7 +376,7 @@ class LanguageServer {
                 else if (this.languageId == 'ucsm' && prefixWord.toUpperCase() == 'SCHEDID') {
                     return this.ucsmHandler.getHoverScheduleFromID(word);
                 }
-                else if (showDataType.paramType == 'ucsmSyntax' || this.languageId == 'ucsm') {
+                else if ((0, ucsmValidation_1.dataTypeAlternatives)(showDataType.paramType).includes('ucsmSyntax') || this.languageId == 'ucsm') {
                     const ucsmhover = this.ucsmHandler.getHoverWord(word.toUpperCase(), wordRange, prefixWord.toUpperCase());
                     if (ucsmhover)
                         return ucsmhover;

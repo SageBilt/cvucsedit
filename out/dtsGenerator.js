@@ -145,9 +145,19 @@ class DtsGenerator {
             return { name: info.name, type: this.mapDeclaredType(declared) };
         }).filter(p => p.name.length > 0);
     }
-    /** `parameterDef[].DataType` is a closed vocabulary of 14 values. */
+    /**
+     * `parameterDef[].DataType` is a closed vocabulary of 14 values, optionally several of them
+     * separated by `|` when the parameter genuinely accepts more than one - `ModifyParameter`'s
+     * `Object value` is a description string, a parameter type constant or a parameter style
+     * constant depending on the preceding argument, and typing it as any one of those rejects the
+     * other two.
+     */
     mapParamType(raw) {
         const text = (raw ?? '').trim();
+        if (text.includes('|')) {
+            const mapped = text.split('|').map(part => this.mapParamType(part));
+            return [...new Set(mapped)].join(' | ');
+        }
         if (text.startsWith('constants.')) {
             return text.slice('constants.'.length);
         }
@@ -247,9 +257,13 @@ class DtsGenerator {
         let seenOptional = false;
         return defs.map((param, index) => {
             const info = this.paramInfo(param.ParamName ?? '', index);
-            const group = (param.DataType ?? '').startsWith('constants.')
-                ? (param.DataType ?? '').slice('constants.'.length)
-                : undefined;
+            // The completion hint follows the first constant group listed, so a union still gets a
+            // `PARSTYLE_` style parameter name rather than the declared `value`.
+            const group = (param.DataType ?? '')
+                .split('|')
+                .map(t => t.trim())
+                .find(t => t.startsWith('constants.'))
+                ?.slice('constants.'.length);
             let name = (group && this.constantPrefix(group)) || info.name;
             while (used.has(name))
                 name = `${name}_`;
@@ -333,8 +347,9 @@ class DtsGenerator {
             properties: this.data.properties.filter(p => !p.objectType && this.parents(p).includes(parent))
         };
     }
+    /** Every caller reaches this through an optional chain, so an absent list has to widen to string. */
     unionOf(names) {
-        const unique = [...new Set(names.filter((n) => !!n && n.trim().length > 0))].sort();
+        const unique = [...new Set((names ?? []).filter((n) => !!n && n.trim().length > 0))].sort();
         if (!unique.length)
             return 'string';
         return unique.map(n => `'${n.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`).join(' | ');
@@ -450,10 +465,13 @@ class DtsGenerator {
                 // No DOM: the Cabinet Vision script engine is not a browser, so window, document and
                 // alert must not appear in completions.
                 lib: ['ES2017'],
-                // Only set because the trailing `export {};` sentinel makes each UCS a module.
+                // Nothing in the mirror is a module any more - each UCS is a script wrapped in a
+                // function, each library a script declaring one global - but moduleResolution needs
+                // a module setting of es2015 or later to be legal.
                 module: 'ES2020',
                 moduleResolution: 'bundler',
                 checkJs,
+                strict: false,
                 noEmit: true,
                 maxNodeModuleJsDepth: 0
             },

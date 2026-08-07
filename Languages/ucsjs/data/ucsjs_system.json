@@ -382,56 +382,56 @@
             "parentObject": ["_this", "_cab"],
             "value": "CLASS",
             "description": "Object class represented by one of the Object Class constants",
-            "Type": "VAL_INTEGER"
+            "Type": "constants.objectClass"
         },
         {
             "name": "TYPE",
             "parentObject": ["_this", "_cab"],
             "value": "TYPE",
             "description": "Object type represented by one of the Object Type constants",
-            "Type": "VAL_INTEGER"
+            "Type": "constants.objectTypes"
         },
         {
             "name": "X",
             "parentObject": ["_this", "_cab"],
             "value": "X",
             "description": "X position",
-            "Type": "VAL_MEASUREMENT"
+            "Type": "VAL_MEASUREMENT|VAL_TEXT"
         },
         {
             "name": "Y",
             "parentObject": ["_this", "_cab"],
             "value": "Y",
             "description": "Y position",
-            "Type": "VAL_MEASUREMENT"
+            "Type": "VAL_MEASUREMENT|VAL_TEXT"
         },
         {
             "name": "Z",
             "parentObject": ["_this", "_cab"],
             "value": "Z",
             "description": "Z position",
-            "Type": "VAL_MEASUREMENT"
+            "Type": "VAL_MEASUREMENT|VAL_TEXT"
         },
         {
             "name": "DX",
             "parentObject": ["_this", "_cab"],
             "value": "DX",
             "description": "Width",
-            "Type": "VAL_MEASUREMENT"
+            "Type": "VAL_MEASUREMENT|VAL_TEXT"
         },
         {
             "name": "DY",
             "parentObject": ["_this", "_cab"],
             "value": "DY",
             "description": "Height/length",
-            "Type": "VAL_MEASUREMENT"
+            "Type": "VAL_MEASUREMENT|VAL_TEXT"
         },
         {
             "name": "DZ",
             "parentObject": ["_this", "_cab"],
             "value": "DZ",
             "description": "Depth/thickness",
-            "Type": "VAL_MEASUREMENT"
+            "Type": "VAL_MEASUREMENT|VAL_TEXT"
         },
         {
             "name": "AX",
@@ -1711,7 +1711,7 @@
                 {
                     "ParamName": "Object value",
                     "ParamValue": "If action is equal to PARMOD_DESC then value represents text for the new description.\nIf action is equal to PARMOD_TYPE then value represents one of the data type enumeration values.\nIf action is equal to PARMOD_STYLE then value represents one of the following parameter style constants.\n\n1.PARSTYLE_DEFAULT\n2.PARSTYLE_ATTRIBUTE\n3.PARSTYLE_NOTE"
-                    ,"DataType": "constants.parameterModStyles"
+                    ,"DataType": "constants.parameterModStyles|constants.parameterTypes|string"
                 }
             ]
         },
@@ -1778,7 +1778,7 @@
             "example": "_this.SetMaterial('3/4 Oak Ply');",
             "returnType": "bool - true on success else false",
             "parameterDef": [
-                {"ParamName": "variant value", "ParamValue": "Desired material defined by name or ID","DataType": "materials"}
+                {"ParamName": "variant value", "ParamValue": "Desired material defined by name or ID","DataType": "materials|int"}
             ]
 
         },

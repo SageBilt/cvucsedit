@@ -9,6 +9,16 @@ import { ControlStructure, UCSMSpecialObject, UCSMSystemData , UCSMSyntaxData , 
 import * as CONSTANTS from '.././constants';
 import { subscribe } from 'diagnostics_channel';
 
+/**
+ * `parameterDef[].DataType` is normally one value of a closed vocabulary, but a parameter that
+ * genuinely accepts more than one lists them separated by `|` - `ModifyParameter`'s `Object value`
+ * is a description string, a parameter type constant or a parameter style constant depending on
+ * the preceding argument. Every consumer matches on the alternatives, not on the raw string.
+ */
+export function dataTypeAlternatives(raw: string | undefined): string[] {
+    return (raw ?? '').split('|').map(t => t.trim()).filter(t => t.length > 0);
+}
+
 enum dataTypeCheck {
     any = 0,
     number = 1,
@@ -83,7 +93,7 @@ export class ucsmValidation {
 
     private FindUCSJSSyntaxMethods() {
         this.ucsjsMethods.forEach((Method:UCSJSSystemMethod)=> {
-            if (Method.parameterDef?.some(param =>  param.DataType == "ucsmSyntax"))
+            if (Method.parameterDef?.some(param =>  dataTypeAlternatives(param.DataType).includes("ucsmSyntax")))
             this.UCSJSSyntaxMethods.push(Method);
         });
     }
@@ -143,7 +153,7 @@ export class ucsmValidation {
                   if (char === quoteChar && argsSoFar[i - 1] !== '\\') {
                       inString = false; // End of string
                       //this.connection.console.log(`paramDataType "${paramDataType}" insideStr "${lineText.substring(StrStart,argsStart + i)}"`);
-                      if (paramDataType == 'ucsmSyntax') {
+                      if (dataTypeAlternatives(paramDataType).includes('ucsmSyntax')) {
 
                         const filteredText = lineText.substring(StrStart,argsStart + i);
                         const startOffset = StrStart;
