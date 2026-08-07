@@ -9,9 +9,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```powershell
-npm run compile   # tsc -p ./  -> out/
-npm run watch     # tsc -watch (this is the default build task, used by F5 "Run Extension")
+npm run bundle    # esbuild -> dist/          (what actually ships)
+npm run watch     # esbuild --watch -> dist/  (part of the default build task, used by F5)
+npm run compile   # tsc -p ./ -> out/         (type check + tests; nothing loads it at runtime)
+npm run watch:tsc # tsc -watch -> out/        (the other half of the default build task)
 npm run lint      # eslint src
+npm run package   # compile + lint + production bundle; this is `vscode:prepublish`
 npm test          # vscode-test: compile + lint, then runs out/test/**/*.test.js
 ```
 
@@ -19,8 +22,31 @@ Debugging: F5 (`.vscode/launch.json` "Run Extension") launches an Extension Deve
 effectively no test suite yet ([src/test/extension.test.ts](src/test/extension.test.ts) is the stub),
 so verification is done by running the extension against a real Cabinet Vision SQL database.
 
-`out/` is **committed to git** (not in `.gitignore`). A change to `src/` is not shipped until
-`npm run compile` is run and the regenerated `out/` files are committed.
+### There are two build outputs, and only one of them ships
+
+`dist/` is the extension: two files, `extension.js` and `server.js`, bundled by
+[esbuild.js](esbuild.js). `out/` is the `tsc` output, which is still what the type check and
+`npm test` run against — **esbuild only strips types, it does not check them**, which is why the
+default build task runs both watchers and why `package` runs `compile` before bundling.
+
+Bundling is not an optimisation, it is what makes the VSIX publishable. `mssql` pulls `tedious`,
+which has a top-level `require("@azure/identity")`, which drags in MSAL and Key Vault — roughly 1400
+files of Azure AD authentication that this extension never uses, since the SQL credentials are a
+hard-coded Cabinet Vision account. `.vscodeignore` cannot touch any of it: the requires are static
+and real, so excluding them breaks `mssql` at runtime. Unbundled the VSIX held 2400 files, 2351 of
+them `node_modules`, and `vsce` warned about it on every publish. Bundled it holds 32.
+
+Two entry points, because there are two processes ([Two processes](#two-processes) below), and both
+outputs land **directly in `dist/`**, at the same depth `out/` had. That is load-bearing:
+[src/constants.ts](src/constants.ts) resolves the `Languages/` data files through
+`path.join(__dirname, '../Languages/...')`, and esbuild rewrites `__dirname` to the *bundle's*
+directory rather than the original source file's — a server bundle in `dist/server/` would look for
+`dist/Languages/` and find nothing. `SERVER_MODULE` in [src/extension.ts](src/extension.ts) is the
+matching path on the client side.
+
+`out/` is **committed to git**; `dist/` is not, because `vscode:prepublish` rebuilds it on every
+publish and a megabyte of minified output would be churn. A change to `src/` reaches a running
+Extension Development Host as soon as the esbuild watcher writes `dist/`.
 
 ## Architecture
 
@@ -324,8 +350,9 @@ they cannot be confused with real code: `}();` requires the `()`, or a library w
 
 Static Cabinet Vision documentation is baked into JSON under [Languages/](Languages/) and loaded with
 `fs.readFileSync` via paths in [src/constants.ts](src/constants.ts). Those paths are relative to
-`__dirname`, i.e. `out/`, so `../Languages` resolves from the repo root at runtime — the folder is
-shipped in the VSIX, not compiled.
+`__dirname`, i.e. `dist/`, so `../Languages` resolves from the repo root at runtime — the folder is
+shipped in the VSIX, not compiled or bundled. Both bundles sit directly in `dist/` to keep that one
+`../` true for the extension host and the server process alike; see the build-outputs section above.
 
 - [Languages/data/system.json](Languages/data/system.json) — UCS:M keywords, ~680 system variables,
   functions, types, special objects. **Generated**, not hand-written: `initializeSystemJson()` in
@@ -458,7 +485,9 @@ Context awareness hinges on two private helpers in `server.ts`:
 - `.vscodeignore` excludes `cvucs/**` and the root `AGENTS.md`. This repository is itself a test
   workspace, so it has a mirror in it, and `vsce` packs from the working directory without consulting
   the mirror's own `.gitignore` — without those lines the VSIX ships a copy of whatever UCS code was
-  last synced from the developer's database.
+  last synced from the developer's database. It also excludes `out/**` and `node_modules/**`, which
+  is only correct *because* the extension is bundled; both would have to come back if `main` ever
+  pointed at `out/` again.
 - Database schema differs by CV version: `DbInfo.Version >= 2024` has the `MacroType` / `UCSLibrary`
   columns; older versions are UCS:M-only and those columns are synthesized as `0` in the query.
 - The UCS:JS client still registers against `languageId: 'javascript'`, so its `documentSelector` is

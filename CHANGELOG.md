@@ -5,6 +5,18 @@ All notable changes to the "cvucsedit" extension will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.1] - 2026-08-08
+
+Packaging only. No behaviour changes.
+
+### Changed
+- **The extension is now bundled**, and the download is a twentieth of the size:
+  742 KB across 34 files, where 2.2.0 was 5.0 MB across 2404. Almost all of that
+  was the dependency tree shipped alongside the code — the SQL Server driver
+  pulls in an Azure Active Directory authentication stack of some 1400 files,
+  none of which this extension can use, since it connects with the fixed Cabinet
+  Vision account. Installing and starting up both have less to walk through.
+
 ## [2.2.0] - 2026-08-08
 
 Cabinet Vision can launch VS Code on its own `Temp\UCSJS` folder and attach its

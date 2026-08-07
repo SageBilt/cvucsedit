@@ -4,17 +4,65 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"type": "npm",
-			"script": "watch",
-			"problemMatcher": "$tsc-watch",
-			"isBackground": true,
-			"presentation": {
-				"reveal": "never"
-			},
+			// The default build task, and what F5 waits on. Two watchers, because the extension host
+			// loads `dist/` (esbuild) while the type errors and the tests come from `out/` (tsc):
+			// esbuild only strips types, it does not check them.
+			"label": "watch",
+			"dependsOn": [
+				"npm: watch",
+				"npm: watch:tsc"
+			],
 			"group": {
 				"kind": "build",
 				"isDefault": true
 			}
+		},
+		{
+			"type": "npm",
+			"script": "watch",
+			"isBackground": true,
+			"presentation": {
+				"reveal": "never",
+				"group": "watch"
+			},
+			"group": "build",
+			// Matches the markers the `problem-matcher` plugin in esbuild.js prints. Written out
+			// rather than using `$esbuild-watch`, which needs the esbuild-problem-matchers extension.
+			"problemMatcher": {
+				"owner": "esbuild",
+				"fileLocation": [
+					"relative",
+					"${workspaceFolder}"
+				],
+				"pattern": [
+					{
+						"regexp": "^✘ \\[ERROR\\] (.+)$",
+						"message": 1
+					},
+					{
+						"regexp": "^\\s+(.+):(\\d+):(\\d+):$",
+						"file": 1,
+						"line": 2,
+						"column": 3
+					}
+				],
+				"background": {
+					"activeOnStart": true,
+					"beginsPattern": "^\\[watch\\] build started$",
+					"endsPattern": "^\\[watch\\] build finished$"
+				}
+			}
+		},
+		{
+			"type": "npm",
+			"script": "watch:tsc",
+			"problemMatcher": "$tsc-watch",
+			"isBackground": true,
+			"presentation": {
+				"reveal": "never",
+				"group": "watch"
+			},
+			"group": "build"
 		}
 	]
 }

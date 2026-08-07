@@ -181,6 +181,13 @@ Please report all issues on [Github](https://github.com/SageBilt/cvucsedit/issue
 
 ## Release Notes
 
+#### 2.2.1
+
+Packaging only. No behaviour changes.
+
+##### Changed
+- **The extension is now bundled**, and the download is a twentieth of the size: 742 KB across 34 files, where 2.2.0 was 5.0 MB across 2404. Almost all of that was the dependency tree shipped alongside the code — the SQL Server driver pulls in an Azure Active Directory authentication stack of some 1400 files, none of which this extension can use, since it connects with the fixed Cabinet Vision account. Installing and starting up both have less to walk through.
+
 #### 2.2.0
 
 Cabinet Vision can launch VS Code on its own `Temp\UCSJS` folder and attach its script engine's debugger, so a standard can be run with breakpoints. The extension did nothing in that window, because the files Cabinet Vision puts there are plain `.js` rather than the `.ucs.js` of the mirror. It now recognises the window and gives those files the same language support the mirror gets, without ever writing to them.

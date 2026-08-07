@@ -57,6 +57,12 @@ const debugFolder_1 = require("./debugFolder");
  * this window *is* a UCS window before deciding.
  */
 const ENABLED_KEY = 'cvucsedit.enabledInWorkspace';
+/**
+ * The language server child process, as `esbuild.js` bundles it - one file in `dist/`, not the
+ * `out/server/server.js` tree `tsc` produces. `tsc` still writes `out/` for the type check and the
+ * tests; nothing loads it at runtime.
+ */
+const SERVER_MODULE = path.join('dist', 'server.js');
 let clients = [];
 let provider;
 let statusItem;
@@ -184,7 +190,7 @@ async function start(context, userInitiated = false) {
         const scoped = (extension) => mirrorRoot ? [`${mirrorRoot}/**/*${extension}`] : [`**/*${extension}`];
         const UCSMClient = new client_1.LanguageClientWrapper({
             languageId: 'ucsm',
-            serverModulePath: path.join('out', 'server', 'server.js'),
+            serverModulePath: SERVER_MODULE,
             patterns: scoped('.ucsm')
         }, context, dynamicData);
         clients.push(UCSMClient);
@@ -201,7 +207,7 @@ async function start(context, userInitiated = false) {
         }
         const UCSJSClient = new client_1.LanguageClientWrapper({
             languageId: 'javascript',
-            serverModulePath: path.join('out', 'server', 'server.js'),
+            serverModulePath: SERVER_MODULE,
             patterns: jsPatterns
         }, context, dynamicData);
         clients.push(UCSJSClient);

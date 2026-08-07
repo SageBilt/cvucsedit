@@ -1,2 +1,6 @@
 node_modules
 .vscode-test
+
+# The packaged bundle. Not committed the way `out/` is: `vscode:prepublish` rebuilds it on every
+# publish, so committing a megabyte of minified output would be pure churn.
+dist

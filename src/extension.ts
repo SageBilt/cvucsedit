@@ -23,6 +23,13 @@ import { debugFolder, debugFolderGlobBase } from './debugFolder';
  */
 const ENABLED_KEY = 'cvucsedit.enabledInWorkspace';
 
+/**
+ * The language server child process, as `esbuild.js` bundles it - one file in `dist/`, not the
+ * `out/server/server.js` tree `tsc` produces. `tsc` still writes `out/` for the type check and the
+ * tests; nothing loads it at runtime.
+ */
+const SERVER_MODULE = path.join('dist', 'server.js');
+
 let clients: LanguageClientWrapper[] = [];
 let provider: SQLScriptProvider | undefined;
 let statusItem: vscode.StatusBarItem;
@@ -183,7 +190,7 @@ async function start(context: vscode.ExtensionContext, userInitiated = false): P
 
         const UCSMClient = new LanguageClientWrapper({
                 languageId: 'ucsm',
-                serverModulePath: path.join('out','server', 'server.js'),
+                serverModulePath: SERVER_MODULE,
                 patterns: scoped('.ucsm')
                 },
                 context,
@@ -205,7 +212,7 @@ async function start(context: vscode.ExtensionContext, userInitiated = false): P
 
         const UCSJSClient = new LanguageClientWrapper({
             languageId: 'javascript',
-            serverModulePath: path.join('out','server', 'server.js'),
+            serverModulePath: SERVER_MODULE,
             patterns: jsPatterns
             },
             context,

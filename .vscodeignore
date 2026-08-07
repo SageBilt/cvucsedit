@@ -6,6 +6,14 @@ CLAUDE.md
 AGENTS.md
 .gitignore
 
+# The extension ships as `dist/`, bundled by `esbuild.js`. Everything below is what that replaces:
+# `out/` is the tsc output, kept for the type check and the tests, and `node_modules` is the
+# dependency tree the bundle now contains - 2351 of the 2400 files this VSIX used to hold, most of
+# them the @azure/identity + MSAL stack that `tedious` requires and this extension never uses.
+out/**
+node_modules/**
+esbuild.js
+
 # This repository is itself a test workspace, so it has a mirror in it. vsce packs from the working
 # directory and ignores the mirror's own `.gitignore`, so without these the VSIX would ship a copy
 # of whatever UCS code was last synced from the developer's database.
