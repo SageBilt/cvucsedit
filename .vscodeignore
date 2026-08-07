@@ -1,6 +1,8 @@
 .vscode/**
 .vscode-test/**
+.claude/**
 src/**
+CLAUDE.md
 .gitignore
 .yarnrc
 vsc-extension-quickstart.md
