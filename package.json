@@ -4,7 +4,7 @@
   "name": "cvucsedit",
   "displayName": "Cabinet Vision UCS Editor",
   "description": "Adds features to VS Code for loading, editing and saving Cabinet Vision User Created Standards",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "author": {
     "name": "David Bilton"
   },
@@ -46,23 +46,12 @@
         "language": "ucsm",
         "scopeName": "source.ucsm",
         "path": "./Languages/ucsm/ucsm.tmLanguage.json"
-      },
-      {
-        "path": "./Languages/ucsjs/ucsjs.tmLanguage.json",
-        "scopeName": "source.ucsjs",
-        "injectTo": [
-          "source.js"
-        ]
       }
     ],
     "snippets": [
       {
         "language": "ucsm",
         "path": "./Languages/ucsm/ucsm.snippets.json"
-      },
-      {
-        "language": "javascript",
-        "path": "./Languages/ucsjs/ucsjs.snippets.json"
       }
     ],
     "configuration": {
@@ -77,8 +66,22 @@
           "type": "string",
           "default": "CVData",
           "description": "The name of the Cabinet Vision SQL database."
+        },
+        "cvucsedit.MirrorFolder": {
+          "type": "string",
+          "default": ".cvucs",
+          "description": "Folder inside the workspace where UCS code is mirrored as real files. The folder ignores itself in git, and is what makes UCS code reachable by AI agents, search and standard JavaScript tooling."
+        },
+        "cvucsedit.CheckJs": {
+          "type": "boolean",
+          "default": false,
+          "description": "Report TypeScript diagnostics in mirrored UCS:JS files. Completion, hover, go to definition and rename work either way; enabling this also surfaces type errors, which can be noisy."
         }
       }
+    },
+    "configurationDefaults": {
+      "javascript.suggest.completeFunctionCalls": true,
+      "typescript.suggest.completeFunctionCalls": true
     },
     "viewsContainers": {
       "activitybar": [
@@ -177,12 +180,6 @@
         }
       ]
     },
-    "semanticTokenTypes": [
-      {
-        "id": "ucsjsLibrary",
-        "description": "A JavaScript UCS Library instance"
-      }
-    ],
     "semanticTokenModifiers": [
       {
         "id": "native",
@@ -211,9 +208,6 @@
     "typescript": "^5.8.2"
   },
   "dependencies": {
-    "@babel/parser": "^7.28.4",
-    "@babel/traverse": "^7.28.4",
-    "express": "^4.21.2",
     "mssql": "^11.0.1",
     "vscode-languageclient": "^9.0.1",
     "vscode-languageserver": "^9.0.1",

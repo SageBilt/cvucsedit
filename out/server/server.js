@@ -46,23 +46,13 @@ class LanguageServer {
     ucsmHandler;
     ucsjsHandler;
     ucsmValid;
-    semanticTokensLegend = {
-        tokenTypes: [
-            'UCSJSLibrary', // Custom variable for your language
-            'specialObject', // For special objects like _M:, _CV:
-        ],
-        tokenModifiers: [
-            'declaration', // e.g., where a variable is defined
-            'readonly', // e.g., constants
-        ]
-    };
     constructor(config) {
         this.connection = (0, node_1.createConnection)(node_1.ProposedFeatures.all);
         this.connection.console.log("Starting language server...");
         this.documents = new node_1.TextDocuments(vscode_languageserver_textdocument_1.TextDocument);
         this.languageId = config.languageId;
         this.ucsmHandler = new ucsmLanguageHandler_1.ucsmLanguageHandler(this.languageId, this.connection);
-        this.ucsjsHandler = new ucsjsLanguageHandler_1.ucsjsLanguageHandler(this.languageId, this.connection);
+        this.ucsjsHandler = new ucsjsLanguageHandler_1.ucsjsLanguageHandler(this.connection);
         this.ucsmValid = new ucsmValidation_1.ucsmValidation(this.languageId, this.connection);
         this.initialize();
         this.setupCompletion();
@@ -70,8 +60,6 @@ class LanguageServer {
         this.setDefinitionProvider();
         this.setReferenceProvider();
         this.setupDocumentValidation();
-        this.setupClientNotification();
-        this.setupSemanticTokens(); // Add this
         this.documents.listen(this.connection);
         this.connection.listen();
     }
@@ -92,10 +80,6 @@ class LanguageServer {
                     hoverProvider: true,
                     definitionProvider: true,
                     referencesProvider: true,
-                    // semanticTokensProvider: { // Add semantic tokens capability
-                    //   legend: this.semanticTokensLegend,
-                    //   full: true, // Support full document tokenization
-                    // }
                 }
             };
         });
@@ -271,21 +255,18 @@ class LanguageServer {
                 }
             }
             else if (this.languageId == 'javascript') {
-                if (this.ucsjsHandler.isObject(items, linePrefix))
-                    return items;
-                if (this.ucsjsHandler.isCVManaged(items, linePrefix, prefixWord))
-                    return items;
-                if (this.ucsjsHandler.isLibraryClassInstances(items, linePrefix))
-                    return items;
+                /*
+                 * Everything structural - objects, their properties and methods, constants, global
+                 * functions and library classes - now comes from the generated cv-api.d.ts through VS Code's
+                 * own TypeScript service, which also supplies hover, signature help, go to definition,
+                 * find references and rename. Offering it again here would only duplicate every entry.
+                 *
+                 * What is left is the context TypeScript cannot know about: a Cabinet Vision connection id.
+                 */
                 if (prefixWord == '_CONNID') {
                     this.ucsmHandler.AddConnections(items, false);
                     return items;
                 }
-                this.ucsjsHandler.AddMethods(items);
-                this.ucsjsHandler.AddAllConstants(items);
-                this.ucsjsHandler.AddObjects(items);
-                this.ucsjsHandler.AddFunctions(items);
-                this.ucsjsHandler.AddLibraryClassInstances(items);
             }
             return items;
         });
@@ -396,12 +377,9 @@ class LanguageServer {
                     if (ucsmhover)
                         return ucsmhover;
                 }
-                else if (!['ucsmSyntax', 'string'].includes(showDataType.paramType) && this.languageId == 'javascript') {
-                    return this.ucsjsHandler.getHoverWord(word, wordRange, prefixWord, linePrefix);
-                }
+                // No UCS:JS fallback: hover for the Cabinet Vision API comes from the JSDoc in the
+                // generated cv-api.d.ts, so adding it here would show every entry twice.
             }
-            else
-                return this.ucsjsHandler.getHoverWord(word, wordRange, prefixWord, linePrefix);
         });
     }
     findSymbolAtPosition(doc, pos) {
@@ -420,6 +398,10 @@ class LanguageServer {
     }
     setDefinitionProvider() {
         this.connection.onDefinition((params) => {
+            // UCS:JS definitions come from the TypeScript service against cv-api.d.ts and the mirrored
+            // library files, so this provider is UCS:M only.
+            if (this.languageId != 'ucsm')
+                return null;
             const uri = params.textDocument.uri;
             const position = params.position;
             // Get the document text (assumes you’re tracking open documents)
@@ -431,8 +413,7 @@ class LanguageServer {
             //const symbol = this.findSymbolAtPosition(document, position);
             if (!symbol)
                 return null;
-            console.log(`symbol "${symbol}" prefixWord "${prefixWord}"`);
-            const definition = this.languageId == 'ucsm' ? this.ucsmHandler.getReferences(symbol)[0] : this.ucsjsHandler.getDefinition(symbol, prefixWord);
+            const definition = this.ucsmHandler.getReferences(symbol)[0];
             if (!definition)
                 return null;
             //console.log(`uri "${definition.uri}" uri "${params.textDocument.uri}"`);
@@ -458,14 +439,9 @@ class LanguageServer {
             //const symbol = this.findSymbolAtPosition(document, position);
             if (!symbol)
                 return null;
-            //console.log(`symbol "${symbol}" prefixWord "${prefixWord}"`);
+            // As with definitions, UCS:JS references are the TypeScript service's job now.
             if (this.languageId == 'ucsm') {
                 return this.ucsmHandler.getReferences(symbol);
-            }
-            else {
-                const jsRefs = this.ucsjsHandler.getReferences(symbol, prefixWord, uri);
-                if (jsRefs)
-                    return jsRefs;
             }
             return null;
         });
@@ -490,51 +466,6 @@ class LanguageServer {
         //console.log(diagnostics);
         const normalizedUri = decodeURIComponent(document.uri);
         this.connection.sendDiagnostics({ uri: normalizedUri, diagnostics });
-    }
-    setupClientNotification() {
-        this.connection.onNotification('updateJSReferences', (params) => {
-            this.ucsjsHandler.classLibraries = params.classRefs;
-            this.ucsjsHandler.CVAsmManagedReferences = params.CVAsmManagedRefs;
-            this.ucsjsHandler.CVShapeManagedReferences = params.CVShapeManagedRefs;
-            //console.log(`Received data updated references for libraries`);
-        });
-    }
-    tokenTypeIndex(type) {
-        return this.semanticTokensLegend.tokenTypes.indexOf(type);
-    }
-    setupSemanticTokens() {
-        this.connection.languages.semanticTokens.on((params) => {
-            const document = this.documents.get(params.textDocument.uri);
-            if (!document)
-                return { data: [] };
-            const builder = new node_1.SemanticTokensBuilder();
-            if (this.languageId == 'javascript') {
-                const text = document.getText();
-                const lines = text.split('\n');
-                let inMultiLineComment = false;
-                // Tokenize each line
-                for (let line = 0; line < lines.length; line++) {
-                    //const lineText = lines[line];
-                    const filteredLine = this.ucsmValid.getUCSJSLineWithoutComment(lines[line], inMultiLineComment);
-                    if (filteredLine === false)
-                        continue;
-                    const lineText = filteredLine.newLine;
-                    inMultiLineComment = filteredLine.inMultiLineComment;
-                    //let trimStart = filteredLine.start;
-                    this.ucsjsHandler.classLibraries.forEach(jsLib => {
-                        let match;
-                        const customKeywordRegex = new RegExp(`\\b(${jsLib.name})\\b`, 'g');
-                        //console.log(jsLib.name);
-                        while ((match = customKeywordRegex.exec(lineText)) !== null) {
-                            builder.push(line, match.index, match[0].length, this.tokenTypeIndex('UCSJSLibrary'), 0);
-                        }
-                    });
-                    // Example tokenization logic (customize this based on your language)
-                    //this.tokenizeLine(lineText, line, builder);
-                }
-            }
-            return builder.build();
-        });
     }
 }
 //console.log("🌍 Language server is starting...");

@@ -1,13 +1,11 @@
 import * as vscode from 'vscode';
 import * as CLT from './CustomLookupTree';
-import { DatabaseFileSystemProvider } from './DatabaseFileSystemProvider';
 import { SQLConnection } from './SQLConnection';
 import { DynamicData, UCSOpenContex } from './interfaces';
-import { referenceParser } from './referenceParser';
-import { TextDocument } from 'vscode';
+import { MirrorFileStore, MirrorRow, PlacedRow, leadingSentinelLines, leadingSentinel, trailingSentinel } from './MirrorFileStore';
+import { DtsGenerator } from './dtsGenerator';
 
 export class SQLScriptProvider {
-    private UCS: Map<string, string> = new Map();
     private DBVersion: number = 0;
     public UCSListlookupProvider: CLT.LookupTreeDataProvider;
     public UCSLibListlookupProvider: CLT.LookupTreeDataProvider;
@@ -24,35 +22,99 @@ export class SQLScriptProvider {
         doors: [],
         connections: []
     } as DynamicData;
-    public UCSJSLibRefParser = new referenceParser;
-    public textProvider = new DatabaseFileSystemProvider();
+    public mirror: MirrorFileStore;
 
     constructor(public readonly context: vscode.ExtensionContext) {
         this.UCSListlookupProvider = new CLT.LookupTreeDataProvider(this.context);
         vscode.window.registerTreeDataProvider('CVUCSList', this.UCSListlookupProvider);
         this.UCSLibListlookupProvider = new CLT.LookupTreeDataProvider(this.context);
         vscode.window.registerTreeDataProvider('CVUCSLibList', this.UCSLibListlookupProvider);
-        vscode.workspace.registerFileSystemProvider('cvucs', this.textProvider, { isCaseSensitive: false });
 
-        this.setupLanguageHandler();
+        this.mirror = new MirrorFileStore(this.SQLConn);
+        this.mirror.globalStorage = this.context.globalStorageUri;
+        // Keep the tree's cached code in step when an external edit is pushed to the database.
+        this.mirror.onCodePushed = (ucsId, code) => this.updateTreeItemCode(ucsId, code);
+        this.context.subscriptions.push(this.mirror);
+
+        this.setupSentinelGuard();
     }
 
-    private setupLanguageHandler() {
+    private updateTreeItemCode(ucsId: number, code: string) {
+        for (const provider of [this.UCSListlookupProvider, this.UCSLibListlookupProvider]) {
+            const item = provider.getTreeItemByUCSID(ucsId);
+            if (item) {
+                item.Code = code;
+                return;
+            }
+        }
+    }
+
+    /**
+     * Revert edits to the sentinel lines, which belong to the mirror rather than to the UCS.
+     * Registered once, not once per open as it used to be. Edits that bypass the editor entirely are
+     * harmless because stripSentinels tolerates a missing or malformed sentinel.
+     */
+    private setupSentinelGuard() {
         this.context.subscriptions.push(
-            vscode.workspace.onDidOpenTextDocument(async (doc) => {
-                if (doc.uri.scheme === 'cvucs') {
-                    const treeItem = this.findTreeItemByUri(doc.uri.toString());
-                    if (treeItem) {
-                        const langId = ["UCSJS", "UCSJS-Disabled"].includes(treeItem.FileType.FileTypeName) ? 'javascript' : 'ucsm';
-                        if (doc.languageId !== langId) {
-                            console.log(`Setting language for ${doc.uri.toString()} to ${langId}`);
-                            await vscode.languages.setTextDocumentLanguage(doc, langId);
-                        }
-                    }
+            vscode.workspace.onDidChangeTextDocument(event => {
+                if (!event.contentChanges.length) return;
+
+                const item = this.findTreeItemByUri(event.document.uri.toString());
+                if (!item) return;
+
+                const kind = CLT.GetSentinelKind(item.FileType, item.isJSLibrary);
+                if (kind === 'ucsm') return;
+
+                const doc = event.document;
+                const guarded: vscode.Range[] = [];
+                if (kind === 'jsLibrary') {
+                    guarded.push(doc.lineAt(0).rangeIncludingLineBreak);
+                    guarded.push(doc.lineAt(doc.lineCount - 1).range);
+                } else {
+                    guarded.push(doc.lineAt(doc.lineCount - 1).range);
                 }
+
+                const touched = event.contentChanges.some(change =>
+                    guarded.some(range => change.range.intersection(range))
+                );
+                if (!touched) return;
+
+                const editor = vscode.window.visibleTextEditors.find(e => e.document === doc);
+                if (!editor) return;
+
+                const expectedFirst = leadingSentinel(kind, item.UCSName);
+                const expectedLast = trailingSentinel(kind);
+
+                void editor.edit(builder => {
+                    if (expectedFirst && doc.lineAt(0).text !== expectedFirst) {
+                        builder.replace(doc.lineAt(0).range, expectedFirst);
+                    }
+                    const last = doc.lineCount - 1;
+                    if (expectedLast && doc.lineAt(last).text !== expectedLast) {
+                        builder.replace(doc.lineAt(last).range, expectedLast);
+                    }
+                }, { undoStopBefore: false, undoStopAfter: false });
             })
         );
     }
+
+    /** Decorate the sentinel lines so it is obvious they are not part of the UCS. */
+    private applySentinelDecoration(editor: vscode.TextEditor, item: CLT.CustomTreeItem) {
+        const kind = CLT.GetSentinelKind(item.FileType, item.isJSLibrary);
+        if (kind === 'ucsm') return;
+
+        const doc = editor.document;
+        const ranges: vscode.Range[] = [doc.lineAt(doc.lineCount - 1).range];
+        if (kind === 'jsLibrary') {
+            ranges.unshift(doc.lineAt(0).range);
+        }
+        editor.setDecorations(this.sentinelDecoration, ranges);
+    }
+
+    private sentinelDecoration = vscode.window.createTextEditorDecorationType({
+        opacity: '0.35',
+        isWholeLine: true
+    });
 
     async GetDBVersion(): Promise<number> {
         const result = await this.SQLConn.ExecuteStatment('Select Version From DbInfo', []);
@@ -93,6 +155,25 @@ export class SQLScriptProvider {
 
     }
 
+    /**
+     * Regenerate cv-api.d.ts and jsconfig.json. Cheap and idempotent, so it runs both at activation
+     * and after each list refresh, which keeps the database driven unions (material names and so on)
+     * current without the window reload that initializationOptions would need.
+     */
+    async writeProjectFiles() {
+        await this.mirror.initialize();
+        const generator = new DtsGenerator();
+        await this.mirror.writeProjectFiles(
+            generator.build(this.USCMDynamicData),
+            generator.buildJsConfig()
+        );
+    }
+
+    /** UCS:M has no `Divider` code to mirror, so those rows stay in the tree but get no file. */
+    private hasCode(FileType: { FileTypeName: string }): boolean {
+        return FileType.FileTypeName !== 'Divider' && FileType.FileTypeName !== 'None';
+    }
+
     async loadUCSListSideBarMenu() {
         let SQLText: string;
 
@@ -118,78 +199,46 @@ export class SQLScriptProvider {
     }
 
     private async loadSideBarMenu(lookupProvider: CLT.LookupTreeDataProvider, SQLText: string, isJSLibrary: boolean) {
+        await this.mirror.initialize();
         lookupProvider.clearItems();
 
         const result = await this.SQLConn.ExecuteStatment(SQLText, []);
-        if (result.recordset) {
-             
-            const List = result.recordset.map((ucsrecord: { ID: number; Name: string; Code: string; MacroType: number; UCSTypeID: number; Disabled: boolean; }) => new CLT.CustomTreeItem(
-                ucsrecord.ID,
-                ucsrecord.Name,
-                ucsrecord.Name,
-                CLT.GetFileType(ucsrecord.UCSTypeID, ucsrecord.MacroType, ucsrecord.Disabled),
-                isJSLibrary,
-                ucsrecord.Code,
-                -1,
-                vscode.TreeItemCollapsibleState.Expanded,
-                this.context
-            )
-            );
-            lookupProvider.updateResults(List);
+        if (!result.recordset) return;
 
-            this.createFilesInFileSystem(List)
-            this.addClassRefs(List);
-        }
-    }
+        const records = result.recordset.map((ucsrecord: { ID: number; Name: string; Code: string; MacroType: number; UCSTypeID: number; Disabled: boolean; }) => ({
+            ...ucsrecord,
+            FileType: CLT.GetFileType(ucsrecord.UCSTypeID, ucsrecord.MacroType, ucsrecord.Disabled)
+        }));
 
-    private createFilesInFileSystem(list: CLT.CustomTreeItem[]) {
-        list.forEach(item => {
-            // Wrap JavaScript code in a class for UCSJS/UCSJS-Disabled
-            const wrappedCode = item.isJSLibrary
-            ? this.addClassDefToLibraryCode(item)
-            : item.Code;
-        
-            this.textProvider.writeFile(item.docURI, Buffer.from(wrappedCode, 'utf8'), { create: true, overwrite: true });
-        });
-    }
+        // Dividers carry no code, so they get a tree entry but no file.
+        const mirrorRows: MirrorRow[] = records
+            .filter(rec => this.hasCode(rec.FileType))
+            .map(rec => ({
+                ucsId: rec.ID,
+                ucsName: rec.Name,
+                code: rec.Code ?? '',
+                kind: CLT.GetSentinelKind(rec.FileType, isJSLibrary),
+                isLibrary: isJSLibrary
+            }));
 
-    private addClassRefs(list: CLT.CustomTreeItem[]) {
-        list.forEach(item => {
-            const fType = item.FileType.FileTypeName;
-            if (['UCSJS','UCSJS-Disabled'].includes(fType)) { //only pass enabled ones for now
-                const docURI = this.parseURI(item);
-                if (item.isJSLibrary) {
-                    const wrappedCode = this.addClassDefToLibraryCode(item);
-                    const docName = '_' + item.label;
-                    this.UCSJSLibRefParser.updateClasses(docName,docURI.toString(),wrappedCode,fType != 'UCSJS-Disabled');
-                } else {
-                    this.UCSJSLibRefParser.updateReferences(item.label,docURI.toString(),item.Code);
-                }
-            }
-        });
-    }
+        const placed = this.mirror.planPaths(mirrorRows);
+        const placedById = new Map<number, PlacedRow>(placed.map(row => [row.ucsId, row]));
 
-    public updateClassRefsForDoc(document: TextDocument) {
-        let treeItem = this.UCSLibListlookupProvider.getTreeItemByDocumentUri(document.uri.toString());
-        if (!treeItem) treeItem = this.UCSListlookupProvider.getTreeItemByDocumentUri(document.uri.toString());
-        if (treeItem) {
-            const fType = treeItem.FileType.FileTypeName;
-            const newCode = document.getText();
-            const docName = document.fileName.split("\\")[1].split(".")[0] ;
-            if (treeItem.isJSLibrary)
-                this.UCSJSLibRefParser.updateClasses('_' + docName,document.uri.toString(),newCode, fType != 'UCSJS-Disabled');
-            else
-                this.UCSJSLibRefParser.updateReferences(docName,document.uri.toString(),newCode);
-        }
+        const List = records.map(rec => new CLT.CustomTreeItem(
+            rec.ID,
+            rec.Name,
+            placedById.get(rec.ID)?.uri ?? vscode.Uri.parse(`cvucs-divider:/${rec.ID}`),
+            rec.Name,
+            rec.FileType,
+            isJSLibrary,
+            rec.Code,
+            -1,
+            vscode.TreeItemCollapsibleState.Expanded,
+            this.context
+        ));
+        lookupProvider.updateResults(List);
 
-    }
-
-    private parseURI(item: CLT.CustomTreeItem) {
-        return vscode.Uri.parse(`cvucs:/${item.label}.${item.FileType.Extension}`);
-    }
-
-    private addClassDefToLibraryCode(item: CLT.CustomTreeItem) : string {
-        return `class _${item.label} {\r\n${item.Code}\r\n}`;   
+        await this.mirror.syncFromDb(placed, isJSLibrary ? 'lib' : 'ucs');
     }
 
     public findTreeItemByUri(uri: string): CLT.CustomTreeItem | undefined {
@@ -214,10 +263,7 @@ export class SQLScriptProvider {
 
     public async openUCS(UCSContex: UCSOpenContex,highlightRange?:vscode.Range) {
 
-        let item = this.UCSListlookupProvider.getTreeItemByDocumentUri(UCSContex.uri.toString());
-        if (!item)
-            item = this.UCSLibListlookupProvider.getTreeItemByDocumentUri(UCSContex.uri.toString());
-
+        const item = this.findTreeItemByUri(UCSContex.uri.toString());
         if (!item) return;
 
         if (item.FileType.FileTypeName === "Divider") {
@@ -225,84 +271,19 @@ export class SQLScriptProvider {
             return;
         }
 
-        const uri = item.docURI;// this.parseURI(item); 
-
-        
-        // // Wrap JavaScript code in a class for UCSJS/UCSJS-Disabled
-        // const wrappedCode = item.isJSLibrary
-        //     ? this.addClassDefToLibraryCode(item)
-        //     : item.Code;
-    
-        // this.textProvider.writeFile(uri, Buffer.from(wrappedCode, 'utf8'), { create: true, overwrite: true });
-    
-        const document = await vscode.workspace.openTextDocument(uri);
-        // const LangId = ["UCSJS", "UCSJS-Disabled"].includes(item.FileType.FileTypeName) ? 'javascript' : 'ucsm';
-        // await vscode.languages.setTextDocumentLanguage(document, LangId);
-        console.log('Opened document URI:', document.uri.toString());
-    
+        const document = await vscode.workspace.openTextDocument(item.docURI);
         const editor = await vscode.window.showTextDocument(document, {
             preview: false
         });
-    
-        // Make first and last lines readonly for JavaScript files
-        if (item.isJSLibrary) {
-            const firstLineRange = new vscode.Range(0, 0, 0, 50);
-            const lastLineRange = new vscode.Range(document.lineCount - 1, 0, document.lineCount, 0);
-    
-            const decorationType = vscode.window.createTextEditorDecorationType({
-                backgroundColor: 'rgba(200, 200, 200, 0.3)',
-                opacity: '0.3', // Makes text semi-transparent
-                isWholeLine: true
-            });
-            editor.setDecorations(decorationType, [firstLineRange, lastLineRange]);
-    
-            let originalFirstLine = document.lineAt(0).text;
-            let originalLastLine = document.lineAt(document.lineCount - 1).text;
-    
-            vscode.workspace.onDidChangeTextDocument(event => {
-                const firstLineRange = new vscode.Range(0, 0, 0, 50);
-                const lastLineRange = new vscode.Range(document.lineCount - 1, 0, document.lineCount, 0);
 
-                if (event.document.uri.toString() === document.uri.toString()) {
-                    let needsRevert = false;
-                    for (const change of event.contentChanges) {
-                        if (change.range.intersection(firstLineRange) || change.range.intersection(lastLineRange)) {
-                            needsRevert = true;
-                            break;
-                        }
-                    }
-                    if (needsRevert) {
-                        editor.edit(editBuilder => {
-                            const currentFirstLine = document.lineAt(0).text;
-                            const currentLastLine = document.lineAt(document.lineCount - 1).text;
-                            if (currentFirstLine !== originalFirstLine) {
-                                editBuilder.replace(firstLineRange, originalFirstLine);
-                            }
-                            if (currentLastLine !== originalLastLine) {
-                                editBuilder.replace(lastLineRange, originalLastLine);
-                            }
-                        }).then(success => {
-                            if (success) {
-                                // Ensure cursor stays out of readonly areas
-                                const selection = editor.selection;
-                                if (selection.intersection(firstLineRange) || selection.intersection(lastLineRange)) {
-                                    editor.selection = new vscode.Selection(
-                                        new vscode.Position(1, 0),
-                                        new vscode.Position(1, 0)
-                                    );
-                                    editor.setDecorations(decorationType, [firstLineRange, lastLineRange]);
-                                }
-                            }
-                        });
-                    }
-                }
-            });
-        }
-    
-        //this.UCSListlookupProvider.storeTreeItem(document.uri.toString(), item);
-    
+        this.applySentinelDecoration(editor, item);
+
+        // Tree line numbers are relative to the database code, the editor also shows the leading
+        // sentinel, so shift by however many sentinel lines precede the code.
+        const lineOffset = leadingSentinelLines(CLT.GetSentinelKind(item.FileType, item.isJSLibrary));
+
         if (UCSContex.searchCodeLine > -1) {
-            const lineNumber = UCSContex.searchCodeLine + (item.isJSLibrary ? 1 : 0); // Offset for class line
+            const lineNumber = UCSContex.searchCodeLine + lineOffset;
             const startChar = UCSContex.contextValue?.indexOf(UCSContex.searchText) || 0;
             const startPos = new vscode.Position(lineNumber, startChar);
             const endPos = new vscode.Position(lineNumber, startChar + UCSContex.searchText.length);
@@ -311,37 +292,12 @@ export class SQLScriptProvider {
         }
 
         if (highlightRange) {
-            //const lineNumber = highlightRange.start.line
-            //const startPos = item.isJSLibrary ? new vscode.Position(lineNumber, startChar); :  ;
-            editor.selection = new vscode.Selection(highlightRange.start,highlightRange.start);
-            editor.revealRange(highlightRange);
-        }
-    }
-
-    private stripFirstLastLines(document: vscode.TextDocument) : string {
-        const lineCount = document.lineCount;
-        const start = new vscode.Position(1, 0); // Start of second line
-        const end = new vscode.Position(lineCount - 1, 0); // Start of last line
-        const contentRange = new vscode.Range(start, end);
-        return document.getText(contentRange);
-    }
-
-
-    public saveUCS(document: vscode.TextDocument) {
-        if (document.uri.scheme === 'cvucs') {
-            const key = `treeItem:${document.uri.toString()}`;
-            let treeItem = this.UCSListlookupProvider.getTreeItemByDocumentUri(document.uri.toString());
-            if (!treeItem)
-                treeItem = this.UCSLibListlookupProvider.getTreeItemByDocumentUri(document.uri.toString());
-
-            if (treeItem) {
-                const scriptId = treeItem.UCSID;
-                const content = treeItem.isJSLibrary ? this.stripFirstLastLines(document) : document.getText();
-
-                this.SQLConn.ExecuteStatment(`Update UCS Set Code = @Code Where ID = @ID`,[{"Name":"ID","Value": scriptId},{"Name":"Code","Value": content}]);
-                treeItem.Code = content;
-                //vscode.window.showInformationMessage(`Updated UCS ${treeItem.label} in Cabinet Vision SQL Server Database.`);
-            }
+            const shifted = new vscode.Range(
+                highlightRange.start.translate(lineOffset),
+                highlightRange.end.translate(lineOffset)
+            );
+            editor.selection = new vscode.Selection(shifted.start, shifted.start);
+            editor.revealRange(shifted);
         }
     }
 

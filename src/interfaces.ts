@@ -1,5 +1,5 @@
-import { Position, Uri } from 'vscode';
-import { Range, CompletionItemKind } from 'vscode-languageserver/node';
+import { Uri } from 'vscode';
+import { Range } from 'vscode-languageserver/node';
 
 // Define an interface for the language configuration
 export interface LanguageConfig {
@@ -136,6 +136,7 @@ export interface UCSJSSystemConstants {
     objectTypes: string[];
     assemblyEndTypes: string[];
     ShapeSideType: string[];
+    ShapeAxis: string[];
 }
 
 export interface UCSJSSystemData {
@@ -219,47 +220,5 @@ export interface UCSJSSystemData {
     caseStandards: CaseStandards[];
     doors : Doors[];
     connections: Connections[];
-  }
-
-  export interface ElementParam {
-    name: string;
-    optional?: boolean | null;
-  }
-
-  export interface ClassReference {
-    elementName: string;
-    uri: string;
-    range: Range;
-  }
-
-  export interface classElement {
-    name: string;
-    compKind: CompletionItemKind;
-    params?: ElementParam[] | undefined;
-    type: string;
-    range: Range;
-}
-
-  export interface docClassRef {
-      name: string;
-      uri: string;
-      classElements: classElement[];
-      elementReferences: ClassReference[];
-      classReferences: ClassReference[];
-      isEnabled: boolean;
-  }
-
-  export interface CVManaged {
-    variableName: string;
-    objectName: string;
-    type: string;
-    uri: string;
-    range: Range;
-  }
-
-  export interface docReferences {
-    classRefs : docClassRef[];
-    CVAsmManagedRefs : CVManaged[];
-    CVShapeManagedRefs : CVManaged[];
   }
 

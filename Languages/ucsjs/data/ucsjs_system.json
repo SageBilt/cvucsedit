@@ -1,7 +1,7 @@
 {
     "objects": [
-        {"name":"_this","type":"CVAsmManaged"},
-        {"name":"_cab","type":"CVAsmManaged"},
+        {"name":"_this","Type":"CVAsmManaged"},
+        {"name":"_cab","Type":"CVAsmManaged"},
         {"name":"_cvMath"},
         {"name":"_cvSystem"},
         {"name":"_cvString"}

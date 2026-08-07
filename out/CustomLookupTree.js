@@ -36,6 +36,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.LookupTreeDataProvider = exports.CustomTreeItem = void 0;
 exports.GetFileTypeByName = GetFileTypeByName;
 exports.GetFileType = GetFileType;
+exports.IsJSFileType = IsJSFileType;
+exports.GetSentinelKind = GetSentinelKind;
 const vscode = __importStar(require("vscode"));
 const path = __importStar(require("path"));
 const UCSFileTypes = [
@@ -72,27 +74,38 @@ function GetFileType(UCSTypeID, MacroType, Disabled) {
         }
     }
 }
+function IsJSFileType(FileType) {
+    return ["UCSJS", "UCSJS-Disabled"].includes(FileType.FileTypeName);
+}
+/** Which sentinel lines the mirrored file carries. See MirrorFileStore for what each kind means. */
+function GetSentinelKind(FileType, isJSLibrary) {
+    if (!IsJSFileType(FileType))
+        return 'ucsm';
+    return isJSLibrary ? 'jsLibrary' : 'js';
+}
 class CustomTreeItem extends vscode.TreeItem {
     UCSID;
     UCSName;
+    docURI;
     label;
     FileType;
     isJSLibrary;
     Code;
     searchCodeLine;
-    docURI;
-    constructor(UCSID, UCSName, label, FileType, isJSLibrary, Code, searchCodeLine, collapsibleState, context // Pass context to access extension path
+    constructor(UCSID, UCSName, 
+    /** Real file: URI inside the mirror. Assigned by MirrorFileStore, which owns path layout. */
+    docURI, label, FileType, isJSLibrary, Code, searchCodeLine, collapsibleState, context // Pass context to access extension path
     ) {
         super(label, collapsibleState);
         this.UCSID = UCSID;
         this.UCSName = UCSName;
+        this.docURI = docURI;
         this.label = label;
         this.FileType = FileType;
         this.isJSLibrary = isJSLibrary;
         this.Code = Code;
         this.searchCodeLine = searchCodeLine;
         // Optional: Add a tooltip or description
-        this.docURI = vscode.Uri.parse(`cvucs:/${UCSName}.${FileType.Extension}`);
         if (this.searchCodeLine == -1) {
             this.tooltip = Code.split("\n")[0]; //`Type: ${this.extensionType}`;
             this.description = Code.split("\n")[0]; // Displays next to the label
@@ -112,7 +125,6 @@ class LookupTreeDataProvider {
     //private results: { label: string; extensionType: string }[] = [];
     results = [];
     context;
-    documentToTreeItem = new Map();
     searchTerm = ''; // Store the current search term
     filteredResults = []; // Store filtered items
     constructor(context) {
@@ -159,7 +171,7 @@ class LookupTreeDataProvider {
         if (!element) {
             // Root level: return filtered items
             return Promise.resolve(this.filteredResults.map(result => {
-                const treeItem = new CustomTreeItem(result.UCSID, result.label, result.label, result.FileType, result.isJSLibrary, result.Code, -1, this.searchTerm && result.Code.toLowerCase().includes(this.searchTerm)
+                const treeItem = new CustomTreeItem(result.UCSID, result.UCSName, result.docURI, result.label, result.FileType, result.isJSLibrary, result.Code, -1, this.searchTerm && result.Code.toLowerCase().includes(this.searchTerm)
                     ? vscode.TreeItemCollapsibleState.Expanded
                     : vscode.TreeItemCollapsibleState.None, this.context);
                 const UCSContext = { uri: treeItem.docURI, searchCodeLine: -1, contextValue: '', searchText: '' };
@@ -178,7 +190,7 @@ class LookupTreeDataProvider {
                 const childItems = codeLines.map((line, index) => {
                     if (line.toLowerCase().includes(this.searchTerm)) {
                         const childItem = new CustomTreeItem(element.UCSID, // Unique ID
-                        element.label, line.trim(), element.FileType, element.isJSLibrary, element.Code, // Pass the full code so it can be opened
+                        element.UCSName, element.docURI, line.trim(), element.FileType, element.isJSLibrary, element.Code, // Pass the full code so it can be opened
                         index, vscode.TreeItemCollapsibleState.None, this.context);
                         // Store the line number in contextValue or another property
                         childItem.contextValue = line;
@@ -200,11 +212,9 @@ class LookupTreeDataProvider {
     }
     getTreeItemByDocumentUri(uri) {
         return this.results.find(item => item.docURI.toString() == uri);
-        return this.documentToTreeItem.get(uri);
     }
-    // Method to store the mapping
-    storeTreeItem(documentUri, treeItem) {
-        this.documentToTreeItem.set(documentUri, treeItem);
+    getTreeItemByUCSID(UCSID) {
+        return this.results.find(item => item.UCSID === UCSID);
     }
     // Method to refresh the Tree View
     refresh() {
