@@ -4,7 +4,7 @@
   "name": "cvucsedit",
   "displayName": "Cabinet Vision UCS Editor",
   "description": "Adds features to VS Code for loading, editing and saving Cabinet Vision User Created Standards",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "author": {
     "name": "David Bilton"
   },
@@ -67,15 +67,38 @@
           "default": "CVData",
           "description": "The name of the Cabinet Vision SQL database."
         },
+        "cvucsedit.AutoStart": {
+          "type": "boolean",
+          "default": true,
+          "description": "Connect to Cabinet Vision automatically when a workspace opens. This only ever applies to a workspace where the extension has already been used: a workspace that has not connected before stays untouched until you run 'Cabinet Vision UCS: Connect'. Turn this off to start manually every time."
+        },
+        "cvucsedit.MirrorLocation": {
+          "type": "string",
+          "enum": [
+            "dedicated",
+            "workspace"
+          ],
+          "enumDescriptions": [
+            "Mirror into a folder of the extension's own, outside all of your projects (see cvucsedit.MirrorPath). Open it with 'Cabinet Vision UCS: Open UCS Workspace'.",
+            "Mirror into the folder currently open, under cvucsedit.MirrorFolder."
+          ],
+          "default": "dedicated",
+          "description": "Where UCS code is mirrored as real files. Leave unset to let the extension decide per workspace: a workspace that already contains a mirror keeps using it, anything else uses the dedicated folder so that no UCS files or AGENTS.md changes appear in unrelated projects."
+        },
+        "cvucsedit.MirrorPath": {
+          "type": "string",
+          "default": "",
+          "description": "Full path of the dedicated mirror folder, used when cvucsedit.MirrorLocation is 'dedicated'. Empty means '<your home folder>/Cabinet Vision UCS'. Each database gets a subfolder of its own. Avoid a cloud synced folder such as OneDrive: the mirror tracks a live database."
+        },
         "cvucsedit.MirrorFolder": {
           "type": "string",
           "default": "cvucs",
-          "description": "Folder inside the workspace where UCS code is mirrored as real files. The folder ignores itself in git, and is what makes UCS code reachable by AI agents, search and standard JavaScript tooling. Deliberately not dot prefixed: some AI agent tools skip hidden folders when looking for context. An existing '.cvucs' folder is moved here automatically."
+          "description": "Folder name used when cvucsedit.MirrorLocation is 'workspace'. The folder ignores itself in git, and is what makes UCS code reachable by AI agents, search and standard JavaScript tooling. Deliberately not dot prefixed: some AI agent tools skip hidden folders when looking for context. An existing '.cvucs' folder is moved here automatically."
         },
         "cvucsedit.WriteRootAgentFiles": {
           "type": "boolean",
           "default": true,
-          "description": "Maintain a short block in AGENTS.md and CLAUDE.md at the root of the workspace pointing AI agents at the mirrored UCS folder. Most agent tools only look for these files at the project root. Existing files are appended to between markers, never overwritten."
+          "description": "Maintain a short block in AGENTS.md and CLAUDE.md at the root of the folder holding the mirror, pointing AI agents at it. Most agent tools only look for these files at the project root. In the dedicated mirror folder this is written straight away; in one of your own projects you are asked first, per workspace. Existing files are appended to between markers, never overwritten."
         },
         "cvucsedit.CheckJs": {
           "type": "boolean",
@@ -112,6 +135,26 @@
       ]
     },
     "commands": [
+      {
+        "command": "cvucsedit.start",
+        "title": "Connect to Cabinet Vision",
+        "category": "Cabinet Vision UCS"
+      },
+      {
+        "command": "cvucsedit.stop",
+        "title": "Disconnect from Cabinet Vision",
+        "category": "Cabinet Vision UCS"
+      },
+      {
+        "command": "cvucsedit.openMirrorWorkspace",
+        "title": "Open UCS Workspace",
+        "category": "Cabinet Vision UCS"
+      },
+      {
+        "command": "cvucsedit.removeFromWorkspace",
+        "title": "Remove UCS Files from This Workspace",
+        "category": "Cabinet Vision UCS"
+      },
       {
         "command": "cvucsedit.loadUCSLists",
         "title": "Reload Cabinet Vision UCS & Library lists"
@@ -151,7 +194,33 @@
         "icon": "$(refresh)"
       }
     ],
+    "viewsWelcome": [
+      {
+        "view": "CVUCSList",
+        "contents": "Not connected to Cabinet Vision in this workspace.\n\nConnecting mirrors your UCS code as real files. Choose where that folder goes with the `cvucsedit.MirrorLocation` setting - by default it is a folder of its own, outside your projects.\n[Connect to Cabinet Vision](command:cvucsedit.start)\n[Open UCS Workspace](command:cvucsedit.openMirrorWorkspace)",
+        "when": "!cvucsedit.running"
+      },
+      {
+        "view": "CVUCSLibList",
+        "contents": "Not connected to Cabinet Vision in this workspace.\n[Connect to Cabinet Vision](command:cvucsedit.start)",
+        "when": "!cvucsedit.running"
+      }
+    ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "cvucsedit.onUCSItemClick",
+          "when": "false"
+        },
+        {
+          "command": "cvucsedit.start",
+          "when": "!cvucsedit.running"
+        },
+        {
+          "command": "cvucsedit.stop",
+          "when": "cvucsedit.running"
+        }
+      ],
       "view/title": [
         {
           "command": "cvucsedit.searchUCSList",

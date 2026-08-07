@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import * as os from 'os';
 import * as crypto from 'crypto';
 import { SQLConnection } from './SQLConnection';
 
@@ -139,9 +140,34 @@ const WRITE_DEBOUNCE_MS = 300;
 /**
  * Not dot prefixed, deliberately. A hidden folder is skipped outright by some AI agent tools when
  * they look for context and instruction files, which defeats the entire point of mirroring to disk.
+ * Only used in `workspace` location mode; the dedicated location is already a folder of our own.
  */
 const DEFAULT_MIRROR_FOLDER = 'cvucs';
 const LEGACY_MIRROR_FOLDER = '.cvucs';
+
+/**
+ * Where the mirror lives.
+ *
+ * `dedicated` - a folder of the extension's own, outside every project, opened as its own window.
+ *               This is the default because 2.0.0's behaviour (mirror into whatever folder happened
+ *               to be open) put a `cvucs/` folder and an `AGENTS.md` pointer into unrelated
+ *               repositories, in every window, without being asked. A folder we own also removes the
+ *               root pointer problem by construction: its root `AGENTS.md` *is* ours to write.
+ * `workspace` - the 2.0.0 behaviour, kept because mirroring next to a project is genuinely useful
+ *               when the project *is* the Cabinet Vision work. Never chosen implicitly for a
+ *               workspace that does not already have a mirror in it.
+ */
+export type MirrorLocation = 'dedicated' | 'workspace';
+
+/**
+ * The dedicated location, under the home directory rather than under Documents: Documents is
+ * commonly redirected into OneDrive, and continuously syncing a mirror of a live database to the
+ * cloud is not something to sign the user up for silently.
+ */
+const DEDICATED_FOLDER = 'Cabinet Vision UCS';
+
+/** workspaceState keys. Per workspace, so one project's answer never leaks into another's. */
+const LOCATION_KEY = 'cvucsedit.mirrorLocation';
 
 const WINDOWS_RESERVED = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
 
@@ -289,13 +315,22 @@ export function stripSentinels(text: string, kind: SentinelKind): string {
  */
 export class MirrorFileStore implements vscode.Disposable {
     public root: vscode.Uri | undefined;
-    /** The workspace folder the mirror sits in, if any. Where the root pointer files are written. */
-    public workspaceRoot: vscode.Uri | undefined;
+    /**
+     * The folder the root `AGENTS.md` / `CLAUDE.md` pointer belongs to: the dedicated mirror base,
+     * or the workspace folder we are mirroring into. `ownsRoot` says which, and that is what decides
+     * whether the pointer may be written without asking.
+     */
+    public pointerRoot: vscode.Uri | undefined;
+    /** True when `pointerRoot` is a folder the extension created and owns outright. */
+    public ownsRoot = false;
+    public location: MirrorLocation = 'dedicated';
 
     private manifest: Manifest = { version: MANIFEST_VERSION, database: '', entries: {} };
     private watcher: vscode.FileSystemWatcher | undefined;
     private pending = new Map<string, NodeJS.Timeout>();
     private disposables: vscode.Disposable[] = [];
+    /** Kept apart from `disposables`: these are torn down and rebuilt on every connect cycle. */
+    private watcherDisposables: vscode.Disposable[] = [];
     private output: vscode.OutputChannel;
     private initialised = false;
     private warnedAboutStrayFile = false;
@@ -304,16 +339,100 @@ export class MirrorFileStore implements vscode.Disposable {
     /** Called after an external edit has been pushed to the database, so the tree stays current. */
     public onCodePushed: ((ucsId: number, code: string) => void) | undefined;
 
-    constructor(private readonly SQLConn: SQLConnection) {
+    constructor(private readonly SQLConn: SQLConnection, private readonly state: vscode.Memento) {
         this.output = vscode.window.createOutputChannel('Cabinet Vision UCS Sync');
         this.disposables.push(this.output);
     }
 
     dispose() {
-        this.pending.forEach(t => clearTimeout(t));
-        this.pending.clear();
+        this.shutdown();
         this.disposables.forEach(d => d.dispose());
         this.disposables = [];
+    }
+
+    /**
+     * Stop watching and forget the resolved root, so a later `initialize` starts clean. Called when
+     * the user disconnects: the watcher is the write path to the database, so leaving it running
+     * after a disconnect would mean saves still reaching production.
+     */
+    public shutdown(): void {
+        this.pending.forEach(t => clearTimeout(t));
+        this.pending.clear();
+        this.watcherDisposables.forEach(d => d.dispose());
+        this.watcherDisposables = [];
+        this.watcher = undefined;
+        this.initialised = false;
+    }
+
+    /**
+     * Forget which location this workspace resolved to, so the next `initialize` decides again.
+     * Called after the mirror has been deleted from a workspace: the remembered answer was based on
+     * a folder that is no longer there, and honouring it would put the folder straight back.
+     */
+    public async forgetLocation(): Promise<void> {
+        await this.state.update(LOCATION_KEY, undefined);
+    }
+
+    /**
+     * The dedicated mirror base: `cvucsedit.MirrorPath` if set, otherwise `~/Cabinet Vision UCS`.
+     * Static because the "Open UCS Workspace" command needs it before anything is initialised.
+     */
+    public static dedicatedBase(): vscode.Uri {
+        const configured = vscode.workspace.getConfiguration('cvucsedit').get<string>('MirrorPath', '').trim();
+        if (configured) {
+            const expanded = configured.startsWith('~')
+                ? path.join(os.homedir(), configured.slice(1))
+                : configured;
+            return vscode.Uri.file(path.resolve(expanded));
+        }
+        return vscode.Uri.file(path.join(os.homedir(), DEDICATED_FOLDER));
+    }
+
+    /**
+     * Decide where this window's mirror lives, in order of authority: an explicit setting, what this
+     * workspace resolved to last time, then whether a mirror is already sitting in this workspace.
+     *
+     * That third test is the upgrade path. Someone whose Cabinet Vision work *is* the open project
+     * has a `cvucs/<Database>/` in it already, possibly with edits not yet pushed, and moving it out
+     * from under them on upgrade would be exactly the kind of surprise this whole change is about.
+     * The answer is remembered, so it survives the folder later being deleted.
+     */
+    private async resolveLocation(folderName: string, database: string): Promise<MirrorLocation> {
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        const config = vscode.workspace.getConfiguration('cvucsedit');
+
+        const decide = async (): Promise<MirrorLocation> => {
+            const chosen = config.inspect<string>('MirrorLocation');
+            const explicit = chosen?.workspaceFolderValue ?? chosen?.workspaceValue ?? chosen?.globalValue;
+            if (explicit === 'dedicated' || explicit === 'workspace') {
+                return explicit;
+            }
+
+            const remembered = this.state.get<MirrorLocation>(LOCATION_KEY);
+            if (remembered === 'dedicated' || remembered === 'workspace') {
+                return remembered;
+            }
+
+            if (workspaceFolder) {
+                for (const name of [folderName, LEGACY_MIRROR_FOLDER]) {
+                    const existing = vscode.Uri.joinPath(workspaceFolder.uri, name, sanitiseFileName(database));
+                    try {
+                        await vscode.workspace.fs.stat(existing);
+                        await this.state.update(LOCATION_KEY, 'workspace');
+                        return 'workspace';
+                    } catch {
+                        // Not there. Keep looking.
+                    }
+                }
+            }
+
+            return 'dedicated';
+        };
+
+        const location = await decide();
+        // `workspace` needs a workspace. A window with no folder open falls back rather than
+        // mirroring into a temporary directory nobody can find.
+        return location === 'workspace' && !workspaceFolder ? 'dedicated' : location;
     }
 
     /** Resolve the mirror root, load the manifest and start watching. Idempotent. */
@@ -326,31 +445,35 @@ export class MirrorFileStore implements vscode.Disposable {
         const folderName = config.get<string>('MirrorFolder', DEFAULT_MIRROR_FOLDER);
         const database = config.get('Database', 'CVData');
 
-        this.label = `${folderName}/${sanitiseFileName(database)}/`;
+        this.location = await this.resolveLocation(folderName, database);
 
-        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-        const base = workspaceFolder ? workspaceFolder.uri : this.fallbackRoot();
-        if (!workspaceFolder) {
-            vscode.window.showWarningMessage(
-                'No folder is open, so Cabinet Vision UCS files are being mirrored outside the workspace. ' +
-                'Open a folder for AI agents and search to be able to reach them.'
-            );
-        }
-        this.workspaceRoot = workspaceFolder?.uri;
-        this.root = vscode.Uri.joinPath(base, folderName, sanitiseFileName(database));
+        if (this.location === 'dedicated') {
+            const base = MirrorFileStore.dedicatedBase();
+            this.root = vscode.Uri.joinPath(base, sanitiseFileName(database));
+            this.pointerRoot = base;
+            this.ownsRoot = true;
+            this.label = `${path.basename(base.fsPath)}/${sanitiseFileName(database)}/`;
+        } else {
+            const base = vscode.workspace.workspaceFolders![0].uri;
+            this.root = vscode.Uri.joinPath(base, folderName, sanitiseFileName(database));
+            this.pointerRoot = base;
+            this.ownsRoot = false;
+            this.label = `${folderName}/${sanitiseFileName(database)}/`;
 
-        // The default folder name lost its dot in 2.1. Move an existing mirror rather than leaving
-        // it behind: the manifest inside it is the three way merge base, so starting fresh would
-        // silently discard any edit made on disk but not yet pushed.
-        // `get` falls back to the package.json default, so only `inspect` can tell "unset" from
-        // "set to the default"; a folder the user chose explicitly is never moved out from under them.
-        const chosen = config.inspect<string>('MirrorFolder');
-        const explicit = chosen?.globalValue ?? chosen?.workspaceValue ?? chosen?.workspaceFolderValue;
-        if (explicit === undefined && folderName !== LEGACY_MIRROR_FOLDER) {
-            await this.migrateLegacyRoot(
-                vscode.Uri.joinPath(base, LEGACY_MIRROR_FOLDER, sanitiseFileName(database)),
-                vscode.Uri.joinPath(base, LEGACY_MIRROR_FOLDER)
-            );
+            // The default folder name lost its dot in 2.1. Move an existing mirror rather than
+            // leaving it behind: the manifest inside it is the three way merge base, so starting
+            // fresh would silently discard any edit made on disk but not yet pushed.
+            // `get` falls back to the package.json default, so only `inspect` can tell "unset" from
+            // "set to the default"; a folder the user chose explicitly is never moved out from
+            // under them.
+            const chosen = config.inspect<string>('MirrorFolder');
+            const explicit = chosen?.globalValue ?? chosen?.workspaceValue ?? chosen?.workspaceFolderValue;
+            if (explicit === undefined && folderName !== LEGACY_MIRROR_FOLDER) {
+                await this.migrateLegacyRoot(
+                    vscode.Uri.joinPath(base, LEGACY_MIRROR_FOLDER, sanitiseFileName(database)),
+                    vscode.Uri.joinPath(base, LEGACY_MIRROR_FOLDER)
+                );
+            }
         }
 
         await vscode.workspace.fs.createDirectory(this.root);
@@ -439,29 +562,46 @@ export class MirrorFileStore implements vscode.Disposable {
     }
 
     /**
-     * Maintain the pointer block in the workspace root `AGENTS.md` and `CLAUDE.md`.
+     * The mirror root relative to `pointerRoot`, e.g. `cvucs/CVData/` in a project but just
+     * `CVData/` in the dedicated folder. The pointer block links to it, so unlike `rootLabel` this
+     * has to be a path that resolves from the file it is written into.
+     */
+    public get pointerLabel(): string {
+        if (!this.root || !this.pointerRoot) {
+            return this.label;
+        }
+        const rel = path.relative(this.pointerRoot.fsPath, this.root.fsPath).split(path.sep).join('/');
+        return rel ? `${rel}/` : './';
+    }
+
+    /**
+     * Maintain the pointer block in the root `AGENTS.md` and `CLAUDE.md` of the folder the mirror
+     * sits in - the one place most agent tools reliably look.
      *
-     * This is the only thing the extension writes outside its own folder, so it is conservative:
-     * off with one setting, additive between markers, and it announces itself the first time it
-     * creates or changes one of these files.
+     * In the dedicated location that folder is ours, so the block goes in unannounced. Anywhere else
+     * it is a file in someone's repository, and 2.0.0 got this wrong: it wrote first and offered an
+     * undo afterwards, once ever and globally, so the second unrelated project got no notice at all.
+     * `requestConsent` now runs *before* the first write and its answer is remembered per workspace.
      *
-     * `merge` returns undefined when the file already says the right thing, so a workspace that is
-     * up to date is never written to at all.
+     * `merge` returns undefined when a file already says the right thing, so consent is only ever
+     * asked for when something would actually change, and an up to date workspace is never touched.
      */
     public async writeRootPointer(
         block: string,
         merge: (existing: string | undefined, block: string) => string | undefined,
-        announce: () => void
+        requestConsent: () => Promise<boolean>
     ): Promise<void> {
-        if (!this.workspaceRoot) {
-            return; // mirroring outside the workspace; there is no project root to point from
+        if (!this.pointerRoot) {
+            return;
         }
         if (!vscode.workspace.getConfiguration('cvucsedit').get('WriteRootAgentFiles', true)) {
             return;
         }
 
+        // Work out what would change before asking for anything.
+        const planned: { uri: vscode.Uri; name: string; merged: string; existed: boolean }[] = [];
         for (const name of ['AGENTS.md', 'CLAUDE.md']) {
-            const uri = vscode.Uri.joinPath(this.workspaceRoot, name);
+            const uri = vscode.Uri.joinPath(this.pointerRoot, name);
             let existing: string | undefined;
             try {
                 existing = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf8');
@@ -470,16 +610,24 @@ export class MirrorFileStore implements vscode.Disposable {
             }
 
             const merged = merge(existing, block);
-            if (merged === undefined) {
-                continue;
+            if (merged !== undefined) {
+                planned.push({ uri, name, merged, existed: existing !== undefined });
             }
+        }
 
+        if (!planned.length) {
+            return;
+        }
+        if (!this.ownsRoot && !await requestConsent()) {
+            return;
+        }
+
+        for (const file of planned) {
             try {
-                await vscode.workspace.fs.writeFile(uri, Buffer.from(merged, 'utf8'));
-                this.log(`${name}: ${existing === undefined ? 'created' : 'updated'} the UCS pointer block.`);
-                announce();
+                await vscode.workspace.fs.writeFile(file.uri, Buffer.from(file.merged, 'utf8'));
+                this.log(`${file.name}: ${file.existed ? 'updated' : 'created'} the UCS pointer block.`);
             } catch (error) {
-                this.log(`${name}: could not write the UCS pointer block - ${
+                this.log(`${file.name}: could not write the UCS pointer block - ${
                     error instanceof Error ? error.message : String(error)}`);
             }
         }
@@ -490,12 +638,14 @@ export class MirrorFileStore implements vscode.Disposable {
         return this.root ? this.root.fsPath.replace(/\\/g, '/') : undefined;
     }
 
-    private fallbackRoot(): vscode.Uri {
-        // globalStorageUri is only reachable through the extension context; the caller sets it.
-        return this.globalStorage ?? vscode.Uri.file(path.join(process.env.TEMP || process.cwd(), 'cvucsedit'));
+    /**
+     * Whether the mirror is inside a folder open in this window. It has to be for VS Code's
+     * TypeScript service to form a project over it, which is what gives UCS:JS its IntelliSense -
+     * so in the dedicated location, that folder has to actually be open.
+     */
+    public get visibleToWorkspace(): boolean {
+        return !!this.root && !!vscode.workspace.getWorkspaceFolder(this.root);
     }
-
-    public globalStorage: vscode.Uri | undefined;
 
     private async loadManifest(database: string) {
         const uri = vscode.Uri.joinPath(this.root!, MANIFEST_NAME);
@@ -692,11 +842,11 @@ export class MirrorFileStore implements vscode.Disposable {
         this.watcher = vscode.workspace.createFileSystemWatcher(
             new vscode.RelativePattern(this.root, '**/*.{js,ucsm}')
         );
-        this.disposables.push(this.watcher);
+        this.watcherDisposables.push(this.watcher);
 
-        this.disposables.push(this.watcher.onDidChange(uri => this.queue(uri)));
-        this.disposables.push(this.watcher.onDidCreate(uri => this.queue(uri)));
-        this.disposables.push(this.watcher.onDidDelete(uri => {
+        this.watcherDisposables.push(this.watcher.onDidChange(uri => this.queue(uri)));
+        this.watcherDisposables.push(this.watcher.onDidCreate(uri => this.queue(uri)));
+        this.watcherDisposables.push(this.watcher.onDidDelete(uri => {
             const relPath = this.relPathOf(uri);
             if (relPath && this.manifest.entries[relPath]) {
                 this.log(`${relPath}: deleted on disk. The database row is untouched; refresh to restore the file.`);

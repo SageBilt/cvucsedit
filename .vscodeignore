@@ -3,7 +3,15 @@
 .claude/**
 src/**
 CLAUDE.md
+AGENTS.md
 .gitignore
+
+# This repository is itself a test workspace, so it has a mirror in it. vsce packs from the working
+# directory and ignores the mirror's own `.gitignore`, so without these the VSIX would ship a copy
+# of whatever UCS code was last synced from the developer's database.
+cvucs/**
+.cvucs/**
+
 .yarnrc
 vsc-extension-quickstart.md
 **/tsconfig.json

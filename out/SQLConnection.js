@@ -92,8 +92,17 @@ class SQLConnection {
                 const config = GetConfig();
                 const origServer = config.get('Server', '');
                 const origDatabase = config.get('Database', '');
-                const newServer = await vscode.window.showInputBox({ prompt: 'Enter Cabinet Vision SQL Server Name', value: origServer }) || origServer;
-                const newDatabase = await vscode.window.showInputBox({ prompt: 'Enter Cabinet Vision SQL Database Name', value: origDatabase }) || origDatabase;
+                // Escape means "stop asking". Falling back to the current value and retrying
+                // put six input boxes in front of anyone who opened a window with Cabinet
+                // Vision not running, and wrote the fallback into global settings besides.
+                const newServer = await vscode.window.showInputBox({ prompt: 'Enter Cabinet Vision SQL Server Name', value: origServer });
+                if (newServer === undefined) {
+                    break;
+                }
+                const newDatabase = await vscode.window.showInputBox({ prompt: 'Enter Cabinet Vision SQL Database Name', value: origDatabase });
+                if (newDatabase === undefined) {
+                    break;
+                }
                 await writeConfig('Server', newServer);
                 await writeConfig('Database', newDatabase);
             }

@@ -7,6 +7,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-08-07
+
+2.0.0 assumed every VS Code window was a Cabinet Vision window. It activated in
+all of them, connected to the database, mirrored a `cvucs/` folder into whatever
+project happened to be open and added a block to that project's `AGENTS.md` and
+`CLAUDE.md`. This release makes all three of those things something a workspace
+opts in to.
+
+Existing setups are unaffected: a workspace that already contains a mirror keeps
+using it, in place, and keeps starting automatically.
+
+### Changed
+- **The extension no longer starts in a workspace that has not used it.** Opening
+  an unrelated project now does nothing at all — no connection, no folder, no
+  files written. Connect with **Cabinet Vision UCS: Connect** from the command
+  palette or the button in the UCS tree view, and that workspace is remembered.
+- **UCS code is mirrored outside your projects by default.** New setups mirror to
+  `<your home folder>/Cabinet Vision UCS/<Database>/`, which you open as its own
+  window with **Cabinet Vision UCS: Open UCS Workspace**. A workspace that
+  already has a `cvucs/` folder in it carries on exactly as before. Choose
+  explicitly with `cvucsedit.MirrorLocation` (`dedicated` or `workspace`), and
+  set the path with `cvucsedit.MirrorPath`.
+- **You are now asked before anything is written to your project's `AGENTS.md`
+  or `CLAUDE.md`.** In the dedicated UCS folder the pointer block is still
+  written straight away, because that folder belongs to the extension. In one of
+  your own projects the prompt offers *Add*, *Not now* and *Never in this
+  workspace*, and the answer is remembered for that workspace only. 2.0.0 wrote
+  first and offered an undo afterwards, once ever, so a second project got no
+  notice at all.
+- Cancelling the SQL server/database prompt now stops asking. Previously
+  escaping it re-used the current value and retried, so an unreachable database
+  produced six input boxes and wrote the fallback into your global settings.
+
+### Added
+- `cvucsedit.AutoStart` (default on) — connect automatically when a workspace
+  that has used the extension before is opened. Turn it off to start manually
+  every time with **Cabinet Vision UCS: Connect**.
+- **Cabinet Vision UCS: Disconnect** — stops the language servers and the file
+  watcher, so no further save reaches the database, and stops this workspace
+  starting automatically.
+- **Cabinet Vision UCS: Remove UCS Files from This Workspace** — cleans up after
+  an earlier version: takes the pointer block back out of `AGENTS.md` and
+  `CLAUDE.md`, and optionally deletes the mirror folder. It works without
+  connecting, and only deletes a folder it can identify as a mirror by its
+  `manifest.json`.
+- A status bar item showing whether the extension is connected, and a welcome
+  view in the UCS tree with a Connect button.
+
+### Fixed
+- The published VSIX no longer contains a copy of the developer's own mirrored
+  UCS code. `vsce` packs from the working directory and does not consult the
+  mirror's `.gitignore`, and this repository is itself a test workspace.
+
 ## [2.0.0] - 2026-08-07
 
 A major release. UCS code is no longer held in virtual documents — every UCS is

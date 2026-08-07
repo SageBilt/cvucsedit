@@ -6,6 +6,9 @@ const node_1 = require("vscode-languageclient/node");
 class LanguageClientWrapper {
     client;
     languageId;
+    /** Held so a disconnect/reconnect cycle does not leave a dead output channel behind each time. */
+    output;
+    watcher;
     constructor(config, context, dynamicData) {
         this.languageId = config.languageId;
         // Server module path
@@ -21,23 +24,27 @@ class LanguageClientWrapper {
         const pattern = config.mirrorRoot
             ? `${config.mirrorRoot}/**/*${config.fileExtension}`
             : `**/*${config.fileExtension}`;
+        this.output = vscode_1.window.createOutputChannel(`${this.languageId} Language Server`);
+        this.watcher = vscode_1.workspace.createFileSystemWatcher(pattern);
         const clientOptions = {
             documentSelector: [{ scheme: 'file', language: this.languageId, pattern }],
             synchronize: {
-                fileEvents: vscode_1.workspace.createFileSystemWatcher(pattern)
+                fileEvents: this.watcher
             },
-            outputChannel: vscode_1.window.createOutputChannel(`${this.languageId} Language Server`),
+            outputChannel: this.output,
             initializationOptions: dynamicData, // Pass dynamic data here
         };
         // Create and start the client
         this.client = new node_1.LanguageClient(`${this.languageId}LanguageServer`, `${this.languageId} Language Server`, serverOptions, clientOptions);
     }
-    async start(context) {
+    /**
+     * Not registered in `context.subscriptions`: the client is now started and stopped as the user
+     * connects and disconnects, so its lifetime is shorter than the extension's and the caller owns
+     * it. Disposing it on deactivation is handled there.
+     */
+    async start() {
         try {
-            this.client.start().then(() => {
-                console.log('Test Language Server started');
-            });
-            context.subscriptions.push(this.client);
+            await this.client.start();
         }
         catch (error) {
             console.error(`Failed to start ${this.languageId} client:`, error);
@@ -45,6 +52,8 @@ class LanguageClientWrapper {
         }
     }
     stop() {
+        this.watcher.dispose();
+        this.output.dispose();
         if (!this.client) {
             return undefined;
         }

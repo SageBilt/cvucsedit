@@ -1,4 +1,4 @@
-import { workspace, ExtensionContext, window } from 'vscode';
+import { workspace, ExtensionContext, window, OutputChannel } from 'vscode';
 import { LanguageClient, LanguageClientOptions, ServerOptions, TransportKind } from 'vscode-languageclient/node';
 import { DynamicData } from '.././interfaces';
 
@@ -13,6 +13,9 @@ interface LanguageClientConfig {
 export class LanguageClientWrapper {
     public client: LanguageClient;
     private languageId: string;
+    /** Held so a disconnect/reconnect cycle does not leave a dead output channel behind each time. */
+    private output: OutputChannel;
+    private watcher: ReturnType<typeof workspace.createFileSystemWatcher>;
 
     constructor(config: LanguageClientConfig,context: ExtensionContext,dynamicData:DynamicData) {
       this.languageId = config.languageId;
@@ -32,12 +35,15 @@ export class LanguageClientWrapper {
         ? `${config.mirrorRoot}/**/*${config.fileExtension}`
         : `**/*${config.fileExtension}`;
 
+      this.output = window.createOutputChannel(`${this.languageId} Language Server`);
+      this.watcher = workspace.createFileSystemWatcher(pattern);
+
       const clientOptions: LanguageClientOptions = {
           documentSelector: [{ scheme: 'file', language: this.languageId, pattern }],
           synchronize: {
-              fileEvents: workspace.createFileSystemWatcher(pattern)
+              fileEvents: this.watcher
           },
-          outputChannel: window.createOutputChannel(`${this.languageId} Language Server`),
+          outputChannel: this.output,
           initializationOptions: dynamicData, // Pass dynamic data here
       };
 
@@ -52,15 +58,14 @@ export class LanguageClientWrapper {
 
 
 
-    public async start(context: ExtensionContext): Promise<void> {
+    /**
+     * Not registered in `context.subscriptions`: the client is now started and stopped as the user
+     * connects and disconnects, so its lifetime is shorter than the extension's and the caller owns
+     * it. Disposing it on deactivation is handled there.
+     */
+    public async start(): Promise<void> {
       try {
-        this.client.start().then(() => {
-          console.log('Test Language Server started');
-        });
-    
-        context.subscriptions.push(this.client);
-        
-  
+        await this.client.start();
       } catch (error) {
         console.error(`Failed to start ${this.languageId} client:`, error);
         throw error; // Let caller handle it
@@ -68,6 +73,8 @@ export class LanguageClientWrapper {
     }
 
     public stop(): Thenable<void> | undefined {
+      this.watcher.dispose();
+      this.output.dispose();
       if (!this.client) {
         return undefined;
       }

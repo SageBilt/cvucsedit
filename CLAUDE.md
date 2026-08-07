@@ -28,6 +28,41 @@ A VS Code extension that edits Cabinet Vision User Created Standards (UCS) store
 Server database. Two UCS languages are supported: **UCS:M** (legacy, `languageId: ucsm`) and
 **UCS:JS** (JavaScript from CV 2024.1+, `languageId: javascript`).
 
+### Activating and starting are two different things
+
+`onStartupFinished` fires in **every** VS Code window, and until 2.1 activation *was* startup: 2.0.0
+connected to SQL, mirrored a `cvucs/` folder into whatever project happened to be open and wrote a
+pointer block into that project's `AGENTS.md`, in every window, without being asked. Doing Cabinet
+Vision work in one window and something unrelated in another was enough to hit it.
+
+So `activate()` now only does what is free — constructs `SQLScriptProvider` (tree views, output
+channel, no connection), registers commands, creates the status bar item, sets the
+`cvucsedit.running` context key. Everything with a side effect is in `start()`, and reaching it takes
+two gates:
+
+- **`isEnabledWorkspace`** — `workspaceState[cvucsedit.enabledInWorkspace]`, deliberately
+  three-valued: `true` connect, `false` the user disconnected *here* and meant it, `undefined` never
+  asked. Only on `undefined` does it look for evidence that this window is a UCS window: the folder
+  being the dedicated mirror base (`contains`, case-insensitive because Windows), or a mirror already
+  sitting in it — the same upgrade path `resolveLocation` uses, so an existing 2.0.0 setup keeps
+  starting automatically and only the workspaces that never wanted this go quiet.
+- **`cvucsedit.AutoStart`** — the second gate, not the only one. A global "start everywhere" boolean
+  on its own would put us straight back to connecting in unrelated projects.
+
+`stop()` is a real disconnect, not just an idle flag: it stops both clients *and* calls
+`MirrorFileStore.shutdown()`, because the file watcher is the write path to the database and a
+disconnected window that still pushed saves to production would be the worst of both. `shutdown`
+clears `initialised` so a later `start` re-resolves the root, and the watcher's own listeners live in
+`watcherDisposables` rather than `disposables` so a connect cycle does not accumulate them. For the
+same reason `LanguageClientWrapper` no longer registers itself in `context.subscriptions` — its
+lifetime is now shorter than the extension's — and disposes its output channel and file watcher in
+`stop()`.
+
+Entry points when not running: `viewsWelcome` on both tree views (`when: !cvucsedit.running`), the
+status bar item, and the refresh/reload commands, which call `ensureRunning` — pressing refresh in a
+workspace that has not connected plainly means "connect", and failing silently there would be
+baffling.
+
 ### Two processes
 
 [src/extension.ts](src/extension.ts) starts **two** language-server child processes from the same
@@ -43,16 +78,37 @@ UCS:M completions.
 ### Documents are real files in a mirrored workspace folder
 
 [src/MirrorFileStore.ts](src/MirrorFileStore.ts) materialises every `UCS` row as a real file under
-`<workspace>/cvucs/<Database>/` (`cvucsedit.MirrorFolder`), so UCS code has a `file:` URI. That is
-what makes it reachable by AI agents, `grep`, and — critically — VS Code's own TypeScript service,
-which only forms a project over `file:` documents inside a workspace folder.
+`<mirror root>/<Database>/`, so UCS code has a `file:` URI. That is what makes it reachable by AI
+agents, `grep`, and — critically — VS Code's own TypeScript service, which only forms a project over
+`file:` documents inside a workspace folder.
+
+**Where that root is, is decided per workspace** (`resolveLocation`), because 2.0.0 always used
+`workspaceFolders[0]` and so put a `cvucs/` folder into whatever project happened to be open:
+
+| `cvucsedit.MirrorLocation` | root | |
+|---|---|---|
+| `dedicated` (default) | `~/Cabinet Vision UCS/<Database>/` | a folder of ours, outside every project. `cvucsedit.MirrorPath` overrides the base; `MirrorFileStore.dedicatedBase()` is static so the *Open UCS Workspace* command can resolve it before anything is initialised |
+| `workspace` | `<workspace>/cvucs/<Database>/` | `cvucsedit.MirrorFolder`. The 2.0.0 behaviour |
+
+Order of authority: an explicit setting, then the answer this workspace reached before
+(`workspaceState`), then **whether a mirror is already sitting in this workspace** — which is the
+upgrade path, and is why an existing 2.0.0 setup is never moved out from under someone who has
+unpushed edits in it. Only then does it fall back to `dedicated`. `workspace` with no folder open
+degrades to `dedicated` rather than mirroring somewhere nobody can find.
+
+Not being in the open window has one cost, and only one: the TypeScript service forms no project, so
+UCS:JS loses completion, rename and find-references (UCS:M and the tree are unaffected, since the LSP
+`documentSelector` is an absolute path pattern, not a workspace membership test). `visibleToWorkspace`
+tests for it and `warnIfMirrorIsOutOfSight` offers *Open UCS Workspace*, which is the whole reason
+that command exists.
 
 The folder name is **not** dot-prefixed, and that is deliberate: a hidden folder is skipped outright
 by some agent tools when they scan for context and instruction files, which defeats the point of
 mirroring to disk at all. `.cvucs` was the 2.0.0 default, so `migrateLegacyRoot` renames an existing
 one on activation — a rename rather than a fresh start, because the manifest inside it is the
 three-way merge base and losing it would silently discard unpushed disk edits. A folder the user set
-explicitly (`inspect`, not `get`) is never moved.
+explicitly (`inspect`, not `get`) is never moved. This only applies in `workspace` mode; the
+dedicated folder has never had a dotted form.
 
 ```
 cvucs/<Database>/
@@ -116,13 +172,27 @@ now cover that, in decreasing order of how much they can be relied on:
 
 1. **The generated header on every mirrored file** (see Sentinels below). Depends on no discovery
    mechanism whatsoever, because it is in the file the agent was asked to edit.
-2. **A pointer block at the workspace root.** `writeRootPointer` maintains a delimited block in the
-   root `AGENTS.md` and `CLAUDE.md` — the one place every tool that supports the convention reads.
-   This is the only thing the extension writes outside its own folder, so it is careful:
-   `AgentDocsGenerator.mergeRootPointer` rewrites only what lies between `BLOCK_BEGIN`/`BLOCK_END`
-   and appends when the markers are absent, it returns `undefined` when nothing changed so an
-   up-to-date workspace is never written to, `cvucsedit.WriteRootAgentFiles` turns it off, and
-   `announceRootPointer` says so once ever with an *Undo and disable* action.
+2. **A pointer block at the root of the folder holding the mirror.** `writeRootPointer` maintains a
+   delimited block in that folder's `AGENTS.md` and `CLAUDE.md` — the one place every tool that
+   supports the convention reads. `AgentDocsGenerator.mergeRootPointer` rewrites only what lies
+   between `BLOCK_BEGIN`/`BLOCK_END` and appends when the markers are absent, and it returns
+   `undefined` when nothing changed so an up-to-date folder is never written to.
+
+   **Whether that needs permission is what `ownsRoot` decides.** In the dedicated location the root
+   is the extension's own folder and the block goes straight in — which is a large part of why
+   `dedicated` is the default at all. Anywhere else it is a file in someone's repository, so
+   `requestConsent` runs *before* the first write and its answer is remembered per workspace
+   (`cvucsedit.rootPointerConsent`: `yes` / `never`; *Not now* is not persisted but holds for the
+   session so a list refresh does not re-ask). 2.0.0 had this backwards — it wrote first and offered
+   an undo afterwards, and the announcement was keyed on `globalState`, so the *second* unrelated
+   project it edited got no notice at all. `cvucsedit.WriteRootAgentFiles` still turns the whole
+   thing off, and `cvucsedit.removeFromWorkspace` takes an already-written block back out without
+   needing to connect.
+
+   The pointer links to the mirror, so it interpolates `pointerLabel` (the path *relative to
+   `pointerRoot`* — `CVData/` in the dedicated folder) rather than `rootLabel`, which is the
+   human-readable `Cabinet Vision UCS/CVData/` used in prose and in the layout diagram inside
+   `AGENTS.md`.
 3. **The folder no longer being hidden**, covered above.
 
 The mirror `.gitignore` is still `*`: these are generated, per-database and rewritten on every
@@ -322,7 +392,14 @@ Context awareness hinges on two private helpers in `server.ts`:
   bare name is not an identifier (`9Lib` — `_9Lib` is legal, `9Lib` is not).
 - SQL credentials are hard-coded in [src/SQLConnection.ts](src/SQLConnection.ts) (fixed CV account);
   only server instance and database name are user settings (`cvucsedit.Server`, `cvucsedit.Database`).
-  A failed connection prompts for both and retries up to 3 times.
+  A failed connection prompts for both and retries up to 3 times. Escaping either prompt now `break`s
+  the retry loop: falling back to the current value and retrying put *six* input boxes in front of
+  anyone who opened a window with Cabinet Vision not running, and wrote the fallback into **global**
+  settings besides, so a stray keystroke in an unrelated project could change the real configuration.
+- `.vscodeignore` excludes `cvucs/**` and the root `AGENTS.md`. This repository is itself a test
+  workspace, so it has a mirror in it, and `vsce` packs from the working directory without consulting
+  the mirror's own `.gitignore` — without those lines the VSIX ships a copy of whatever UCS code was
+  last synced from the developer's database.
 - Database schema differs by CV version: `DbInfo.Version >= 2024` has the `MacroType` / `UCSLibrary`
   columns; older versions are UCS:M-only and those columns are synthesized as `0` in the query.
 - The UCS:JS client still registers against `languageId: 'javascript'`, so its `documentSelector` is
@@ -332,3 +409,15 @@ Context awareness hinges on two private helpers in `server.ts`:
   is retained but no longer contributed, since constants are now coloured via `cv-api.d.ts`.
 - Both README.md and CHANGELOG.md carry release notes; keep them in sync with `package.json` `version`
   when publishing.
+
+<!-- BEGIN cvucsedit - generated, edits here are lost -->
+## Cabinet Vision UCS code
+
+This workspace contains Cabinet Vision User Created Standards, mirrored from a SQL database into
+[`cvucs/CVData/`](cvucs/CVData/).
+
+**Before editing anything under `cvucs/CVData/`, read [`cvucs/CVData/AGENTS.md`](cvucs/CVData/AGENTS.md).**
+Those files are not ordinary source files — each one is a live database row, saving one writes
+straight to the database with no undo, and creating a file there does not create a standard. The
+rules, the UCS:JS API and a full UCS:M reference are all in that folder.
+<!-- END cvucsedit -->

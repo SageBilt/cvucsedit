@@ -37,8 +37,12 @@ Addition to VSCode's built in features, this extension provides these features.
 - **UCS & JavaScript library tree views**
   - UCS opens when clicked in tree view.
   - Search, clear search and reload list buttons for each list.
-- **Mirrored workspace folder**
-  - Every UCS and library is written as a real file under `cvucs/<Database>/` in your workspace, as `<Name>.ucs.js` or `<Name>.ucsm`. This is what allows UCS code to be searched across every UCS at once, opened by external tools, and read and edited by AI coding agents.
+- **Opt in per workspace**
+  - The extension does nothing in a workspace until you connect there, with **Cabinet Vision UCS: Connect** or the button in the UCS tree view. Opening an unrelated project never creates a folder, writes a file or touches the database.
+  - Once you have connected in a workspace it is remembered and starts automatically next time. `cvucsedit.AutoStart` turns that off if you would rather start it by hand.
+- **Mirrored UCS folder**
+  - Every UCS and library is written as a real file under `<mirror>/<Database>/`, as `<Name>.ucs.js` or `<Name>.ucsm`. This is what allows UCS code to be searched across every UCS at once, opened by external tools, and read and edited by AI coding agents.
+  - By default the mirror is a folder of its own outside your projects — `<your home folder>/Cabinet Vision UCS/` — which you open as its own window with **Cabinet Vision UCS: Open UCS Workspace**. Set `cvucsedit.MirrorLocation` to `workspace` to mirror into the project you have open instead, under `cvucs/`.
   - Sync is two way. Saving in the editor, an AI agent writing the file, and an external tool writing the file all take the same route back to the database.
   - On startup disk and database are reconciled. A change made only on disk is pushed to the database, a change made only in Cabinet Vision rewrites the file, and a file changed on both sides is reported as a conflict with neither side overwritten.
   - The folder ignores itself in git, so your own `.gitignore` is never touched.
@@ -48,7 +52,7 @@ Addition to VSCode's built in features, this extension provides these features.
   - `ucsjs-reference.md` covers how Cabinet Vision executes a UCS:JS — why `return` is legal at the top level, why a `var` cannot appear inside an equation string, and why measurements must be compared with `_cvMath`.
   - `ucsm-reference.md` is a full UCS:M reference: the syntax, object tree navigation, value types, functions, object classes and types, and an index of all 683 system parameters grouped by the object they apply to. Written from Cabinet Vision's own help files, and generated from the same data the extension validates against, so it cannot drift.
   - Every mirrored file also carries a short generated header, so an agent is warned in the file it is editing even if it never opens the documentation. The header is not part of your standard and is never saved to the database.
-  - A short pointer to all of this is kept in `AGENTS.md` and `CLAUDE.md` at the root of your workspace, since most agent tools only look there. Only the marked block is ever rewritten, anything you write around it is left alone, and `cvucsedit.WriteRootAgentFiles` turns it off.
+  - A short pointer to all of this is kept in `AGENTS.md` and `CLAUDE.md` at the root of the folder holding the mirror, since most agent tools only look there. In the dedicated UCS folder that is written straight away; if you are mirroring into a project of your own you are asked first, per workspace. Only the marked block is ever rewritten, anything you write around it is left alone, `cvucsedit.WriteRootAgentFiles` turns it off, and **Cabinet Vision UCS: Remove UCS Files from This Workspace** takes it back out again.
   - The mirrored copies are regenerated on activation and on each list refresh, and are ignored by git along with the rest of the folder.
 - **Syntax highlighting**
   - Different elements like keywords, constraints, data types etc. are styled accordingly.
@@ -126,9 +130,9 @@ Because UCS's are edited outside of Cabinet Vision, the user will need to force 
 This can be done by simply opening the UCS editor window and making any change. This could be just disabling and then re-enabling any UCS.
 Alternatively the job can be closed and re-opened.
 
-#### An open folder
+#### The UCS folder being open
 
-UCS code is mirrored into the open workspace folder, which is created automatically. If no folder is open the mirror falls back to a location outside the workspace and a warning is shown — editing still works, but search, AI agents and the JavaScript language features cannot reach the files, so opening a folder is recommended.
+UCS code is mirrored to real files on disk, and VS Code's JavaScript language features only cover files inside the folder you have open. So with the default `dedicated` mirror location, run **Cabinet Vision UCS: Open UCS Workspace** to open the mirror as its own window — the extension offers this if it notices the mirror is out of sight. Editing works either way, but UCS:JS completion, rename and find references, and anything an AI agent does, need the folder to be open.
 
 ## dependencies
 - vscode-languageclient
@@ -142,12 +146,19 @@ UCS code is mirrored into the open workspace folder, which is created automatica
 
 * `cvucsedit.Server`: The Cabinet Vision database SQL server instance name (defaults to **localhost\CV24**).
 * `cvucsedit.Database`: The name of the Cabinet Vision SQL database (defaults to **CVData**).
-* `cvucsedit.MirrorFolder`: The folder inside the workspace that UCS code is mirrored into (defaults to **cvucs**). Deliberately not hidden — some AI agent tools skip dot-prefixed folders. A mirror left in the old `.cvucs` folder is moved here automatically.
-* `cvucsedit.WriteRootAgentFiles`: Keep a short Cabinet Vision UCS section in `AGENTS.md` and `CLAUDE.md` at the root of the workspace, pointing AI agents at the mirrored folder (defaults to **true**). Existing files are appended to between markers, never overwritten.
+* `cvucsedit.AutoStart`: Connect automatically when a workspace that has used the extension before is opened (defaults to **true**). A workspace that has never connected is never started automatically, whatever this is set to.
+* `cvucsedit.MirrorLocation`: Where UCS code is mirrored — **dedicated** (a folder of the extension's own, outside your projects) or **workspace** (the folder you have open). Leave it unset to let the extension decide per workspace: one that already contains a mirror keeps using it, anything else uses the dedicated folder.
+* `cvucsedit.MirrorPath`: Full path of the dedicated mirror folder (defaults to **&lt;your home folder&gt;\Cabinet Vision UCS**). Each database gets a subfolder of its own. Avoid a cloud-synced folder such as OneDrive — the mirror tracks a live database.
+* `cvucsedit.MirrorFolder`: The folder name used when `cvucsedit.MirrorLocation` is **workspace** (defaults to **cvucs**). Deliberately not hidden — some AI agent tools skip dot-prefixed folders. A mirror left in the old `.cvucs` folder is moved here automatically.
+* `cvucsedit.WriteRootAgentFiles`: Keep a short Cabinet Vision UCS section in `AGENTS.md` and `CLAUDE.md` at the root of the folder holding the mirror, pointing AI agents at it (defaults to **true**). In your own project you are asked before this is written for the first time. Existing files are appended to between markers, never overwritten.
 * `cvucsedit.CheckJs`: Report JavaScript type errors in mirrored UCS:JS files (defaults to **false**). Completion, hover, go to definition and rename work either way; enabling this also surfaces type errors, which can be noisy.
 
 #### Available Commands
 
+* `cvucsedit.start`: Connect to Cabinet Vision, and remember this workspace.
+* `cvucsedit.stop`: Disconnect. Stops the language servers and the file watcher, so no further save reaches the database.
+* `cvucsedit.openMirrorWorkspace`: Open the dedicated UCS folder as its own window.
+* `cvucsedit.removeFromWorkspace`: Remove the UCS pointer block, and optionally the mirror folder, from this workspace.
 * `cvucsedit.loadUCSLists`: Reload Cabinet Vision UCS & library lists.
 * `cvucsedit.searchUCSList`: Search UCS List.
 * `cvucsedit.clearSearchUCSList`: Clear UCS Search.
@@ -162,6 +173,25 @@ Please report all issues on [Github](https://github.com/SageBilt/cvucsedit/issue
 
 
 ## Release Notes
+
+#### 2.1.0
+
+2.0.0 assumed every VS Code window was a Cabinet Vision window: it connected to the database in all of them, mirrored a `cvucs/` folder into whatever project happened to be open, and added a block to that project's `AGENTS.md` and `CLAUDE.md`. This release makes all three of those something a workspace opts in to. Existing setups are unaffected — a workspace that already contains a mirror keeps using it, in place, and keeps starting automatically.
+
+##### Changed
+- **The extension no longer starts in a workspace that has not used it.** Opening an unrelated project does nothing at all: no connection, no folder, no files written. Connect with **Cabinet Vision UCS: Connect** from the command palette or the button in the UCS tree view, and that workspace is remembered.
+- **UCS code is mirrored outside your projects by default.** New setups mirror to `<your home folder>/Cabinet Vision UCS/<Database>/`, opened as its own window with **Cabinet Vision UCS: Open UCS Workspace**. Set `cvucsedit.MirrorLocation` to `workspace` to keep mirroring into the folder you have open instead, and `cvucsedit.MirrorPath` to put the dedicated folder somewhere else.
+- **You are asked before anything is written to your project's `AGENTS.md` or `CLAUDE.md`**, with *Add*, *Not now* and *Never in this workspace*, remembered for that workspace only. In the dedicated UCS folder the pointer is still written straight away, since that folder belongs to the extension.
+- Cancelling the SQL server/database prompt now stops asking, instead of retrying with the same value and writing it into your global settings.
+
+##### Added
+- `cvucsedit.AutoStart` — connect automatically when a workspace that has used the extension before is opened. Turn it off to start manually every time.
+- **Cabinet Vision UCS: Disconnect** — stops the language servers and the file watcher, so no further save reaches the database.
+- **Cabinet Vision UCS: Remove UCS Files from This Workspace** — cleans up after an earlier version. Takes the pointer block back out of `AGENTS.md` and `CLAUDE.md` and optionally deletes the mirror folder, without needing to connect.
+- A status bar item showing whether the extension is connected, and a welcome view in the UCS tree with a Connect button.
+
+##### Fixed
+- The published extension no longer contains a copy of the developer's own mirrored UCS code.
 
 #### 2.0.0
 

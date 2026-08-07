@@ -35,6 +35,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.SQLScriptProvider = void 0;
 const vscode = __importStar(require("vscode"));
+const path = __importStar(require("path"));
 const CLT = __importStar(require("./CustomLookupTree"));
 const SQLConnection_1 = require("./SQLConnection");
 const MirrorFileStore_1 = require("./MirrorFileStore");
@@ -65,8 +66,7 @@ class SQLScriptProvider {
         vscode.window.registerTreeDataProvider('CVUCSList', this.UCSListlookupProvider);
         this.UCSLibListlookupProvider = new CLT.LookupTreeDataProvider(this.context);
         vscode.window.registerTreeDataProvider('CVUCSLibList', this.UCSLibListlookupProvider);
-        this.mirror = new MirrorFileStore_1.MirrorFileStore(this.SQLConn);
-        this.mirror.globalStorage = this.context.globalStorageUri;
+        this.mirror = new MirrorFileStore_1.MirrorFileStore(this.SQLConn, this.context.workspaceState);
         // Keep the tree's cached code in step when an external edit is pushed to the database.
         this.mirror.onCodePushed = (ucsId, code) => this.updateTreeItemCode(ucsId, code);
         this.context.subscriptions.push(this.mirror);
@@ -204,30 +204,58 @@ class SQLScriptProvider {
             'ucsjs-reference.md': docs.buildUcsjsReference(),
             'ucsm-reference.md': docs.buildUcsmReference()
         });
-        // ...and a pointer at the workspace root, which is the only place most agent tools look.
-        await this.mirror.writeRootPointer(docs.buildRootPointer(this.mirror.rootLabel), agentDocs_1.AgentDocsGenerator.mergeRootPointer, () => this.announceRootPointer());
+        // ...and a pointer at the root of the folder the mirror sits in, which is the only place
+        // most agent tools look. In someone else's project that means asking first.
+        await this.mirror.writeRootPointer(docs.buildRootPointer(this.mirror.pointerLabel), agentDocs_1.AgentDocsGenerator.mergeRootPointer, () => this.requestRootPointerConsent());
+    }
+    /** Remembered per workspace, so answering for one project says nothing about any other. */
+    static CONSENT_KEY = 'cvucsedit.rootPointerConsent';
+    consentAskedThisSession = false;
+    /**
+     * Ask before writing to a file at the root of a project that is not ours. Only reached when
+     * something would actually change, and only in `workspace` location mode - the dedicated mirror
+     * folder is the extension's own, so nothing there needs permission.
+     *
+     * "Not now" is deliberately not persisted but does hold for the session, so a list refresh does
+     * not re-ask three times in a row.
+     */
+    async requestRootPointerConsent() {
+        const remembered = this.context.workspaceState.get(SQLScriptProvider.CONSENT_KEY);
+        if (remembered === 'yes') {
+            return true;
+        }
+        if (remembered === 'never' || this.consentAskedThisSession) {
+            return false;
+        }
+        this.consentAskedThisSession = true;
+        const folder = this.mirror.pointerRoot
+            ? path.basename(this.mirror.pointerRoot.fsPath)
+            : 'this workspace';
+        const choice = await vscode.window.showInformationMessage(`Add a Cabinet Vision UCS pointer block to AGENTS.md and CLAUDE.md in "${folder}"? ` +
+            'Most AI agent tools only look for these files at the project root, so without it they ' +
+            `will not find the UCS documentation in ${this.mirror.rootLabel}. ` +
+            'Only the block between the markers is ever written.', 'Add', 'Not now', 'Never in this workspace');
+        if (choice === 'Add') {
+            await this.context.workspaceState.update(SQLScriptProvider.CONSENT_KEY, 'yes');
+            return true;
+        }
+        if (choice === 'Never in this workspace') {
+            await this.context.workspaceState.update(SQLScriptProvider.CONSENT_KEY, 'never');
+        }
+        return false;
     }
     /**
-     * Say so, once ever, the first time we touch a file at the root of someone's project. Silently
-     * editing a repository's own AGENTS.md would be a nasty surprise however useful it is.
+     * Take the block back out again, leaving anything the user wrote around it untouched.
+     *
+     * Reachable from the cleanup command without ever connecting, which is the point: someone who
+     * had 2.0.0 write into an unrelated project needs to undo that without starting the extension
+     * there. So the root is resolved from the open folder when the mirror has not been initialised.
      */
-    announceRootPointer() {
-        if (this.context.globalState.get('cvucsedit.announcedRootPointer')) {
-            return;
-        }
-        void this.context.globalState.update('cvucsedit.announcedRootPointer', true);
-        void vscode.window.showInformationMessage('Added a Cabinet Vision UCS section to AGENTS.md and CLAUDE.md in your workspace root, ' +
-            'so AI agents find the mirrored UCS folder. Only the marked block is ever rewritten.', 'Undo and disable').then(choice => {
-            if (choice) {
-                void vscode.workspace.getConfiguration('cvucsedit')
-                    .update('WriteRootAgentFiles', false, vscode.ConfigurationTarget.Global);
-                void this.removeRootPointer();
-            }
-        });
-    }
-    /** Take the block back out again, leaving anything the user wrote around it untouched. */
     async removeRootPointer() {
-        const root = this.mirror.workspaceRoot;
+        await this.context.workspaceState.update(SQLScriptProvider.CONSENT_KEY, 'never');
+        // The open folder, not `pointerRoot`: the caller means "this project", and in dedicated mode
+        // `pointerRoot` is a folder somewhere else entirely.
+        const root = vscode.workspace.workspaceFolders?.[0]?.uri ?? this.mirror.pointerRoot;
         if (!root) {
             return;
         }
@@ -253,6 +281,67 @@ class SQLScriptProvider {
                 // Not there, or not writable. Nothing to undo.
             }
         }
+    }
+    /**
+     * Delete a mirror that an earlier version left inside this workspace, and return what went.
+     *
+     * Conservative about what it will touch: only a folder that contains a `manifest.json` is
+     * recognised as a mirror of ours, and the parent is removed only once emptying it leaves nothing
+     * behind. A folder of the user's that merely happens to be called `cvucs` is left alone. Deleted
+     * to the recycle bin where the platform supports it, since a mirror may hold edits that were
+     * never pushed.
+     */
+    async removeMirrorFromWorkspace() {
+        const ws = vscode.workspace.workspaceFolders?.[0]?.uri;
+        if (!ws) {
+            return [];
+        }
+        const folderName = vscode.workspace.getConfiguration('cvucsedit').get('MirrorFolder', 'cvucs');
+        const removed = [];
+        for (const parentName of new Set([folderName, 'cvucs', '.cvucs'])) {
+            const parent = vscode.Uri.joinPath(ws, parentName);
+            let children;
+            try {
+                children = await vscode.workspace.fs.readDirectory(parent);
+            }
+            catch {
+                continue; // not there
+            }
+            for (const [name, type] of children) {
+                if (type !== vscode.FileType.Directory) {
+                    continue;
+                }
+                const candidate = vscode.Uri.joinPath(parent, name);
+                try {
+                    await vscode.workspace.fs.stat(vscode.Uri.joinPath(candidate, 'manifest.json'));
+                }
+                catch {
+                    continue; // not one of ours
+                }
+                await this.deleteQuietly(candidate);
+                removed.push(`${parentName}/${name}`);
+            }
+            if (removed.length && !(await vscode.workspace.fs.readDirectory(parent)).length) {
+                await this.deleteQuietly(parent);
+            }
+        }
+        this.mirror.shutdown();
+        await this.mirror.forgetLocation();
+        return removed;
+    }
+    async deleteQuietly(uri) {
+        try {
+            await vscode.workspace.fs.delete(uri, { recursive: true, useTrash: true });
+        }
+        catch {
+            // Some filesystems have no recycle bin. Fall back to a permanent delete.
+            await vscode.workspace.fs.delete(uri, { recursive: true });
+        }
+    }
+    /** Empty both trees. Used when disconnecting, so nothing stale stays clickable. */
+    clearLists() {
+        this.UCSListlookupProvider.clearItems();
+        this.UCSLibListlookupProvider.clearItems();
     }
     /** UCS:M has no `Divider` code to mirror, so those rows stay in the tree but get no file. */
     hasCode(FileType) {
