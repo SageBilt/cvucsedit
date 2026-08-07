@@ -111,8 +111,14 @@ shipped in the VSIX, not compiled.
   [src/jsonDocCreator.ts](src/jsonDocCreator.ts) parses [CVDoc/](CVDoc/) text dumps of the CV help
   files. The call is commented out in `activate()`; uncomment it to regenerate after updating CVDoc.
 - [Languages/ucsjs/data/ucsjs_system.json](Languages/ucsjs/data/ucsjs_system.json) — UCS:JS objects,
-  constants, properties, methods with `parameterDef[].DataType` and `returnType`. Adding new CV API
-  surface is usually a pure edit to this file; it flows into `cv-api.d.ts` automatically.
+  classes, constants, properties, methods with `parameterDef[].DataType` and `returnType`. Adding new
+  CV API surface is usually a pure edit to this file; it flows into `cv-api.d.ts` automatically.
+  `classes[]` is the table of types `_cvSystem.CreateObject` can return — `CVShapeManaged` plus the
+  nine 2D CAD entities (`CMCadArc`, `CMCadCircle`, `CMCadDimension`, `CMCadLeader`, `CMCadLine`,
+  `CMCadRect`, `CMCadSymbol`, `CMCadText`, `CMCadTextBox`). Each entry emits one interface, built
+  from the methods and properties carrying its `name` as their `objectType`, and one `CreateObject`
+  overload keyed on its `createName` string literal. `cad: true` additionally puts the class into the
+  `CVCadObject` union that `AddCAD` accepts.
 - `Languages/ucsm/data/*.json` — syntax value/dim/forEach types and control structures, consumed by
   the validator.
 
@@ -130,8 +136,17 @@ Regenerated on activation and on each list refresh, so DB-derived unions stay cu
 Two closed mapping vocabularies live in the generator: `returnType` (~28 distinct prose values such
 as `"System::Collections::Generic::List - array of CVAsmManaged child objects"`, matched by ordered
 rules, unmapped values fall back to `any` with a console warning) and `parameterDef[].DataType`
-(14 values). `ParamName` is `"<type> <name>"`, so the identifier is the **second** token, and may
+(15 values). `ParamName` is `"<type> <name>"`, so the identifier is the **second** token, and may
 carry an `[optional]` / `(optional …)` marker.
+
+A method with `"factory": true` — only `CreateObject` — ignores `returnType` entirely and emits one
+overload per `classes[]` entry instead, plus a trailing `(className: string): any` so a computed or
+undocumented class name still compiles.
+
+Property `Type` accepts a `constants.<group>` reference, exactly as `parameterDef[].DataType` does,
+which is how the CAD entities get `LineType`, `ArrowLeft`, `TextHAlign` and friends typed to their
+constant group rather than to a bare number. `COLORREF` maps to `number` (colours are written as
+literals — `0xff00`).
 
 ### Server-side responsibilities
 

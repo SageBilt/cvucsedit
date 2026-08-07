@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Dynamic 2D CAD for UCS:JS.** The nine CAD entity
+  classes — Arc, Circle, Dimension, Leader, Line, Rectangle, Symbol, Text and
+  TextBox — are described to TypeScript with all of their properties, methods
+  and Cabinet Vision documentation, so completion, signature help and hover work
+  on them the same way they do on `_this`.
+- `_cvSystem.CreateObject()` now returns the class matching the name it is given.
+  `CreateObject('cvArc')` is a `CMCadArc`, `CreateObject('cvShape')` is still a
+  `CVShapeManaged`, and each is nullable so a missing null check is caught when
+  `cvucsedit.CheckJs` is on.
+- `AddCAD(axis, cad)` on `_this` and `_cab`, which only accepts a CAD object.
+- The CAD constant groups: line type, line weight, arrow type, vertical and
+  horizontal text alignment, and dimension text position. Assigning one to the
+  wrong property — an arrow type to `LineType`, say — is reported.
+
 ## [2.0.0] - 2026-08-07
 
 A major release. UCS code is no longer held in virtual documents — every UCS is

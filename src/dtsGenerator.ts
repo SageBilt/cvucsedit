@@ -62,16 +62,28 @@ export class DtsGenerator {
         return 'any';
     }
 
-    /** Property `Type` is either a Cabinet Vision VAL_* constant name or a raw C++ type. */
+    /**
+     * Property `Type` is a Cabinet Vision VAL_* constant name, a raw C++ type, or - for the CAD
+     * entities, whose properties are set from a documented constant group - a `constants.<group>`
+     * reference, exactly as `parameterDef[].DataType` uses.
+     */
     private mapPropertyType(raw: string | undefined): string {
-        switch ((raw ?? '').trim()) {
-            case 'VAL_TEXT': return 'string';
+        const text = (raw ?? '').trim();
+        if (text.startsWith('constants.')) {
+            return text.slice('constants.'.length);
+        }
+        switch (text) {
+            case 'VAL_TEXT':
+            case 'string': return 'string';
             case 'VAL_BOOL':
             case 'bool': return 'boolean';
             case 'VAL_INTEGER':
             case 'VAL_MEASUREMENT':
             case 'VAL_DEGREES':
-            case 'int': return 'number';
+            case 'int':
+            case 'double':
+            // A Windows RGB colour, written in UCS:JS as a plain number literal (0xff00).
+            case 'COLORREF': return 'number';
             default: return 'any';
         }
     }
@@ -122,6 +134,7 @@ export class DtsGenerator {
             case 'int': return 'number';
             case 'bool': return 'boolean';
             case 'CVShapeManaged': return 'CVShapeManaged';
+            case 'cadObject': return 'CVCadObject';
             case 'materials': return 'MaterialName';
             // A UCS:M expression inside a JavaScript string. Still a string to TypeScript; the
             // language server is what supplies UCS:M completion and validation inside it.
@@ -245,6 +258,8 @@ export class DtsGenerator {
      * accepts the shorter calls, so nothing that used to compile stops compiling.
      */
     private signatures(method: UCSJSSystemMethod): string[] {
+        if (method.factory) return this.factorySignatures(method);
+
         const params = this.parameters(method);
         const returns = this.mapReturnType(method.returnType);
         const render = (allRequired: boolean) => `${method.name}(${params
@@ -252,6 +267,19 @@ export class DtsGenerator {
             .join(', ')}): ${returns};`;
 
         return params.some(p => p.optional) ? [render(true), render(false)] : [render(false)];
+    }
+
+    /**
+     * `_cvSystem.CreateObject` returns a different class for each string it is handed, which the
+     * `returnType` prose cannot express - one overload per `classes` entry does. The trailing
+     * `string` overload keeps calls with a computed or not yet documented class name compiling.
+     */
+    private factorySignatures(method: UCSJSSystemMethod): string[] {
+        const name = this.parameters(method)[0]?.name ?? 'className';
+        return [
+            ...this.data.classes.map(c => `${method.name}(${name}: '${c.createName}'): ${c.name} | null;`),
+            `${method.name}(${name}: string): any;`
+        ];
     }
 
     private memberDoc(entry: UCSJSSystemMethod | UCSJSSystemProperty): (string | undefined)[] {
@@ -357,11 +385,23 @@ export class DtsGenerator {
         // --- object types ----------------------------------------------------
         out.push('// ---------------------------------------------------------------- object types');
         out.push('');
-        const shape = this.forObjectType('CVShapeManaged');
-        out.push('/** A shape attached to an assembly or part. */');
-        out.push('interface CVShapeManaged {');
-        out.push(this.members(shape.methods, shape.properties, '    ', false));
-        out.push('}');
+        for (const cls of this.data.classes) {
+            const own = this.forObjectType(cls.name);
+            out.push(this.jsDoc('', [
+                cls.description,
+                `\n\`_cvSystem.CreateObject('${cls.createName}')\``,
+                cls.example ? `\n@example\n${cls.example}` : undefined
+            ]).trimEnd());
+            out.push(`interface ${cls.name} {`);
+            out.push(this.members(own.methods, own.properties, '    ', false));
+            out.push('}');
+            out.push('');
+        }
+
+        // Everything AddCAD accepts, so a stray shape or a plain object is rejected there.
+        const cad = this.data.classes.filter(c => c.cad).map(c => c.name);
+        out.push('/** Any of the 2D CAD entities that can be added to an object with AddCAD. */');
+        out.push(`type CVCadObject = ${cad.length ? cad.join(' | ') : 'never'};`);
         out.push('');
 
         // _this and _cab are both CVAsmManaged, and the JSON describes their members once against

@@ -6,6 +6,77 @@
         {"name":"_cvSystem"},
         {"name":"_cvString"}
     ],
+    "classes": [
+        {
+            "name": "CVShapeManaged",
+            "createName": "cvShape",
+            "description": "A shape attached to an assembly or part.",
+            "example": "var shape = _cvSystem.CreateObject('cvShape');"
+        },
+        {
+            "name": "CMCadArc",
+            "createName": "cvArc",
+            "cad": true,
+            "description": "A 2D CAD arc, added to an assembly with AddCAD.",
+            "example": "var arc = _cvSystem.CreateObject('cvArc');\nif (arc !== null)\n{\n    arc.Color = 0xff00;\n    arc.SetByRadius(_this.DX / 2, _this.DY / 2, 2, 0, 90);\n    _this.AddCAD(AXIS_XY, arc);\n}"
+        },
+        {
+            "name": "CMCadCircle",
+            "createName": "cvCircle",
+            "cad": true,
+            "description": "A 2D CAD circle, added to an assembly with AddCAD.",
+            "example": "var circle = _cvSystem.CreateObject('cvCircle');\nif (circle !== null)\n{\n    circle.Color = 0xff00;\n    circle.Set(_this.DX / 2, _this.DY / 2, 2.5);\n    _this.AddCAD(AXIS_XY, circle);\n}"
+        },
+        {
+            "name": "CMCadDimension",
+            "createName": "cvDimension",
+            "cad": true,
+            "description": "A 2D CAD dimension, added to an assembly with AddCAD.",
+            "example": "var dim = _cvSystem.CreateObject('cvDimension');\nif (dim !== null)\n{\n    dim.Color = 0xff0000;\n    dim.Style = 'Assembly';\n    dim.Tail = true;\n    dim.SetLinear(5, 10, 15, 10, 12.5, 15);\n    _this.AddCAD(AXIS_XY, dim);\n}"
+        },
+        {
+            "name": "CMCadLeader",
+            "createName": "cvLeader",
+            "cad": true,
+            "description": "A 2D CAD leader, added to an assembly with AddCAD.",
+            "example": "var leader = _cvSystem.CreateObject('cvLeader');\nif (leader !== null)\n{\n    leader.X = _this.DX / 2;\n    leader.Y = _this.DY / 2;\n    leader.AddNode(leader.X + 5, leader.Y + 5);\n    leader.AddNode(leader.X + 10, leader.Y + 5);\n    leader.Color = 0xff;\n    leader.Text = 'Hello World!';\n    leader.TextHeight = 1.5;\n    _this.AddCAD(AXIS_XY, leader);\n}"
+        },
+        {
+            "name": "CMCadLine",
+            "createName": "cvLine",
+            "cad": true,
+            "description": "A 2D CAD line, added to an assembly with AddCAD.",
+            "example": "var line = _cvSystem.CreateObject('cvLine');\nif (line !== null)\n{\n    line.Color = 0xff00;\n    line.Set(5, 5, _this.DX, _this.DY);\n    _this.AddCAD(AXIS_XY, line);\n}"
+        },
+        {
+            "name": "CMCadRect",
+            "createName": "cvRect",
+            "cad": true,
+            "description": "A 2D CAD rectangle, added to an assembly with AddCAD.",
+            "example": "var rect = _cvSystem.CreateObject('cvRect');\nif (rect !== null)\n{\n    rect.Color = 0xff00;\n    rect.SetByCorner(1, 1, _this.DX - 1, _this.DY - 1);\n    _this.AddCAD(AXIS_XY, rect);\n}"
+        },
+        {
+            "name": "CMCadSymbol",
+            "createName": "cvSymbol",
+            "cad": true,
+            "description": "A 2D CAD symbol, added to an assembly with AddCAD.",
+            "example": "var symbol = _cvSystem.CreateObject('cvSymbol');\nif (symbol !== null)\n{\n    symbol.Insert(_this.DX / 2, _this.DY / 2, 'Annotation\\\\Sheet\\\\Sheet Number');\n    _this.AddCAD(AXIS_XY, symbol);\n}"
+        },
+        {
+            "name": "CMCadText",
+            "createName": "cvText",
+            "cad": true,
+            "description": "A 2D CAD text object, added to an assembly with AddCAD.",
+            "example": "var text = _cvSystem.CreateObject('cvText');\nif (text !== null)\n{\n    text.X = _this.DX / 2;\n    text.Y = _this.DY / 2;\n    text.Color = 0xff;\n    text.Text = 'Hello World!!!';\n    text.Height = 1.5;\n    _this.AddCAD(AXIS_XY, text);\n}"
+        },
+        {
+            "name": "CMCadTextBox",
+            "createName": "cvTextBox",
+            "cad": true,
+            "description": "A 2D CAD text box, added to an assembly with AddCAD.",
+            "example": "var txtbox = _cvSystem.CreateObject('cvTextBox');\nif (txtbox !== null)\n{\n    txtbox.Text = 'Hello World!';\n    txtbox.TextHeight = 1.5;\n    txtbox.SetByCorner(0, 0, _this.DX, _this.DY);\n    _this.AddCAD(AXIS_XY, txtbox);\n}"
+        }
+    ],
     "constants": {
         "AssemblyTypes": [
             "OBJ_ASSEMBLY",
@@ -200,6 +271,72 @@
             "ASM_END_CLIPPED",
             "ASM_END_RADIUSED",
             "ASM_END_ANGLED"
+        ],
+        "CADLineType": [
+            "CAD_LT_SOLID",
+            "CAD_LT_DASH",
+            "CAD_LT_DOT",
+            "CAD_LT_DASHDOT",
+            "CAD_LT_DASHDOTDOT"
+        ],
+        "CADLineWidth": [
+            "CAD_LW_QUARTER",
+            "CAD_LW_HALF",
+            "CAD_LW_THREEQUARTER",
+            "CAD_LW_ONE",
+            "CAD_LW_ONEANDQUARTER",
+            "CAD_LW_ONEANDHALF",
+            "CAD_LW_ONEANDTHREEQUARTER",
+            "CAD_LW_TWO",
+            "CAD_LW_TWOANDHALF",
+            "CAD_LW_THREE",
+            "CAD_LW_THREEANDHALF",
+            "CAD_LW_FOUR",
+            "CAD_LW_FOURANDHALF",
+            "CAD_LW_FIVE",
+            "CAD_LW_SIX",
+            "CAD_LW_EIGHT"
+        ],
+        "CADTextVAlign": [
+            "CAD_TVA_BASE",
+            "CAD_TVA_BOTTOM",
+            "CAD_TVA_MIDDLE",
+            "CAD_TVA_TOP"
+        ],
+        "CADTextHAlign": [
+            "CAD_THA_LEFT",
+            "CAD_THA_CENTER",
+            "CAD_THA_RIGHT"
+        ],
+        "CADArrowType": [
+            "CAD_AT_NONE",
+            "CAD_AT_CLOSED",
+            "CAD_AT_CLOSEDBLNK",
+            "CAD_AT_OPEN30",
+            "CAD_AT_OPEN90",
+            "CAD_AT_DOT",
+            "CAD_AT_DOTBLNK",
+            "CAD_AT_DOTSML",
+            "CAD_AT_DOTSMLBLNK",
+            "CAD_AT_ORIGIN",
+            "CAD_AT_ORIGIN2",
+            "CAD_AT_TICK",
+            "CAD_AT_OBLIQUE",
+            "CAD_AT_BOX",
+            "CAD_AT_BOXBLNK"
+        ],
+        "CADDimTextVPosition": [
+            "CAD_DVP_CENTERED",
+            "CAD_DVP_ABOVE",
+            "CAD_DVP_OUTSIDE",
+            "CAD_DVP_BELOW"
+        ],
+        "CADDimTextHPosition": [
+            "CAD_DHP_CENTERED",
+            "CAD_DHP_AT1",
+            "CAD_DHP_AT2",
+            "CAD_DHP_OVER1",
+            "CAD_DHP_OVER2"
         ]
     },
     "functions": [
@@ -410,6 +547,782 @@
             "description": "Number of edges",
             "Type": "int",
             "objectType": "CVShapeManaged"
+        },
+        {
+            "name": "Color",
+            "parentObject": [],
+            "value": "Color",
+            "description": "Arc color",
+            "Type": "COLORREF",
+            "objectType": "CMCadArc"
+        },
+        {
+            "name": "LineWidth",
+            "parentObject": [],
+            "value": "LineWidth",
+            "description": "Line width type (points) represented by one of the CAD Line Width constants",
+            "Type": "constants.CADLineWidth",
+            "objectType": "CMCadArc"
+        },
+        {
+            "name": "LineType",
+            "parentObject": [],
+            "value": "LineType",
+            "description": "Line type represented by one of the CAD Line Type constants",
+            "Type": "constants.CADLineType",
+            "objectType": "CMCadArc"
+        },
+        {
+            "name": "DashScale",
+            "parentObject": [],
+            "value": "DashScale",
+            "description": "Line dash scale (default = 1)",
+            "Type": "double",
+            "objectType": "CMCadArc"
+        },
+        {
+            "name": "X",
+            "parentObject": [],
+            "value": "X",
+            "description": "Center X position",
+            "Type": "double",
+            "objectType": "CMCadCircle"
+        },
+        {
+            "name": "Y",
+            "parentObject": [],
+            "value": "Y",
+            "description": "Center Y position",
+            "Type": "double",
+            "objectType": "CMCadCircle"
+        },
+        {
+            "name": "Radius",
+            "parentObject": [],
+            "value": "Radius",
+            "description": "Circle radius",
+            "Type": "double",
+            "objectType": "CMCadCircle"
+        },
+        {
+            "name": "Color",
+            "parentObject": [],
+            "value": "Color",
+            "description": "Circle color",
+            "Type": "COLORREF",
+            "objectType": "CMCadCircle"
+        },
+        {
+            "name": "LineWidth",
+            "parentObject": [],
+            "value": "LineWidth",
+            "description": "Line width type (points) represented by one of the CAD Line Width constants",
+            "Type": "constants.CADLineWidth",
+            "objectType": "CMCadCircle"
+        },
+        {
+            "name": "LineType",
+            "parentObject": [],
+            "value": "LineType",
+            "description": "Line type represented by one of the CAD Line Type constants",
+            "Type": "constants.CADLineType",
+            "objectType": "CMCadCircle"
+        },
+        {
+            "name": "DashScale",
+            "parentObject": [],
+            "value": "DashScale",
+            "description": "Line dash scale (default = 1)",
+            "Type": "double",
+            "objectType": "CMCadCircle"
+        },
+        {
+            "name": "Style",
+            "parentObject": [],
+            "value": "Style",
+            "description": "Dimension style properties",
+            "Type": "string",
+            "objectType": "CMCadDimension"
+        },
+        {
+            "name": "Color",
+            "parentObject": [],
+            "value": "Color",
+            "description": "Line color",
+            "Type": "COLORREF",
+            "objectType": "CMCadDimension"
+        },
+        {
+            "name": "LineShow",
+            "parentObject": [],
+            "value": "LineShow",
+            "description": "Show line",
+            "Type": "bool",
+            "objectType": "CMCadDimension"
+        },
+        {
+            "name": "LineWidth",
+            "parentObject": [],
+            "value": "LineWidth",
+            "description": "Line width type (points) represented by one of the CAD Line Width constants",
+            "Type": "constants.CADLineWidth",
+            "objectType": "CMCadDimension"
+        },
+        {
+            "name": "LineExtend",
+            "parentObject": [],
+            "value": "LineExtend",
+            "description": "Extend line beyond dimension",
+            "Type": "bool",
+            "objectType": "CMCadDimension"
+        },
+        {
+            "name": "Tail",
+            "parentObject": [],
+            "value": "Tail",
+            "description": "Show dimension tail",
+            "Type": "bool",
+            "objectType": "CMCadDimension"
+        },
+        {
+            "name": "TailOffset",
+            "parentObject": [],
+            "value": "TailOffset",
+            "description": "Clearance from tail to dimension points",
+            "Type": "double",
+            "objectType": "CMCadDimension"
+        },
+        {
+            "name": "Chain",
+            "parentObject": [],
+            "value": "Chain",
+            "description": "Display dimension as part of a chain",
+            "Type": "bool",
+            "objectType": "CMCadDimension"
+        },
+        {
+            "name": "ArrowSize",
+            "parentObject": [],
+            "value": "ArrowSize",
+            "description": "Arrow size",
+            "Type": "double",
+            "objectType": "CMCadDimension"
+        },
+        {
+            "name": "ArrowLeft",
+            "parentObject": [],
+            "value": "ArrowLeft",
+            "description": "Left arrow type represented by one of the CAD Arrow Type constants",
+            "Type": "constants.CADArrowType",
+            "objectType": "CMCadDimension"
+        },
+        {
+            "name": "ArrowRight",
+            "parentObject": [],
+            "value": "ArrowRight",
+            "description": "Right arrow type represented by one of the CAD Arrow Type constants",
+            "Type": "constants.CADArrowType",
+            "objectType": "CMCadDimension"
+        },
+        {
+            "name": "TickSize",
+            "parentObject": [],
+            "value": "TickSize",
+            "description": "Tick size",
+            "Type": "double",
+            "objectType": "CMCadDimension"
+        },
+        {
+            "name": "TickLeft",
+            "parentObject": [],
+            "value": "TickLeft",
+            "description": "Display tick at left dimension point",
+            "Type": "bool",
+            "objectType": "CMCadDimension"
+        },
+        {
+            "name": "TickRight",
+            "parentObject": [],
+            "value": "TickRight",
+            "description": "Display tick at right dimension point",
+            "Type": "bool",
+            "objectType": "CMCadDimension"
+        },
+        {
+            "name": "TextShow",
+            "parentObject": [],
+            "value": "TextShow",
+            "description": "Display text",
+            "Type": "bool",
+            "objectType": "CMCadDimension"
+        },
+        {
+            "name": "TextVPosition",
+            "parentObject": [],
+            "value": "TextVPosition",
+            "description": "Text vertical position represented by one of the CAD Dimension Text Vertical Position constants",
+            "Type": "constants.CADDimTextVPosition",
+            "objectType": "CMCadDimension"
+        },
+        {
+            "name": "TextHPosition",
+            "parentObject": [],
+            "value": "TextHPosition",
+            "description": "Text horizontal position represented by one of the CAD Dimension Text Horizontal Position constants",
+            "Type": "constants.CADDimTextHPosition",
+            "objectType": "CMCadDimension"
+        },
+        {
+            "name": "TextFont",
+            "parentObject": [],
+            "value": "TextFont",
+            "description": "Text font name",
+            "Type": "string",
+            "objectType": "CMCadDimension"
+        },
+        {
+            "name": "TextBold",
+            "parentObject": [],
+            "value": "TextBold",
+            "description": "Display text as bold",
+            "Type": "bool",
+            "objectType": "CMCadDimension"
+        },
+        {
+            "name": "TextClearance",
+            "parentObject": [],
+            "value": "TextClearance",
+            "description": "Text clearance from dimension",
+            "Type": "double",
+            "objectType": "CMCadDimension"
+        },
+        {
+            "name": "TextHeight",
+            "parentObject": [],
+            "value": "TextHeight",
+            "description": "Text height",
+            "Type": "double",
+            "objectType": "CMCadDimension"
+        },
+        {
+            "name": "TextFrame",
+            "parentObject": [],
+            "value": "TextFrame",
+            "description": "Display frame around text",
+            "Type": "bool",
+            "objectType": "CMCadDimension"
+        },
+        {
+            "name": "X",
+            "parentObject": [],
+            "value": "X",
+            "description": "Origin X position",
+            "Type": "double",
+            "objectType": "CMCadLeader"
+        },
+        {
+            "name": "Y",
+            "parentObject": [],
+            "value": "Y",
+            "description": "Origin Y position",
+            "Type": "double",
+            "objectType": "CMCadLeader"
+        },
+        {
+            "name": "Color",
+            "parentObject": [],
+            "value": "Color",
+            "description": "Line color",
+            "Type": "COLORREF",
+            "objectType": "CMCadLeader"
+        },
+        {
+            "name": "LineWidth",
+            "parentObject": [],
+            "value": "LineWidth",
+            "description": "Line width type (points) represented by one of the CAD Line Width constants",
+            "Type": "constants.CADLineWidth",
+            "objectType": "CMCadLeader"
+        },
+        {
+            "name": "LineType",
+            "parentObject": [],
+            "value": "LineType",
+            "description": "Line type represented by one of the CAD Line Type constants",
+            "Type": "constants.CADLineType",
+            "objectType": "CMCadLeader"
+        },
+        {
+            "name": "DashScale",
+            "parentObject": [],
+            "value": "DashScale",
+            "description": "Line dash scale (default = 1)",
+            "Type": "double",
+            "objectType": "CMCadLeader"
+        },
+        {
+            "name": "Count",
+            "parentObject": [],
+            "value": "Count",
+            "description": "Number of nodes",
+            "Type": "int",
+            "objectType": "CMCadLeader"
+        },
+        {
+            "name": "ArrowType",
+            "parentObject": [],
+            "value": "ArrowType",
+            "description": "Arrow type represented by one of the CAD Arrow Type constants",
+            "Type": "constants.CADArrowType",
+            "objectType": "CMCadLeader"
+        },
+        {
+            "name": "ArrowSize",
+            "parentObject": [],
+            "value": "ArrowSize",
+            "description": "Arrow size",
+            "Type": "double",
+            "objectType": "CMCadLeader"
+        },
+        {
+            "name": "Text",
+            "parentObject": [],
+            "value": "Text",
+            "description": "Text to display",
+            "Type": "string",
+            "objectType": "CMCadLeader"
+        },
+        {
+            "name": "TextFont",
+            "parentObject": [],
+            "value": "TextFont",
+            "description": "Text font",
+            "Type": "string",
+            "objectType": "CMCadLeader"
+        },
+        {
+            "name": "TextVAlign",
+            "parentObject": [],
+            "value": "TextVAlign",
+            "description": "Text vertical alignment represented by one of the CAD Vertical Text Alignment constants",
+            "Type": "constants.CADTextVAlign",
+            "objectType": "CMCadLeader"
+        },
+        {
+            "name": "TextHAlign",
+            "parentObject": [],
+            "value": "TextHAlign",
+            "description": "Text horizontal alignment represented by one of the CAD Horizontal Text Alignment constants",
+            "Type": "constants.CADTextHAlign",
+            "objectType": "CMCadLeader"
+        },
+        {
+            "name": "TextBold",
+            "parentObject": [],
+            "value": "TextBold",
+            "description": "Display text as bold",
+            "Type": "bool",
+            "objectType": "CMCadLeader"
+        },
+        {
+            "name": "TextVertical",
+            "parentObject": [],
+            "value": "TextVertical",
+            "description": "Display text vertically",
+            "Type": "bool",
+            "objectType": "CMCadLeader"
+        },
+        {
+            "name": "TextClearance",
+            "parentObject": [],
+            "value": "TextClearance",
+            "description": "Text clearance from leader",
+            "Type": "double",
+            "objectType": "CMCadLeader"
+        },
+        {
+            "name": "TextHeight",
+            "parentObject": [],
+            "value": "TextHeight",
+            "description": "Text height",
+            "Type": "double",
+            "objectType": "CMCadLeader"
+        },
+        {
+            "name": "TextAngle",
+            "parentObject": [],
+            "value": "TextAngle",
+            "description": "Text angle",
+            "Type": "double",
+            "objectType": "CMCadLeader"
+        },
+        {
+            "name": "TextFixedScale",
+            "parentObject": [],
+            "value": "TextFixedScale",
+            "description": "Text has fixed scale",
+            "Type": "bool",
+            "objectType": "CMCadLeader"
+        },
+        {
+            "name": "X1",
+            "parentObject": [],
+            "value": "X1",
+            "description": "Start X position",
+            "Type": "double",
+            "objectType": "CMCadLine"
+        },
+        {
+            "name": "Y1",
+            "parentObject": [],
+            "value": "Y1",
+            "description": "Start Y position",
+            "Type": "double",
+            "objectType": "CMCadLine"
+        },
+        {
+            "name": "X2",
+            "parentObject": [],
+            "value": "X2",
+            "description": "End X position",
+            "Type": "double",
+            "objectType": "CMCadLine"
+        },
+        {
+            "name": "Y2",
+            "parentObject": [],
+            "value": "Y2",
+            "description": "End Y position",
+            "Type": "double",
+            "objectType": "CMCadLine"
+        },
+        {
+            "name": "Color",
+            "parentObject": [],
+            "value": "Color",
+            "description": "Line color",
+            "Type": "COLORREF",
+            "objectType": "CMCadLine"
+        },
+        {
+            "name": "LineWidth",
+            "parentObject": [],
+            "value": "LineWidth",
+            "description": "Line width type (points) represented by one of the CAD Line Width constants",
+            "Type": "constants.CADLineWidth",
+            "objectType": "CMCadLine"
+        },
+        {
+            "name": "LineType",
+            "parentObject": [],
+            "value": "LineType",
+            "description": "Line type represented by one of the CAD Line Type constants",
+            "Type": "constants.CADLineType",
+            "objectType": "CMCadLine"
+        },
+        {
+            "name": "DashScale",
+            "parentObject": [],
+            "value": "DashScale",
+            "description": "Line dash scale (default = 1)",
+            "Type": "double",
+            "objectType": "CMCadLine"
+        },
+        {
+            "name": "X1",
+            "parentObject": [],
+            "value": "X1",
+            "description": "Rectangle corner 1 X position",
+            "Type": "double",
+            "objectType": "CMCadRect"
+        },
+        {
+            "name": "Y1",
+            "parentObject": [],
+            "value": "Y1",
+            "description": "Rectangle corner 1 Y position",
+            "Type": "double",
+            "objectType": "CMCadRect"
+        },
+        {
+            "name": "X2",
+            "parentObject": [],
+            "value": "X2",
+            "description": "Rectangle corner 2 X position",
+            "Type": "double",
+            "objectType": "CMCadRect"
+        },
+        {
+            "name": "Y2",
+            "parentObject": [],
+            "value": "Y2",
+            "description": "Rectangle corner 2 Y position",
+            "Type": "double",
+            "objectType": "CMCadRect"
+        },
+        {
+            "name": "Color",
+            "parentObject": [],
+            "value": "Color",
+            "description": "Rectangle color",
+            "Type": "COLORREF",
+            "objectType": "CMCadRect"
+        },
+        {
+            "name": "LineWidth",
+            "parentObject": [],
+            "value": "LineWidth",
+            "description": "Line width type (points) represented by one of the CAD Line Width constants",
+            "Type": "constants.CADLineWidth",
+            "objectType": "CMCadRect"
+        },
+        {
+            "name": "LineType",
+            "parentObject": [],
+            "value": "LineType",
+            "description": "Line type represented by one of the CAD Line Type constants",
+            "Type": "constants.CADLineType",
+            "objectType": "CMCadRect"
+        },
+        {
+            "name": "DashScale",
+            "parentObject": [],
+            "value": "DashScale",
+            "description": "Line dash scale (default = 1)",
+            "Type": "double",
+            "objectType": "CMCadRect"
+        },
+        {
+            "name": "X",
+            "parentObject": [],
+            "value": "X",
+            "description": "Insert X position",
+            "Type": "double",
+            "objectType": "CMCadSymbol"
+        },
+        {
+            "name": "Y",
+            "parentObject": [],
+            "value": "Y",
+            "description": "Insert Y position",
+            "Type": "double",
+            "objectType": "CMCadSymbol"
+        },
+        {
+            "name": "Symbol",
+            "parentObject": [],
+            "value": "Symbol",
+            "description": "Symbol path",
+            "Type": "string",
+            "objectType": "CMCadSymbol"
+        },
+        {
+            "name": "Scale",
+            "parentObject": [],
+            "value": "Scale",
+            "description": "Symbol scale (default = 1)",
+            "Type": "double",
+            "objectType": "CMCadSymbol"
+        },
+        {
+            "name": "X",
+            "parentObject": [],
+            "value": "X",
+            "description": "Origin X position",
+            "Type": "double",
+            "objectType": "CMCadText"
+        },
+        {
+            "name": "Y",
+            "parentObject": [],
+            "value": "Y",
+            "description": "Origin Y position",
+            "Type": "double",
+            "objectType": "CMCadText"
+        },
+        {
+            "name": "Color",
+            "parentObject": [],
+            "value": "Color",
+            "description": "Text color",
+            "Type": "COLORREF",
+            "objectType": "CMCadText"
+        },
+        {
+            "name": "Text",
+            "parentObject": [],
+            "value": "Text",
+            "description": "Text to display",
+            "Type": "string",
+            "objectType": "CMCadText"
+        },
+        {
+            "name": "Font",
+            "parentObject": [],
+            "value": "Font",
+            "description": "Text font",
+            "Type": "string",
+            "objectType": "CMCadText"
+        },
+        {
+            "name": "VAlign",
+            "parentObject": [],
+            "value": "VAlign",
+            "description": "Text vertical alignment represented by one of the CAD Vertical Text Alignment constants",
+            "Type": "constants.CADTextVAlign",
+            "objectType": "CMCadText"
+        },
+        {
+            "name": "HAlign",
+            "parentObject": [],
+            "value": "HAlign",
+            "description": "Text horizontal alignment represented by one of the CAD Horizontal Text Alignment constants",
+            "Type": "constants.CADTextHAlign",
+            "objectType": "CMCadText"
+        },
+        {
+            "name": "Bold",
+            "parentObject": [],
+            "value": "Bold",
+            "description": "Display text as bold",
+            "Type": "bool",
+            "objectType": "CMCadText"
+        },
+        {
+            "name": "Vertical",
+            "parentObject": [],
+            "value": "Vertical",
+            "description": "Display text vertically",
+            "Type": "bool",
+            "objectType": "CMCadText"
+        },
+        {
+            "name": "Clearance",
+            "parentObject": [],
+            "value": "Clearance",
+            "description": "Text clearance",
+            "Type": "double",
+            "objectType": "CMCadText"
+        },
+        {
+            "name": "Height",
+            "parentObject": [],
+            "value": "Height",
+            "description": "Text height",
+            "Type": "double",
+            "objectType": "CMCadText"
+        },
+        {
+            "name": "Angle",
+            "parentObject": [],
+            "value": "Angle",
+            "description": "Text angle",
+            "Type": "double",
+            "objectType": "CMCadText"
+        },
+        {
+            "name": "FixedScale",
+            "parentObject": [],
+            "value": "FixedScale",
+            "description": "Text has fixed scale",
+            "Type": "bool",
+            "objectType": "CMCadText"
+        },
+        {
+            "name": "X1",
+            "parentObject": [],
+            "value": "X1",
+            "description": "Text box corner 1 X position",
+            "Type": "double",
+            "objectType": "CMCadTextBox"
+        },
+        {
+            "name": "Y1",
+            "parentObject": [],
+            "value": "Y1",
+            "description": "Text box corner 1 Y position",
+            "Type": "double",
+            "objectType": "CMCadTextBox"
+        },
+        {
+            "name": "X2",
+            "parentObject": [],
+            "value": "X2",
+            "description": "Text box corner 2 X position",
+            "Type": "double",
+            "objectType": "CMCadTextBox"
+        },
+        {
+            "name": "Y2",
+            "parentObject": [],
+            "value": "Y2",
+            "description": "Text box corner 2 Y position",
+            "Type": "double",
+            "objectType": "CMCadTextBox"
+        },
+        {
+            "name": "Color",
+            "parentObject": [],
+            "value": "Color",
+            "description": "Text box color",
+            "Type": "COLORREF",
+            "objectType": "CMCadTextBox"
+        },
+        {
+            "name": "Angle",
+            "parentObject": [],
+            "value": "Angle",
+            "description": "Text box angle",
+            "Type": "double",
+            "objectType": "CMCadTextBox"
+        },
+        {
+            "name": "Frame",
+            "parentObject": [],
+            "value": "Frame",
+            "description": "Show text box frame",
+            "Type": "bool",
+            "objectType": "CMCadTextBox"
+        },
+        {
+            "name": "Text",
+            "parentObject": [],
+            "value": "Text",
+            "description": "Text to display",
+            "Type": "string",
+            "objectType": "CMCadTextBox"
+        },
+        {
+            "name": "TextFont",
+            "parentObject": [],
+            "value": "TextFont",
+            "description": "Text font",
+            "Type": "string",
+            "objectType": "CMCadTextBox"
+        },
+        {
+            "name": "TextHAlign",
+            "parentObject": [],
+            "value": "TextHAlign",
+            "description": "Text horizontal alignment represented by one of the CAD Horizontal Text Alignment constants",
+            "Type": "constants.CADTextHAlign",
+            "objectType": "CMCadTextBox"
+        },
+        {
+            "name": "TextBold",
+            "parentObject": [],
+            "value": "TextBold",
+            "description": "Display text as bold",
+            "Type": "bool",
+            "objectType": "CMCadTextBox"
+        },
+        {
+            "name": "TextHeight",
+            "parentObject": [],
+            "value": "TextHeight",
+            "description": "Text height",
+            "Type": "double",
+            "objectType": "CMCadTextBox"
         }
     ],
     "methods": [
@@ -436,12 +1349,13 @@
         {
             "name": "CreateObject",
             "parentObject": ["_cvSystem"],
-            "definition": "CreateObject(string class)",
+            "factory": true,
+            "definition": "CreateObject(string className)",
             "value": "CreateObject('cvShape')",
-            "description": "Creates an object of the requested class type. Currently only one object type is supported.",
-            "example": "var tmpl = _cvSystem.CreateObject('cvShape');",
-            "returnType": "Object of the requested type else null on failure.\nCurrent supported values [CVShapeManaged]",
-            "parameterDef": [{"ParamName": "string class", "ParamValue": "Object Type","DataType": "string"}]
+            "description": "Creates an object of the requested class type, or null on failure.",
+            "example": "var tmpl = _cvSystem.CreateObject('cvShape');\nvar line = _cvSystem.CreateObject('cvLine');",
+            "returnType": "Object of the requested type else null on failure.\nSee the classes table for the supported values.",
+            "parameterDef": [{"ParamName": "string className", "ParamValue": "Object class name, one of 'cvShape', 'cvArc', 'cvCircle', 'cvDimension', 'cvLeader', 'cvLine', 'cvRect', 'cvSymbol', 'cvText' or 'cvTextBox'","DataType": "string"}]
         },
         {
             "name": "Degrees",
@@ -1070,6 +1984,393 @@
             "example": "var check = shape.Check(true);\nif ( var != 0 )\n{\n_cvSystem.CopyToClipboard(shape.ToXML());\nalert('Shape Error : ' + check + '\nThe shape has been copied to the clipboard ' +\n'and can be pasted into Notepad for analysis');\n}",
             "returnType": "string - Shape data as XML format",
             "parameterDef": []
+        },
+        {
+            "name": "AddCAD",
+            "parentObject": ["_this", "_cab"],
+            "definition": "AddCAD(int axis, object cad)",
+            "value": "AddCAD(${1:AXIS_}, ${2:cad})",
+            "description": "Add a dynamic 2D CAD object to the current object. Each object keeps an internal list of dynamic CAD objects per axis, displayed the same way as manually created assembly overlay CAD, with the CAD axis origin coinciding with the object.\nA copy of the CAD object is stored, so the same CAD object can be added repeatedly - change its properties between calls rather than creating a new one each time.",
+            "example": "var line = _cvSystem.CreateObject('cvLine');\nif (line !== null)\n{\n    line.Color = 0xff00;\n    for (var r = 0; r < 10; r++)\n    {\n        line.Set(0, r, _this.DX, r);\n        _this.AddCAD(AXIS_XY, line);\n    }\n}",
+            "returnType": "variant - result of the add operation",
+            "parameterDef": [
+                {"ParamName": "int axis", "ParamValue": "The object axis the CAD is drawn on, represented by one of the Shape Axis constants","DataType": "constants.ShapeAxis"},
+                {"ParamName": "object cad", "ParamValue": "A CAD object created with _cvSystem.CreateObject","DataType": "cadObject"}
+            ]
+        },
+        {
+            "name": "SetBy3Pnts",
+            "parentObject": [],
+            "objectType": "CMCadArc",
+            "definition": "SetBy3Pnts(double x1, double y1, double x2, double y2, double x3, double y3)",
+            "value": "SetBy3Pnts(${1:x1}, ${2:y1}, ${3:x2}, ${4:y2}, ${5:x3}, ${6:y3})",
+            "description": "Set an arc by three points, start, point along the arc and end point.",
+            "example": "arc.SetBy3Pnts(2, 2, 5, 5, 8, 2);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x1", "ParamValue": "Arc start X position","DataType": "double"},
+                {"ParamName": "double y1", "ParamValue": "Arc start Y position","DataType": "double"},
+                {"ParamName": "double x2", "ParamValue": "Arc point X position","DataType": "double"},
+                {"ParamName": "double y2", "ParamValue": "Arc point Y position","DataType": "double"},
+                {"ParamName": "double x3", "ParamValue": "Arc end X position","DataType": "double"},
+                {"ParamName": "double y3", "ParamValue": "Arc end Y position","DataType": "double"}
+            ]
+        },
+        {
+            "name": "SetByRadius",
+            "parentObject": [],
+            "objectType": "CMCadArc",
+            "definition": "SetByRadius(double x, double y, double radius, double begangle, double endangle)",
+            "value": "SetByRadius(${1:x}, ${2:y}, ${3:radius}, ${4:begangle}, ${5:endangle})",
+            "description": "Set an arc by center position, radius and start and end angles",
+            "example": "arc.SetByRadius(0, 0, 3.5, 45, 90);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x", "ParamValue": "Arc center X position","DataType": "double"},
+                {"ParamName": "double y", "ParamValue": "Arc center Y position","DataType": "double"},
+                {"ParamName": "double radius", "ParamValue": "Arc radius","DataType": "double"},
+                {"ParamName": "double begangle", "ParamValue": "Arc begin angle (degrees)","DataType": "double"},
+                {"ParamName": "double endangle", "ParamValue": "Arc end angle (degrees)","DataType": "double"}
+            ]
+        },
+        {
+            "name": "Set",
+            "parentObject": [],
+            "objectType": "CMCadCircle",
+            "definition": "Set(double x, double y, double radius)",
+            "value": "Set(${1:x}, ${2:y}, ${3:radius})",
+            "description": "Set a circle by center position and radius",
+            "example": "circle.Set(0, 0, 3.5);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x", "ParamValue": "Center X position","DataType": "double"},
+                {"ParamName": "double y", "ParamValue": "Center Y position","DataType": "double"},
+                {"ParamName": "double radius", "ParamValue": "Circle radius","DataType": "double"}
+            ]
+        },
+        {
+            "name": "SetAligned",
+            "parentObject": [],
+            "objectType": "CMCadDimension",
+            "definition": "SetAligned(double x1, double y1, double x2, double y2, double x3, double y3)",
+            "value": "SetAligned(${1:x1}, ${2:y1}, ${3:x2}, ${4:y2}, ${5:x3}, ${6:y3})",
+            "description": "Set an aligned dimension",
+            "example": "dim.SetAligned(5, 10, 10, 15, 7, 12);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x1", "ParamValue": "Dimension point 1 X","DataType": "double"},
+                {"ParamName": "double y1", "ParamValue": "Dimension point 1 Y","DataType": "double"},
+                {"ParamName": "double x2", "ParamValue": "Dimension point 2 X","DataType": "double"},
+                {"ParamName": "double y2", "ParamValue": "Dimension point 2 Y","DataType": "double"},
+                {"ParamName": "double x3", "ParamValue": "Dimension line X","DataType": "double"},
+                {"ParamName": "double y3", "ParamValue": "Dimension line Y","DataType": "double"}
+            ]
+        },
+        {
+            "name": "SetAngular",
+            "parentObject": [],
+            "objectType": "CMCadDimension",
+            "definition": "SetAngular(double x1, double y1, double x2, double y2, double x3, double y3, double x4, double y4)",
+            "value": "SetAngular(${1:x1}, ${2:y1}, ${3:x2}, ${4:y2}, ${5:x3}, ${6:y3}, ${7:x4}, ${8:y4})",
+            "description": "Set an angular dimension",
+            "example": "dim.SetAngular(5, 10, 10, 15, 7, 12, 9, 14);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x1", "ParamValue": "Dimension intersection X","DataType": "double"},
+                {"ParamName": "double y1", "ParamValue": "Dimension intersection Y","DataType": "double"},
+                {"ParamName": "double x2", "ParamValue": "Dimension point 1 X","DataType": "double"},
+                {"ParamName": "double y2", "ParamValue": "Dimension point 1 Y","DataType": "double"},
+                {"ParamName": "double x3", "ParamValue": "Dimension point 2 X","DataType": "double"},
+                {"ParamName": "double y3", "ParamValue": "Dimension point 2 Y","DataType": "double"},
+                {"ParamName": "double x4", "ParamValue": "Dimension line X","DataType": "double"},
+                {"ParamName": "double y4", "ParamValue": "Dimension line Y","DataType": "double"}
+            ]
+        },
+        {
+            "name": "SetDiameter",
+            "parentObject": [],
+            "objectType": "CMCadDimension",
+            "definition": "SetDiameter(double x1, double y1, double x2, double y2, double x3, double y3)",
+            "value": "SetDiameter(${1:x1}, ${2:y1}, ${3:x2}, ${4:y2}, ${5:x3}, ${6:y3})",
+            "description": "Set a diameter dimension",
+            "example": "dim.SetDiameter(5, 10, 10, 15, 7, 12);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x1", "ParamValue": "Dimension center X","DataType": "double"},
+                {"ParamName": "double y1", "ParamValue": "Dimension center Y","DataType": "double"},
+                {"ParamName": "double x2", "ParamValue": "Dimension arc X","DataType": "double"},
+                {"ParamName": "double y2", "ParamValue": "Dimension arc Y","DataType": "double"},
+                {"ParamName": "double x3", "ParamValue": "Dimension line X","DataType": "double"},
+                {"ParamName": "double y3", "ParamValue": "Dimension line Y","DataType": "double"}
+            ]
+        },
+        {
+            "name": "SetInternal",
+            "parentObject": [],
+            "objectType": "CMCadDimension",
+            "definition": "SetInternal(double x1, double y1, double x2, double y2, double x3, double y3)",
+            "value": "SetInternal(${1:x1}, ${2:y1}, ${3:x2}, ${4:y2}, ${5:x3}, ${6:y3})",
+            "description": "Set an internal dimension",
+            "example": "dim.SetInternal(5, 10, 10, 15, 7, 12);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x1", "ParamValue": "Dimension point 1 X","DataType": "double"},
+                {"ParamName": "double y1", "ParamValue": "Dimension point 1 Y","DataType": "double"},
+                {"ParamName": "double x2", "ParamValue": "Dimension point 2 X","DataType": "double"},
+                {"ParamName": "double y2", "ParamValue": "Dimension point 2 Y","DataType": "double"},
+                {"ParamName": "double x3", "ParamValue": "Dimension line X","DataType": "double"},
+                {"ParamName": "double y3", "ParamValue": "Dimension line Y","DataType": "double"}
+            ]
+        },
+        {
+            "name": "SetLinear",
+            "parentObject": [],
+            "objectType": "CMCadDimension",
+            "definition": "SetLinear(double x1, double y1, double x2, double y2, double x3, double y3)",
+            "value": "SetLinear(${1:x1}, ${2:y1}, ${3:x2}, ${4:y2}, ${5:x3}, ${6:y3})",
+            "description": "Set a linear dimension",
+            "example": "dim.SetLinear(5, 10, 10, 15, 7, 12);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x1", "ParamValue": "Dimension point 1 X","DataType": "double"},
+                {"ParamName": "double y1", "ParamValue": "Dimension point 1 Y","DataType": "double"},
+                {"ParamName": "double x2", "ParamValue": "Dimension point 2 X","DataType": "double"},
+                {"ParamName": "double y2", "ParamValue": "Dimension point 2 Y","DataType": "double"},
+                {"ParamName": "double x3", "ParamValue": "Dimension line X","DataType": "double"},
+                {"ParamName": "double y3", "ParamValue": "Dimension line Y","DataType": "double"}
+            ]
+        },
+        {
+            "name": "SetRadius",
+            "parentObject": [],
+            "objectType": "CMCadDimension",
+            "definition": "SetRadius(double x1, double y1, double x2, double y2, double x3, double y3)",
+            "value": "SetRadius(${1:x1}, ${2:y1}, ${3:x2}, ${4:y2}, ${5:x3}, ${6:y3})",
+            "description": "Set a radius dimension",
+            "example": "dim.SetRadius(5, 10, 10, 10, 7, 12);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x1", "ParamValue": "Dimension center X","DataType": "double"},
+                {"ParamName": "double y1", "ParamValue": "Dimension center Y","DataType": "double"},
+                {"ParamName": "double x2", "ParamValue": "Dimension arc X","DataType": "double"},
+                {"ParamName": "double y2", "ParamValue": "Dimension arc Y","DataType": "double"},
+                {"ParamName": "double x3", "ParamValue": "Dimension line X","DataType": "double"},
+                {"ParamName": "double y3", "ParamValue": "Dimension line Y","DataType": "double"}
+            ]
+        },
+        {
+            "name": "SetSimple",
+            "parentObject": [],
+            "objectType": "CMCadDimension",
+            "definition": "SetSimple(double x1, double y1, double x2, double y2)",
+            "value": "SetSimple(${1:x1}, ${2:y1}, ${3:x2}, ${4:y2})",
+            "description": "Set a simple dimension",
+            "example": "dim.SetSimple(5, 10, 7, 10);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x1", "ParamValue": "Dimension point 1 X","DataType": "double"},
+                {"ParamName": "double y1", "ParamValue": "Dimension point 1 Y","DataType": "double"},
+                {"ParamName": "double x2", "ParamValue": "Dimension point 2 X","DataType": "double"},
+                {"ParamName": "double y2", "ParamValue": "Dimension point 2 Y","DataType": "double"}
+            ]
+        },
+        {
+            "name": "AddNode",
+            "parentObject": [],
+            "objectType": "CMCadLeader",
+            "definition": "AddNode(double x, double y)",
+            "value": "AddNode(${1:x}, ${2:y})",
+            "description": "Add a node to the leader tail",
+            "example": "leader.AddNode(_this.DX / 2 + 10, _this.DY / 2 + 10);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x", "ParamValue": "Node X position","DataType": "double"},
+                {"ParamName": "double y", "ParamValue": "Node Y position","DataType": "double"}
+            ]
+        },
+        {
+            "name": "SetOrigin",
+            "parentObject": [],
+            "objectType": "CMCadLeader",
+            "definition": "SetOrigin(double x, double y)",
+            "value": "SetOrigin(${1:x}, ${2:y})",
+            "description": "Set the leader origin coordinate.",
+            "example": "leader.SetOrigin(_this.DX / 2, _this.DY / 2);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x", "ParamValue": "Leader origin X position","DataType": "double"},
+                {"ParamName": "double y", "ParamValue": "Leader origin Y position","DataType": "double"}
+            ]
+        },
+        {
+            "name": "GetAngle",
+            "parentObject": [],
+            "objectType": "CMCadLine",
+            "definition": "GetAngle()",
+            "value": "GetAngle()",
+            "description": "Returns the direction angle of the line in degrees.",
+            "example": "var dir = line.GetAngle();",
+            "returnType": "double - direction angle of the line in degrees",
+            "parameterDef": []
+        },
+        {
+            "name": "GetLength",
+            "parentObject": [],
+            "objectType": "CMCadLine",
+            "definition": "GetLength()",
+            "value": "GetLength()",
+            "description": "Returns the length of the line.",
+            "example": "var length = line.GetLength();",
+            "returnType": "double - length of the line",
+            "parameterDef": []
+        },
+        {
+            "name": "Set",
+            "parentObject": [],
+            "objectType": "CMCadLine",
+            "definition": "Set(double x1, double y1, double x2, double y2)",
+            "value": "Set(${1:x1}, ${2:y1}, ${3:x2}, ${4:y2})",
+            "description": "Set a line by start and end position.",
+            "example": "line.Set(0, 0, 10, 10);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x1", "ParamValue": "Line start X position","DataType": "double"},
+                {"ParamName": "double y1", "ParamValue": "Line start Y position","DataType": "double"},
+                {"ParamName": "double x2", "ParamValue": "Line end X position","DataType": "double"},
+                {"ParamName": "double y2", "ParamValue": "Line end Y position","DataType": "double"}
+            ]
+        },
+        {
+            "name": "SetByPolar",
+            "parentObject": [],
+            "objectType": "CMCadLine",
+            "definition": "SetByPolar(double x, double y, double angle, double length)",
+            "value": "SetByPolar(${1:x}, ${2:y}, ${3:angle}, ${4:length})",
+            "description": "Set a line by origin and direction angle and length.",
+            "example": "line.SetByPolar(0, 0, 45, 10);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x", "ParamValue": "Line origin (start) X position","DataType": "double"},
+                {"ParamName": "double y", "ParamValue": "Line origin (start) Y position","DataType": "double"},
+                {"ParamName": "double angle", "ParamValue": "Direction angle of the line in degrees","DataType": "double"},
+                {"ParamName": "double length", "ParamValue": "Length of line","DataType": "double"}
+            ]
+        },
+        {
+            "name": "GetHeight",
+            "parentObject": [],
+            "objectType": "CMCadRect",
+            "definition": "GetHeight()",
+            "value": "GetHeight()",
+            "description": "Returns the height of the rectangle.",
+            "example": "var height = rect.GetHeight();",
+            "returnType": "double - rectangle height",
+            "parameterDef": []
+        },
+        {
+            "name": "GetWidth",
+            "parentObject": [],
+            "objectType": "CMCadRect",
+            "definition": "GetWidth()",
+            "value": "GetWidth()",
+            "description": "Returns the width of the rectangle.",
+            "example": "var width = rect.GetWidth();",
+            "returnType": "double - rectangle width",
+            "parameterDef": []
+        },
+        {
+            "name": "SetByCorner",
+            "parentObject": [],
+            "objectType": "CMCadRect",
+            "definition": "SetByCorner(double x1, double y1, double x2, double y2)",
+            "value": "SetByCorner(${1:x1}, ${2:y1}, ${3:x2}, ${4:y2})",
+            "description": "Set a rectangle by opposing corner coordinates.",
+            "example": "rect.SetByCorner(0, 0, _this.DX, _this.DY);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x1", "ParamValue": "Rectangle corner 1 X position","DataType": "double"},
+                {"ParamName": "double y1", "ParamValue": "Rectangle corner 1 Y position","DataType": "double"},
+                {"ParamName": "double x2", "ParamValue": "Rectangle corner 2 X position","DataType": "double"},
+                {"ParamName": "double y2", "ParamValue": "Rectangle corner 2 Y position","DataType": "double"}
+            ]
+        },
+        {
+            "name": "SetBySize",
+            "parentObject": [],
+            "objectType": "CMCadRect",
+            "definition": "SetBySize(double x, double y, double width, double height)",
+            "value": "SetBySize(${1:x}, ${2:y}, ${3:width}, ${4:height})",
+            "description": "Set a rectangle by corner position and width and height.",
+            "example": "rect.SetBySize(0, 0, 45, 10);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x", "ParamValue": "Rectangle corner X position","DataType": "double"},
+                {"ParamName": "double y", "ParamValue": "Rectangle corner Y position","DataType": "double"},
+                {"ParamName": "double width", "ParamValue": "Rectangle width","DataType": "double"},
+                {"ParamName": "double height", "ParamValue": "Rectangle height","DataType": "double"}
+            ]
+        },
+        {
+            "name": "Insert",
+            "parentObject": [],
+            "objectType": "CMCadSymbol",
+            "definition": "Insert(double x, double y, string path, double scale[optional])",
+            "value": "Insert(${1:x}, ${2:y}, '${3:path}'${4:, scale[optional]})",
+            "description": "Insert a symbol by position and path",
+            "example": "symbol.Insert(5, 10, 'Sheet Number');",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x", "ParamValue": "Insert X position","DataType": "double"},
+                {"ParamName": "double y", "ParamValue": "Insert Y position","DataType": "double"},
+                {"ParamName": "string path", "ParamValue": "Symbol path","DataType": "string"},
+                {"ParamName": "double scale[optional]", "ParamValue": "Optional scale for the symbol","DataType": "double"}
+            ]
+        },
+        {
+            "name": "SetOrigin",
+            "parentObject": [],
+            "objectType": "CMCadText",
+            "definition": "SetOrigin(double x, double y)",
+            "value": "SetOrigin(${1:x}, ${2:y})",
+            "description": "Set the text origin coordinate.",
+            "example": "text.SetOrigin(_this.DX / 2, _this.DY / 2);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x", "ParamValue": "Text origin X position","DataType": "double"},
+                {"ParamName": "double y", "ParamValue": "Text origin Y position","DataType": "double"}
+            ]
+        },
+        {
+            "name": "SetByCorner",
+            "parentObject": [],
+            "objectType": "CMCadTextBox",
+            "definition": "SetByCorner(double x1, double y1, double x2, double y2)",
+            "value": "SetByCorner(${1:x1}, ${2:y1}, ${3:x2}, ${4:y2})",
+            "description": "Set a text box by opposing corner coordinates.",
+            "example": "txtbox.SetByCorner(0, 0, _this.DX, _this.DY);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x1", "ParamValue": "Text box corner 1 X position","DataType": "double"},
+                {"ParamName": "double y1", "ParamValue": "Text box corner 1 Y position","DataType": "double"},
+                {"ParamName": "double x2", "ParamValue": "Text box corner 2 X position","DataType": "double"},
+                {"ParamName": "double y2", "ParamValue": "Text box corner 2 Y position","DataType": "double"}
+            ]
+        },
+        {
+            "name": "SetBySize",
+            "parentObject": [],
+            "objectType": "CMCadTextBox",
+            "definition": "SetBySize(double x, double y, double width, double height)",
+            "value": "SetBySize(${1:x}, ${2:y}, ${3:width}, ${4:height})",
+            "description": "Set a text box by corner position and width and height.",
+            "example": "txtbox.SetBySize(0, 0, 45, 10);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "double x", "ParamValue": "Text box corner X position","DataType": "double"},
+                {"ParamName": "double y", "ParamValue": "Text box corner Y position","DataType": "double"},
+                {"ParamName": "double width", "ParamValue": "Text box width","DataType": "double"},
+                {"ParamName": "double height", "ParamValue": "Text box height","DataType": "double"}
+            ]
         }
     ]
 }

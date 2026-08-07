@@ -92,6 +92,20 @@ export interface UCSJSObject {
     Type?: string;
 }
 
+/**
+ * A Cabinet Vision class that `_cvSystem.CreateObject` can hand back. `name` is the interface
+ * emitted into cv-api.d.ts and the value that methods and properties reference through
+ * `objectType`; `createName` is the string CreateObject is called with. `cad` marks the 2D CAD
+ * entities, which are the classes `AddCAD` accepts.
+ */
+export interface UCSJSClass {
+    name: string;
+    createName: string;
+    cad?: boolean;
+    description: string;
+    example?: string;
+}
+
 export interface UCSJSSystemFunction {
     name: string;
     definition: string;
@@ -124,6 +138,8 @@ export interface UCSJSSystemMethod {
     returnType: string;
     parameterDef: UCSJSParameterDef[];
     objectType?:string;
+    /** Emit one overload per entry in `classes`, keyed on the class name literal (CreateObject). */
+    factory?: boolean;
 }
 
 export interface UCSJSSystemConstants {
@@ -137,10 +153,18 @@ export interface UCSJSSystemConstants {
     assemblyEndTypes: string[];
     ShapeSideType: string[];
     ShapeAxis: string[];
+    CADLineType: string[];
+    CADLineWidth: string[];
+    CADTextVAlign: string[];
+    CADTextHAlign: string[];
+    CADArrowType: string[];
+    CADDimTextVPosition: string[];
+    CADDimTextHPosition: string[];
 }
 
 export interface UCSJSSystemData {
     objects: UCSJSObject[];
+    classes: UCSJSClass[];
     constants: UCSJSSystemConstants;
     properties: UCSJSSystemProperty[];
     functions: UCSJSSystemFunction[];

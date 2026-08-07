@@ -94,7 +94,8 @@ Addition to VSCode's built in features, this extension provides these features.
 Because mirrored UCS:JS files are real JavaScript files in your workspace, VS Code's own TypeScript service handles them. The whole Cabinet Vision API is described to it in a generated definition file, so the standard JavaScript features work against the CV API and your own libraries exactly as they would in an ordinary JavaScript project.
 
 - **Code completions**
-  - All documented constants, types and functions for UCS:JS, along with the CVAsmManaged and CVShapeManaged objects and their properties and methods.
+  - All documented constants, types and functions for UCS:JS, along with the CVAsmManaged, CVShapeManaged and 2D CAD objects and their properties and methods.
+  - `_cvSystem.CreateObject()` is typed per class name, so `CreateObject('cvArc')` offers arc members, `CreateObject('cvDimension')` offers dimension members, and so on.
   - Completion is filtered by type, so `_this.` offers only CVAsmManaged members. This applies to the built in objects like `_this` and `_cab` and equally to your own variables assigned from them.
   - Cabinet Vision JavaScript libraries are offered project wide, with each library's public properties and methods.
   - Parameters are filled in automatically when a method is picked from the list, for library methods as well as documented Cabinet Vision methods. Constant arguments show their group as the placeholder, for example `ModifyParameter(name, PARMOD_, PARSTYLE_)`.
