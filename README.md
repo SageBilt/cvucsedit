@@ -19,6 +19,7 @@ This extension adds features to VS Code for loading, editing and saving Cabinet 
 - Syntax error checking.
 - User defined variable references.
 - User defined variable definitions.
+- UCS code is mirrored as real files in your workspace, so it can be searched across every UCS at once, opened by any external tool, and read and edited by AI coding agents.
 
 #### Supported UCS macro types
 - **UCS:M** Legacy UCS syntax
@@ -36,6 +37,12 @@ Addition to VSCode's built in features, this extension provides these features.
 - **UCS & JavaScript library tree views**
   - UCS opens when clicked in tree view.
   - Search, clear search and reload list buttons for each list.
+- **Mirrored workspace folder**
+  - Every UCS and library is written as a real file under `.cvucs/<Database>/` in your workspace, as `<Name>.ucs.js` or `<Name>.ucsm`. This is what allows UCS code to be searched across every UCS at once, opened by external tools, and read and edited by AI coding agents.
+  - Sync is two way. Saving in the editor, an AI agent writing the file, and an external tool writing the file all take the same route back to the database.
+  - On startup disk and database are reconciled. A change made only on disk is pushed to the database, a change made only in Cabinet Vision rewrites the file, and a file changed on both sides is reported as a conflict with neither side overwritten.
+  - The folder ignores itself in git, so your own `.gitignore` is never touched.
+  - Creating or deleting a UCS from the filesystem is not supported — use Cabinet Vision to add or remove a UCS.
 - **Syntax highlighting**
   - Different elements like keywords, constraints, data types etc. are styled accordingly.
   - Syntax highlighting follows VSCode theming and can be customized by the user.
@@ -51,7 +58,7 @@ Addition to VSCode's built in features, this extension provides these features.
   - The existence and location of user defined variables (symbols) can be displayed for UCSM. 
   - Definitions and References for JavaScript library objects and CVAsmManaged object symbols can also be shown.
 - **Language server**
-    The extension uses a language server (LSP) to handle autocomplete, hover and references for declared variables for both **UCS:M** and **UCS:JS**. Using an LSP improves user experience as it runs under a separate process and reduces delay for the user typing.
+    The extension uses a language server (LSP) to handle autocomplete, hover and references for declared variables for **UCS:M**, and to provide the Cabinet Vision specific completions inside **UCS:JS** string arguments. Using an LSP improves user experience as it runs under a separate process and reduces delay for the user typing. The rest of **UCS:JS** is handled by VS Code's own JavaScript/TypeScript service, working from a generated description of the Cabinet Vision API.
 
 ### Language Specific Features
 
@@ -84,29 +91,25 @@ Addition to VSCode's built in features, this extension provides these features.
   
 #### UCS:JS language features
 
-In additional to the standard language features for JavaScript provided by VSCode, the below UCSJS features exist.
+Because mirrored UCS:JS files are real JavaScript files in your workspace, VS Code's own TypeScript service handles them. The whole Cabinet Vision API is described to it in a generated definition file, so the standard JavaScript features work against the CV API and your own libraries exactly as they would in an ordinary JavaScript project.
 
-- **Snippet completion**
-  - Snippets for
-    - new part
-    - new route
-    - new dado
-    - new hole
-    - new linebore
-    - new connection
 - **Code completions**
-  - All documented constants, types, functions for UCSJS have been added to the code completion for JavaScript along with the CVAsmManaged objects with their associated properties and methods.
-  - Context aware code completion exists based on the parameter type of specific CVAsmManaged object methods. For example when the cursor is placed inside a string for the method Evaluate(), which evaluates an equation written in UCSM, the completion list will populate USCM parameters. 
-  - Context aware code completion also exists for CVAsmManaged object so that only the completion list is filtered to provide CVAsmManaged methods and properties. This applies to both the inbuilt CVAsmManaged object like "_this" & "_cab" and also symbols which are assigned to these CVAsmManaged objects.
-  - Additionally context aware code completion also exists for Cabinet Vision JavaScript libraries so that any public properties or methods will be provided for these objects.
+  - All documented constants, types and functions for UCS:JS, along with the CVAsmManaged and CVShapeManaged objects and their properties and methods.
+  - Completion is filtered by type, so `_this.` offers only CVAsmManaged members. This applies to the built in objects like `_this` and `_cab` and equally to your own variables assigned from them.
+  - Cabinet Vision JavaScript libraries are offered project wide, with each library's public properties and methods.
+  - Parameters are filled in automatically when a method is picked from the list, for library methods as well as documented Cabinet Vision methods. Constant arguments show their group as the placeholder, for example `ModifyParameter(name, PARMOD_, PARSTYLE_)`.
+  - Context aware completion inside string arguments. When the cursor is placed inside the string of `Evaluate()`, which evaluates an equation written in UCS:M, the list is populated with UCS:M parameters. Arguments that take a material or a connection are populated from your database, and arguments that take a constant are narrowed to just that group.
 - **Hover information**
-  - Same as UCSM above but specific to the Cabinet Vision documented JavaScript constants, types, functions and CVAsmManaged objects with their associated properties and methods.
+  - The Cabinet Vision documentation and an example for the constant, type, function, property or method under the cursor, and the inferred type of your own variables.
 - **Find References**
-  - References are provided for JavaScript library objects (and their associated properties and methods) and CVAsmManaged object symbols.
+  - References for anything you declare, including library objects and their properties and methods, across every UCS in the mirror folder.
 - **Jump to definition**
-  - Definitions are provided for JavaScript library objects (and their associated properties and methods) and CVAsmManaged object symbols.
+  - Definitions for anything you declare, and for the Cabinet Vision API itself.
+- **Rename**
+  - Rename a symbol (F2) and every use of it is updated, including a library method renamed across every UCS that calls it.
 - **Error checking (Diagnostics)**
-  - Error checking for UCSM context aware code is provided (see error checking under UCS:M language features above for more details).
+  - Error checking for UCS:M context aware code is provided (see error checking under UCS:M language features above for more details).
+  - JavaScript type checking against the Cabinet Vision API is available but off by default, as it can be noisy on existing code. Enable it with the `cvucsedit.CheckJs` setting.
 
 ## Requirements
 
@@ -115,13 +118,15 @@ Because UCS's are edited outside of Cabinet Vision, the user will need to force 
 This can be done by simply opening the UCS editor window and making any change. This could be just disabling and then re-enabling any UCS.
 Alternatively the job can be closed and re-opened.
 
+#### An open folder
+
+UCS code is mirrored into the open workspace folder, which is created automatically. If no folder is open the mirror falls back to a location outside the workspace and a warning is shown — editing still works, but search, AI agents and the JavaScript language features cannot reach the files, so opening a folder is recommended.
+
 ## dependencies
 - vscode-languageclient
 - vscode-languageserver
 - vscode-languageserver-protocol
 - mssql
-- npm install @babel/parser
-- npm install @babel/traverse
 
 ## Extension Settings
 
@@ -129,6 +134,8 @@ Alternatively the job can be closed and re-opened.
 
 * `cvucsedit.Server`: The Cabinet Vision database SQL server instance name (defaults to **localhost\CV24**).
 * `cvucsedit.Database`: The name of the Cabinet Vision SQL database (defaults to **CVData**).
+* `cvucsedit.MirrorFolder`: The folder inside the workspace that UCS code is mirrored into (defaults to **.cvucs**).
+* `cvucsedit.CheckJs`: Report JavaScript type errors in mirrored UCS:JS files (defaults to **false**). Completion, hover, go to definition and rename work either way; enabling this also surfaces type errors, which can be noisy.
 
 #### Available Commands
 
@@ -146,6 +153,31 @@ Please report all issues on [Github](https://github.com/SageBilt/cvucsedit/issue
 
 
 ## Release Notes
+
+#### 2.0.0
+
+A major release. UCS code is no longer held in virtual documents — every UCS is now mirrored as a real file in the workspace, and UCS:JS is served by VS Code's own TypeScript service instead of by this extension's language server.
+
+##### Added
+- **Mirrored workspace folder**
+  - Every UCS and library is written as a real file under `.cvucs/<Database>/`, so UCS code can be searched across every UCS at once, opened by any external tool, and read and edited by AI coding agents.
+  - Sync is two way, and disk and database are reconciled on startup. A file changed on both sides is reported as a conflict with neither side overwritten.
+  - The folder ignores itself in git, so your own `.gitignore` is never touched.
+- **Full TypeScript language support for UCS:JS**
+  - Completion, hover, go to definition, find all references, rename and optional type checking, covering the whole Cabinet Vision API, your own libraries and your own code alike — including renaming a library method across every UCS that calls it.
+  - Parameters are filled in automatically when a method is picked from the completion list, for library methods as well as documented Cabinet Vision methods. Constant arguments show their group as the placeholder, e.g. `ModifyParameter(name, PARMOD_, PARSTYLE_)`.
+- New settings `cvucsedit.MirrorFolder` and `cvucsedit.CheckJs`.
+
+##### Changed
+- UCS:JS completion, hover, definitions and references now come from TypeScript. The extension's language server keeps only what TypeScript cannot know: UCS:M completion and error checking inside string arguments such as `Evaluate()`, live material and connection lists, and constant groups narrowed to the argument being typed.
+- An open folder is strongly recommended. With no folder open the mirror falls back to a location outside the workspace, where search, AI agents and the JavaScript language features cannot reach it.
+
+##### Removed
+- The extension no longer modifies your global `editor.semanticTokenColorCustomizations` setting.
+- UCS:JS snippets (new part, new route, new dado, new hole, new linebore, new connection), superseded by TypeScript completion, which covers the entire API rather than a fixed list. UCS:M snippets are unchanged.
+
+##### Known limitations
+- Creating or deleting a UCS from the filesystem is not supported. Adding or deleting a file in the mirror folder does not add or delete the database row.
 
 #### 1.1.0
 
