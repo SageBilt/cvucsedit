@@ -1,5 +1,5 @@
-import { Position, Uri } from 'vscode';
-import { Range, CompletionItemKind } from 'vscode-languageserver/node';
+import { Uri } from 'vscode';
+import { Range } from 'vscode-languageserver/node';
 
 // Define an interface for the language configuration
 export interface LanguageConfig {
@@ -92,6 +92,20 @@ export interface UCSJSObject {
     Type?: string;
 }
 
+/**
+ * A Cabinet Vision class that `_cvSystem.CreateObject` can hand back. `name` is the interface
+ * emitted into cv-api.d.ts and the value that methods and properties reference through
+ * `objectType`; `createName` is the string CreateObject is called with. `cad` marks the 2D CAD
+ * entities, which are the classes `AddCAD` accepts.
+ */
+export interface UCSJSClass {
+    name: string;
+    createName: string;
+    cad?: boolean;
+    description: string;
+    example?: string;
+}
+
 export interface UCSJSSystemFunction {
     name: string;
     definition: string;
@@ -124,6 +138,8 @@ export interface UCSJSSystemMethod {
     returnType: string;
     parameterDef: UCSJSParameterDef[];
     objectType?:string;
+    /** Emit one overload per entry in `classes`, keyed on the class name literal (CreateObject). */
+    factory?: boolean;
 }
 
 export interface UCSJSSystemConstants {
@@ -136,10 +152,19 @@ export interface UCSJSSystemConstants {
     objectTypes: string[];
     assemblyEndTypes: string[];
     ShapeSideType: string[];
+    ShapeAxis: string[];
+    CADLineType: string[];
+    CADLineWidth: string[];
+    CADTextVAlign: string[];
+    CADTextHAlign: string[];
+    CADArrowType: string[];
+    CADDimTextVPosition: string[];
+    CADDimTextHPosition: string[];
 }
 
 export interface UCSJSSystemData {
     objects: UCSJSObject[];
+    classes: UCSJSClass[];
     constants: UCSJSSystemConstants;
     properties: UCSJSSystemProperty[];
     functions: UCSJSSystemFunction[];
@@ -219,47 +244,5 @@ export interface UCSJSSystemData {
     caseStandards: CaseStandards[];
     doors : Doors[];
     connections: Connections[];
-  }
-
-  export interface ElementParam {
-    name: string;
-    optional?: boolean | null;
-  }
-
-  export interface ClassReference {
-    elementName: string;
-    uri: string;
-    range: Range;
-  }
-
-  export interface classElement {
-    name: string;
-    compKind: CompletionItemKind;
-    params?: ElementParam[] | undefined;
-    type: string;
-    range: Range;
-}
-
-  export interface docClassRef {
-      name: string;
-      uri: string;
-      classElements: classElement[];
-      elementReferences: ClassReference[];
-      classReferences: ClassReference[];
-      isEnabled: boolean;
-  }
-
-  export interface CVManaged {
-    variableName: string;
-    objectName: string;
-    type: string;
-    uri: string;
-    range: Range;
-  }
-
-  export interface docReferences {
-    classRefs : docClassRef[];
-    CVAsmManagedRefs : CVManaged[];
-    CVShapeManagedRefs : CVManaged[];
   }
 

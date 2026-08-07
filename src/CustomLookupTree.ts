@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { UCSOpenContex } from './interfaces';
+import { SentinelKind } from './MirrorFileStore';
 
 interface UCSFileType {
   FileTypeName: string,
@@ -45,11 +46,22 @@ export function GetFileType(UCSTypeID: number, MacroType: number, Disabled: bool
   }
 }
 
+export function IsJSFileType(FileType: UCSFileType): boolean {
+  return ["UCSJS", "UCSJS-Disabled"].includes(FileType.FileTypeName);
+}
+
+/** Which sentinel lines the mirrored file carries. See MirrorFileStore for what each kind means. */
+export function GetSentinelKind(FileType: UCSFileType, isJSLibrary: boolean): SentinelKind {
+  if (!IsJSFileType(FileType)) return 'ucsm';
+  return isJSLibrary ? 'jsLibrary' : 'js';
+}
+
 export class CustomTreeItem extends vscode.TreeItem {
-    public docURI: vscode.Uri;
     constructor(
       public readonly UCSID: number,
       public readonly UCSName: string,
+      /** Real file: URI inside the mirror. Assigned by MirrorFileStore, which owns path layout. */
+      public readonly docURI: vscode.Uri,
       public readonly label: string,
       public readonly FileType: UCSFileType,
       public readonly isJSLibrary: boolean,
@@ -60,9 +72,6 @@ export class CustomTreeItem extends vscode.TreeItem {
     ) {
       super(label, collapsibleState);
       // Optional: Add a tooltip or description
-      this.docURI = vscode.Uri.parse(`cvucs:/${UCSName}.${FileType.Extension}`);
-
-  
       if (this.searchCodeLine == -1) {
         this.tooltip = Code.split("\n")[0];//`Type: ${this.extensionType}`;
         this.description = Code.split("\n")[0]; // Displays next to the label
@@ -85,7 +94,6 @@ export class LookupTreeDataProvider implements vscode.TreeDataProvider<CustomTre
   //private results: { label: string; extensionType: string }[] = [];
   private results: CustomTreeItem[] = [];
   private context: vscode.ExtensionContext;
-  private documentToTreeItem = new Map<string, CustomTreeItem>();
   private searchTerm: string = ''; // Store the current search term
   private filteredResults: CustomTreeItem[] = []; // Store filtered items
 
@@ -143,7 +151,8 @@ export class LookupTreeDataProvider implements vscode.TreeDataProvider<CustomTre
         this.filteredResults.map(result => {
           const treeItem = new CustomTreeItem(
             result.UCSID,
-            result.label,
+            result.UCSName,
+            result.docURI,
             result.label,
             result.FileType,
             result.isJSLibrary,
@@ -172,7 +181,8 @@ export class LookupTreeDataProvider implements vscode.TreeDataProvider<CustomTre
           if (line.toLowerCase().includes(this.searchTerm)) {
             const childItem = new CustomTreeItem(
               element.UCSID, // Unique ID
-              element.label,
+              element.UCSName,
+              element.docURI,
               line.trim(),
               element.FileType,
               element.isJSLibrary,
@@ -203,13 +213,10 @@ export class LookupTreeDataProvider implements vscode.TreeDataProvider<CustomTre
 
   getTreeItemByDocumentUri(uri: string): CustomTreeItem | undefined {
     return this.results.find(item => item.docURI.toString() == uri);
-
-    return this.documentToTreeItem.get(uri);
   }
 
-  // Method to store the mapping
-  storeTreeItem(documentUri: string, treeItem: CustomTreeItem) {
-    this.documentToTreeItem.set(documentUri, treeItem);
+  getTreeItemByUCSID(UCSID: number): CustomTreeItem | undefined {
+    return this.results.find(item => item.UCSID === UCSID);
   }
 
   // Method to refresh the Tree View

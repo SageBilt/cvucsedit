@@ -34,9 +34,19 @@ var __importStar = (this && this.__importStar) || (function () {
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ucsmValidation = void 0;
+exports.dataTypeAlternatives = dataTypeAlternatives;
 const node_1 = require("vscode-languageserver/node");
 const fs = __importStar(require("fs"));
 const CONSTANTS = __importStar(require(".././constants"));
+/**
+ * `parameterDef[].DataType` is normally one value of a closed vocabulary, but a parameter that
+ * genuinely accepts more than one lists them separated by `|` - `ModifyParameter`'s `Object value`
+ * is a description string, a parameter type constant or a parameter style constant depending on
+ * the preceding argument. Every consumer matches on the alternatives, not on the raw string.
+ */
+function dataTypeAlternatives(raw) {
+    return (raw ?? '').split('|').map(t => t.trim()).filter(t => t.length > 0);
+}
 var dataTypeCheck;
 (function (dataTypeCheck) {
     dataTypeCheck[dataTypeCheck["any"] = 0] = "any";
@@ -89,7 +99,7 @@ class ucsmValidation {
     }
     FindUCSJSSyntaxMethods() {
         this.ucsjsMethods.forEach((Method) => {
-            if (Method.parameterDef?.some(param => param.DataType == "ucsmSyntax"))
+            if (Method.parameterDef?.some(param => dataTypeAlternatives(param.DataType).includes("ucsmSyntax")))
                 this.UCSJSSyntaxMethods.push(Method);
         });
     }
@@ -136,7 +146,7 @@ class ucsmValidation {
                     if (char === quoteChar && argsSoFar[i - 1] !== '\\') {
                         inString = false; // End of string
                         //this.connection.console.log(`paramDataType "${paramDataType}" insideStr "${lineText.substring(StrStart,argsStart + i)}"`);
-                        if (paramDataType == 'ucsmSyntax') {
+                        if (dataTypeAlternatives(paramDataType).includes('ucsmSyntax')) {
                             const filteredText = lineText.substring(StrStart, argsStart + i);
                             const startOffset = StrStart;
                             return { filteredText: filteredText, startOffset: StrStart };

@@ -2,19 +2,12 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as path from 'path';
 import * as vscode from 'vscode';
-import * as CLT from './CustomLookupTree';
 import { SQLScriptProvider } from './SQLScriptProvider';
 import { LanguageClientWrapper } from './client/client';
 import { CustomLanguageFoldingProvider } from './ucsmFoldingProvider';
 import { UCSOpenContex } from './interfaces';
 
-interface SemanticTokenColorCustomizations {
-    enabled?: boolean;
-    rules?: { [key: string]: string | { foreground?: string; bold?: boolean; italic?: boolean } };
-  }
-
-
-let clients: LanguageClientWrapper[] = [];
+const clients: LanguageClientWrapper[] = [];
 
 export async function activate(context: vscode.ExtensionContext) {
 
@@ -25,28 +18,34 @@ export async function activate(context: vscode.ExtensionContext) {
     const SQLProvider = new SQLScriptProvider(context);
     await SQLProvider.loadSideBarMenus();
     const dynamicData = await SQLProvider.loadDBVariables();
+    await SQLProvider.writeProjectFiles();
+
+    const mirrorRoot = SQLProvider.mirror.globBase();
 
     const UCSMClient = new LanguageClientWrapper({
             languageId: 'ucsm',
             serverModulePath: path.join('out','server', 'server.js'),
-            fileExtension: '.ucsm'
+            fileExtension: '.ucsm',
+            mirrorRoot
             },
             context,
-            SQLProvider,
             dynamicData
         );
-    UCSMClient.start(context); 
+    clients.push(UCSMClient);
+    UCSMClient.start(context);
 
+    // Registered against 'javascript' because mirrored UCS:JS files really are JavaScript. The glob
+    // keeps this server off every other JavaScript document in the window.
     const UCSJSClient = new LanguageClientWrapper({
         languageId: 'javascript',
         serverModulePath: path.join('out','server', 'server.js'),
-        fileExtension: '.ucsjs'
+        fileExtension: '.ucs.js',
+        mirrorRoot
         },
         context,
-        SQLProvider,
         dynamicData
     );
-
+    clients.push(UCSJSClient);
     UCSJSClient.start(context);
 
 
@@ -63,11 +62,17 @@ export async function activate(context: vscode.ExtensionContext) {
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('cvucsedit.refreshUCSList',async () => SQLProvider.loadUCSListSideBarMenu())
+        vscode.commands.registerCommand('cvucsedit.refreshUCSList',async () => {
+            await SQLProvider.loadUCSListSideBarMenu();
+            await SQLProvider.writeProjectFiles();
+        })
     );
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('cvucsedit.refreshUCSLibList',async () => SQLProvider.loadUCSLibraryListSideBarMenu())
+        vscode.commands.registerCommand('cvucsedit.refreshUCSLibList',async () => {
+            await SQLProvider.loadUCSLibraryListSideBarMenu();
+            await SQLProvider.writeProjectFiles();
+        })
     );
 
     context.subscriptions.push(
@@ -91,37 +96,8 @@ export async function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('cvucsedit.clearSearchUCSLibList', async () => SQLProvider.clearFilterUCSList(true))
     );
 
-    vscode.workspace.onDidSaveTextDocument( async (document) => SQLProvider.saveUCS(document));
-
-    //Clean up document on close
-    context.subscriptions.push(
-        vscode.workspace.onDidCloseTextDocument((document) => {
-          const key = `treeItem:${document.uri.toString()}`;
-          context.workspaceState.update(key, undefined); // Clear the entry
-        })
-    );
-
-
-    /*Below modifies the users semanticTokenColorCustomizations for JS UCS Libraries*/
-    const config = vscode.workspace.getConfiguration('editor');
-    const current: SemanticTokenColorCustomizations = config.get('semanticTokenColorCustomizations') || {};
-  
-    config.update(
-            'semanticTokenColorCustomizations',
-            {
-            ...current,
-            enabled: true,
-            rules: {
-                ...(current.rules || {}), // Now TypeScript knows rules is optional
-                'UCSJSLibrary': '#d19404'
-            }
-            },
-            vscode.ConfigurationTarget.Global
-        ).then(
-            () => console.log('Semantic token colors updated'),
-            (err) => console.error('Failed to update semantic token colors:', err)
-    );
-
+    // Saving is not hooked here: MirrorFileStore's file watcher is the single write path to the
+    // database, so an editor save and a write by an AI agent or external tool behave identically.
 }
 
 export function deactivate() {
