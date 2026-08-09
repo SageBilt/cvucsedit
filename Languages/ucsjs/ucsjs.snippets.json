@@ -104,6 +104,40 @@
         "${1:NewConnection}.SetParameter('_CONNREV', ${15:false}, VAL_BOOL);"
     ],
     "description": "Creates a new Connection with customizable name"
+  },
+  "NewHardware": {
+    "prefix": "NewHardware",
+    "body": [
+        "const ${1:NewHardware} = _this.CreateChild(OBJ_HARDWARE, '${2:hardware name}'${3:, string description[optional]});",
+        "${1:NewHardware}.DX = ${4:0};",
+        "${1:NewHardware}.DY = ${5:0};",
+        "${1:NewHardware}.DZ = ${6:0};",
+        "${1:NewHardware}.X = ${7:0};",
+        "${1:NewHardware}.Y = ${8:0};",
+        "${1:NewHardware}.Z = ${9:0};",
+        "${1:NewHardware}.AX = ${10:0};",
+        "${1:NewHardware}.AY = ${11:0};",
+        "${1:NewHardware}.AZ = ${12:0};"
+    ],
+    "description": "Creates a new hardware with customizable name"
+  },
+  "NewAttribute": {
+    "prefix": "NewAttribute",
+    "body": [
+        "_this.SetParameter('${1:paramName}', ${2:value} , VAL_${3:dataType});",
+        "_this.ModifyParameter('${1:paramName}', PARMOD_STYLE, PARSTYLE_ATTRIBUTE);",
+        "_this.ModifyParameter('${1:paramName}', PARMOD_DESC, '${4:prompt}');"
+    ],
+    "description": "Creates an attribute"
+  },
+  "NewNote": {
+    "prefix": "NewNote",
+    "body": [
+        "_this.SetParameter('${1:paramName}', ${2:value} , VAL_${3:dataType});",
+        "_this.ModifyParameter('${1:paramName}', PARMOD_STYLE, PARSTYLE_NOTE);",
+        "_this.ModifyParameter('${1:paramName}', PARMOD_DESC, '${4:prompt}');"
+    ],
+    "description": "Creates an note"
   }
 }
 

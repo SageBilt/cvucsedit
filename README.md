@@ -109,11 +109,14 @@ Addition to VSCode's built in features, this extension provides these features.
 
 Because mirrored UCS:JS files are real JavaScript files in your workspace, VS Code's own TypeScript service handles them. The whole Cabinet Vision API is described to it in a generated definition file, so the standard JavaScript features work against the CV API and your own libraries exactly as they would in an ordinary JavaScript project.
 
+- **Snippet completion**
+  - Whole blocks for the things a standard usually starts with — `NewPart`, `NewRoute`, `NewDado`, `NewHole`, `NewLinebore`, `NewConnection`, `NewHardware`, and `NewAttribute` and `NewNote` for a parameter that has to appear as an attribute or a note. Type the name and pick it from the completion list, then tab through the values.
+  - They are offered in mirrored UCS files and in Cabinet Vision's debug folder, and nowhere else — not in the ordinary JavaScript you happen to have open in the same window.
 - **Code completions**
   - All documented constants, types and functions for UCS:JS, along with the CVAsmManaged, CVShapeManaged and 2D CAD objects and their properties and methods.
   - `_cvSystem.CreateObject()` is typed per class name, so `CreateObject('cvArc')` offers arc members, `CreateObject('cvDimension')` offers dimension members, and so on.
   - Completion is filtered by type, so `_this.` offers only CVAsmManaged members. This applies to the built in objects like `_this` and `_cab` and equally to your own variables assigned from them.
-  - Cabinet Vision JavaScript libraries are offered project wide, with each library's public properties and methods.
+  - Cabinet Vision JavaScript libraries are offered project wide, with each library's public properties and methods. A library identifies itself in the list and in its hover — that it is a Cabinet Vision UCS:JS library, which one, and that its body is a class body — so a call site reads as more than someone's variable.
   - Parameters are filled in automatically when a method is picked from the list, for library methods as well as documented Cabinet Vision methods. Constant arguments show their group as the placeholder, for example `ModifyParameter(name, PARMOD_, PARSTYLE_)`.
   - Context aware completion inside string arguments. When the cursor is placed inside the string of `Evaluate()`, which evaluates an equation written in UCS:M, the list is populated with UCS:M parameters. Arguments that take a material or a connection are populated from your database, and arguments that take a constant are narrowed to just that group.
 - **Hover information**

@@ -291,7 +291,7 @@ self-contained, a library is shared:
 
 | kind | leading | trailing | TS sees | effect |
 |---|---|---|---|---|
-| `jsLibrary` | banner + `const _<Name> = new class <Name> {` | `}();` | script | `_<Name>` is a project-wide global, callable/renameable from every UCS |
+| `jsLibrary` | banner + JSDoc + `const _<Name> = new class <Name>Library {` | `}();` | script | `_<Name>` is a project-wide global, callable/renameable from every UCS |
 | `js` | banner + `(function () {` | `})();` | script | function scope: top-level `return` is legal, and one UCS cannot see another's declarations |
 | `ucsm` | banner | — | n/a | UCS:M is not in the TypeScript project |
 
@@ -301,7 +301,7 @@ rather than from module semantics.
 **The banner is the four-line generated header**, `//~` for JS and `;~` for UCS:M, and it exists for
 agent discovery rather than for TypeScript — see above. It made the leading sentinel multi-line, so
 `leadingSentinelLines` is now **derived from `leadingSentinel` itself** rather than stated
-separately, and is 5 for both JS kinds and 4 for UCS:M. It also gave UCS:M a leading sentinel where
+separately, and is 11 for `jsLibrary`, 5 for `js` and 4 for UCS:M. It also gave UCS:M a leading sentinel where
 it previously had none, which is why the editor guard and the dimming decoration no longer early-return
 on `kind === 'ucsm'` — as the paragraph below already said they should, they now derive *which* lines
 to protect purely from whether each sentinel function returns a value. `leadingRange` in
@@ -327,9 +327,33 @@ same reveal offset libraries already had.
 The library wrapper must produce an **instance**, not a bare class. UCS code calls
 `_<Name>.Method()` directly, and the members of `class _<Name> { … }` live on the prototype, so
 `_<Name>.Method` does not resolve off the class — the symptom is a library that hovers correctly but
-offers no members. The class expression is *named* only so hovers read `const _MyLib: MyLib` instead
-of `(Anonymous class)`; that name is local to the expression and adds no global. Both wrappers are
-still one line each, so both JS kinds share one offset.
+offers no members. The class expression is *named* so hovers read `const _mylib: MyLibLibrary`
+instead of `(Anonymous class)`; that name is local to the expression and adds no global.
+
+**The library wrapper is also the only thing that tells a reader what a library is**, because the
+declaration is all TypeScript has to report at a call site. It got two additions for that, both in
+`leadingSentinel`:
+
+- **A JSDoc block between the banner and the wrapper** (`libraryDoc`). TypeScript attaches JSDoc to
+  the declaration that follows it, so this text follows `_<name>` into every hover and completion in
+  every file — the one mechanism here that reaches a call site at all. The `//~` banner above it is
+  line comments, which TypeScript ignores, so the attachment holds. It says nothing about *this*
+  file (that saving pushes to SQL, say): the banner covers that, and the text is read mostly in
+  other files, where it would be about the wrong file.
+- **`Library` on the type name** (`libraryTypeName`, skipped when the name already ends that way).
+  The type is the only part of the declaration a *collapsed* completion item shows, and
+  `const _cabshape: cabshape` said nothing the identifier had not. That lowercase was a bug of its
+  own — `.toLowerCase()` was applied to the type as well as the const, though only
+  `libraryClassName` needs it, since only the const is a name UCS code calls.
+
+`LIBRARY_OPEN` therefore takes an **optional** leading JSDoc block, optional so older mirrors still
+match. Consuming a comment is safe despite stripping being destructive, because it is only ever
+taken as part of a match that also required the wrapper line, and a JSDoc of the user's own sits
+inside the body, below that line. The legacy-form test reads past the same optional block rather
+than the head of the match, so which wrapper pair gets stripped does not hinge on legacy mirrors
+happening not to carry one.
+
+The UCS wrapper is still a single line, so only `jsLibrary` pays the larger reveal offset.
 
 `leadingSentinel` / `trailingSentinel` are the single source of truth — `applySentinels`, the
 editor's revert-on-edit guard and the dimming decoration in `SQLScriptProvider` all build from them,
@@ -495,6 +519,14 @@ Context awareness hinges on two private helpers in `server.ts`:
   every JavaScript document in the window. The same reasoning removed the `source.ucsjs` grammar
   injection and the `javascript`-scoped snippets from `package.json`; `Languages/ucsjs/ucsjs.tmLanguage.json`
   is retained but no longer contributed, since constants are now coloured via `cv-api.d.ts`.
+- `Languages/ucsjs/ucsjs.snippets.json` is still shipped and still a VS Code snippet file, but it is
+  now **served rather than contributed**: `ucsjsLanguageHandler` reads it at construction and
+  `AddSnippets` pushes it as `InsertTextFormat.Snippet` completion items. That is what puts it back
+  behind the `documentSelector` — a `contributes.snippets` entry keys on the language id alone, which
+  for UCS:JS is plain `javascript`, so it would reappear in every JS file in the window. `server.ts`
+  offers them only where a statement can start (`isStatementPosition`: not after a `.`, where
+  TypeScript is completing members, and not inside a string, where the UCS:M injection belongs).
+  UCS:M snippets are still a `package.json` contribution, because `ucsm` is a language id of ours.
 - Both README.md and CHANGELOG.md carry release notes; keep them in sync with `package.json` `version`
   when publishing.
 

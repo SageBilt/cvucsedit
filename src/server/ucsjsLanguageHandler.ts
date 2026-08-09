@@ -1,11 +1,12 @@
 import {
     CompletionItem,
     CompletionItemKind,
-    Connection
+    Connection,
+    InsertTextFormat
    } from 'vscode-languageserver/node';
 
 import * as fs from 'fs';
-import { UCSJSSystemConstants, UCSJSSystemData, UCSJSSystemMethod, DynamicData, UCSJSObject } from '../interfaces';
+import { UCSJSSystemConstants, UCSJSSystemData, UCSJSSystemMethod, DynamicData, UCSJSObject, UCSJSSnippets } from '../interfaces';
 import * as CONSTANTS from '../constants';
 
 /**
@@ -23,6 +24,7 @@ export class ucsjsLanguageHandler {
     private ucsjsObjects: UCSJSObject[] = [];
     public ucsjsConstants: UCSJSSystemConstants = {} as UCSJSSystemConstants;
     public ucsjsMethods: UCSJSSystemMethod[] = [];
+    private ucsjsSnippets: CompletionItem[] = [];
     public dynamicData: DynamicData = {} as DynamicData;
 
     constructor(conn: Connection) {
@@ -37,6 +39,45 @@ export class ucsjsLanguageHandler {
           const err = error as Error;
            this.connection.console.log(err.message);
         }
+
+        try {
+          const snippets: UCSJSSnippets = JSON.parse(fs.readFileSync(CONSTANTS.UCSJSSNIPPETSJSONPATH, 'utf8'));
+          this.ucsjsSnippets = this.buildSnippetItems(snippets);
+        } catch (error) {
+          const err = error as Error;
+           this.connection.console.log(`Could not load UCS:JS snippets: ${err.message}`);
+        }
+    }
+
+    /**
+     * Turns the snippet file into completion items once, at construction: the file is static, so
+     * rebuilding it on every keystroke would be wasted work.
+     */
+    private buildSnippetItems(snippets: UCSJSSnippets): CompletionItem[] {
+        return Object.entries(snippets).map(([name, snippet]) => {
+          const body = Array.isArray(snippet.body) ? snippet.body.join('\n') : snippet.body;
+          return {
+            label: snippet.prefix || name,
+            kind: CompletionItemKind.Snippet,
+            detail: snippet.description ?? name,
+            insertText: body,
+            insertTextFormat: InsertTextFormat.Snippet,
+            documentation: {
+                kind: 'markdown' as const,
+                value: `${snippet.description ? `${snippet.description}\n\n` : ''}\`\`\`javascript\n${body}\n\`\`\``
+              }
+          };
+        });
+    }
+
+    /**
+     * The multi line UCS:JS snippets - new part, route, dado, hole, linebore and connection. These
+     * used to be a `package.json` snippet contribution, but that is scoped by language id alone and
+     * so offered them in every JavaScript file in the window. Here they ride on the language
+     * client's document selector, which is already restricted to the mirror and the debug folder.
+     */
+    AddSnippets(items: CompletionItem[]) {
+        items.push(...this.ucsjsSnippets);
     }
 
     AddObjects(items: CompletionItem[]) {

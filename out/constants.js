@@ -33,13 +33,14 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AGENTDOCSDIR = exports.UCSJSSYSTEMJSONPATH = exports.UCSMCONTROLSTRUCTURESJSONPATH = exports.UCSMSYNTAXJSONPATH = exports.UCSMSYSTEMJSONPATH = void 0;
+exports.AGENTDOCSDIR = exports.UCSJSSNIPPETSJSONPATH = exports.UCSJSSYSTEMJSONPATH = exports.UCSMCONTROLSTRUCTURESJSONPATH = exports.UCSMSYNTAXJSONPATH = exports.UCSMSYSTEMJSONPATH = void 0;
 exports.agentDocPath = agentDocPath;
 const path = __importStar(require("path"));
 exports.UCSMSYSTEMJSONPATH = path.join(__dirname, '../Languages/data/system.json');
 exports.UCSMSYNTAXJSONPATH = path.join(__dirname, '../Languages/ucsm/data/ucsm_syntax.json');
 exports.UCSMCONTROLSTRUCTURESJSONPATH = path.join(__dirname, '../Languages/ucsm/data/control_structures.json');
 exports.UCSJSSYSTEMJSONPATH = path.join(__dirname, '../Languages/ucsjs/data/ucsjs_system.json');
+exports.UCSJSSNIPPETSJSONPATH = path.join(__dirname, '../Languages/ucsjs/ucsjs.snippets.json');
 /**
  * Markdown sources for the documentation written into the mirror folder for AI agents. Kept as
  * files rather than string literals for the same reason the language data is: they are content,

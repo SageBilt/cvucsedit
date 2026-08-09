@@ -5,6 +5,34 @@ All notable changes to the "cvucsedit" extension will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Three more UCS:JS snippets.** `NewHardware` creates a hardware child and
+  positions it, and `NewAttribute` and `NewNote` each write the three calls a
+  parameter needs to show up as an attribute or a note — the value, the style,
+  and the prompt — which is easy to get half right from memory.
+
+### Changed
+- **Libraries now describe themselves in hover and IntelliSense.** Hovering
+  `_cabshape` used to read `const _cabshape: cabshape`, which is everything
+  TypeScript could tell from the declaration and nothing a reader did not
+  already know. Library files now carry a generated JSDoc block above the
+  wrapper line, so every hover and every completion says it is a Cabinet Vision
+  UCS:JS library, names it, and explains that its body is a class body — in
+  every standard that calls it, not just in the library itself. The type is
+  named `<Name>Library`, which is the part visible without expanding a
+  completion item, and it keeps the name's own capitalisation instead of being
+  lowercased along with the global.
+
+### Fixed
+- **The UCS:JS snippets are back** — new part, route, dado, hole, linebore,
+  connection and the rest all complete again. 2.0.0 dropped them along with the rest of the
+  `javascript` language contributions, because a snippet contribution applies to
+  every JavaScript file in the window, not just UCS code. They now come from the
+  language server instead, which is already scoped to mirrored UCS:JS and Cabinet
+  Vision's debug folder, so they appear where UCS code is and nowhere else.
+
 ## [2.2.1] - 2026-08-08
 
 Packaging only. No behaviour changes.

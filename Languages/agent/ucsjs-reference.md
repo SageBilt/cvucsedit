@@ -174,7 +174,7 @@ if (_cab.GetParameterValue('CONSTID') == _this.QueryID(ID_ASSEMBLYCONSTRUCTION, 
 ## Libraries
 
 Files in `lib/` are shared code. Each is bound to a global named `_` plus the library's lowercased
-name, declared by the file's sentinel line, and callable from every standard:
+name, declared by the file's sentinel line, and callable from every UCS:
 
 ```js
 // in lib/Helpers.ucs.js, between the sentinels
@@ -191,6 +191,11 @@ _this.DY = _helpers.Round32(_this.DY);
 The body of a library is a **class body**, so its members are written as methods without `function`,
 separated by nothing, and share state through `this`. A regular standard is a function body and
 follows normal JavaScript.
+
+Give each member its own JSDoc comment. It is what the editor shows at every call site, in every
+standard, which is the only place most readers of a library method ever see it described. The
+generated JSDoc *above* the sentinel line is not yours — it describes the library itself and is
+rewritten on every sync.
 
 Only add a library method when more than one standard needs it. Changing an existing library method
 changes the behaviour of every standard that calls it — check the callers first (they are all under

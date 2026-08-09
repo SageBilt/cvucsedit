@@ -51,6 +51,7 @@ class ucsjsLanguageHandler {
     ucsjsObjects = [];
     ucsjsConstants = {};
     ucsjsMethods = [];
+    ucsjsSnippets = [];
     dynamicData = {};
     constructor(conn) {
         this.connection = conn;
@@ -64,6 +65,43 @@ class ucsjsLanguageHandler {
             const err = error;
             this.connection.console.log(err.message);
         }
+        try {
+            const snippets = JSON.parse(fs.readFileSync(CONSTANTS.UCSJSSNIPPETSJSONPATH, 'utf8'));
+            this.ucsjsSnippets = this.buildSnippetItems(snippets);
+        }
+        catch (error) {
+            const err = error;
+            this.connection.console.log(`Could not load UCS:JS snippets: ${err.message}`);
+        }
+    }
+    /**
+     * Turns the snippet file into completion items once, at construction: the file is static, so
+     * rebuilding it on every keystroke would be wasted work.
+     */
+    buildSnippetItems(snippets) {
+        return Object.entries(snippets).map(([name, snippet]) => {
+            const body = Array.isArray(snippet.body) ? snippet.body.join('\n') : snippet.body;
+            return {
+                label: snippet.prefix || name,
+                kind: node_1.CompletionItemKind.Snippet,
+                detail: snippet.description ?? name,
+                insertText: body,
+                insertTextFormat: node_1.InsertTextFormat.Snippet,
+                documentation: {
+                    kind: 'markdown',
+                    value: `${snippet.description ? `${snippet.description}\n\n` : ''}\`\`\`javascript\n${body}\n\`\`\``
+                }
+            };
+        });
+    }
+    /**
+     * The multi line UCS:JS snippets - new part, route, dado, hole, linebore and connection. These
+     * used to be a `package.json` snippet contribution, but that is scoped by language id alone and
+     * so offered them in every JavaScript file in the window. Here they ride on the language
+     * client's document selector, which is already restricted to the mirror and the debug folder.
+     */
+    AddSnippets(items) {
+        items.push(...this.ucsjsSnippets);
     }
     AddObjects(items) {
         this.ucsjsObjects.forEach(obj => {

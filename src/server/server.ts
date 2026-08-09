@@ -157,6 +157,29 @@ class LanguageServer {
 
   }  
 
+  /**
+   * Whether a UCS:JS snippet belongs at this point in the line. They are whole statements, so they
+   * are only offered where a statement can start: not after a `.`, where TypeScript is completing
+   * the members of an object, and not inside a string literal, where the UCS:M side of the server
+   * is what has something to say.
+   */
+  private isStatementPosition(linePrefix: string): boolean {
+    if (/\.\s*\w*$/.test(linePrefix)) return false;
+
+    let inString = false;
+    let quoteChar = '';
+    for (let i = 0; i < linePrefix.length; i++) {
+      const char = linePrefix[i];
+      if (inString) {
+        if (char === quoteChar && linePrefix[i - 1] !== '\\') inString = false;
+      } else if (char === '"' || char === "'" || char === '`') {
+        inString = true;
+        quoteChar = char;
+      }
+    }
+    return !inString;
+  }
+
   private getCursorPosition(position: Position) : Position {
     return { line: position.line, character: position.character };
   }
@@ -281,11 +304,16 @@ class LanguageServer {
          * own TypeScript service, which also supplies hover, signature help, go to definition,
          * find references and rename. Offering it again here would only duplicate every entry.
          *
-         * What is left is the context TypeScript cannot know about: a Cabinet Vision connection id.
+         * What is left is the context TypeScript cannot know about: a Cabinet Vision connection id,
+         * and the multi line UCS:JS snippets, which no longer come from a package.json contribution.
          */
         if (prefixWord == '_CONNID') {
           this.ucsmHandler.AddConnections(items,false);
           return items;
+        }
+
+        if (this.isStatementPosition(linePrefix)) {
+          this.ucsjsHandler.AddSnippets(items);
         }
       }
 

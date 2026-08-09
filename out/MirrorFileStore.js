@@ -38,6 +38,7 @@ exports.leadingBanner = leadingBanner;
 exports.stripBanner = stripBanner;
 exports.leadingSentinelLines = leadingSentinelLines;
 exports.libraryClassName = libraryClassName;
+exports.libraryTypeName = libraryTypeName;
 exports.isValidIdentifier = isValidIdentifier;
 exports.leadingSentinel = leadingSentinel;
 exports.trailingSentinel = trailingSentinel;
@@ -160,12 +161,55 @@ function sanitiseFileName(name) {
 function libraryClassName(ucsName) {
     return `_${ucsName.toLowerCase()}`;
 }
+/**
+ * The name given to a library's class expression, which is the *type* half of what TypeScript shows:
+ * `const _cabshape: CabShapeLibrary`. Suffixed because that one line is all a collapsed completion
+ * item displays, and `const _cabshape: cabshape` said nothing the identifier had not already said.
+ *
+ * Case is the author's. It used to be lowercased along with the const, which is why hovers read
+ * `cabshape`; only `libraryClassName` needs lowering, since that is the name UCS code calls.
+ */
+function libraryTypeName(ucsName) {
+    return /library$/i.test(ucsName) ? ucsName : `${ucsName}Library`;
+}
+/**
+ * The JSDoc block carried by a library's wrapper.
+ *
+ * TypeScript attaches a JSDoc comment to whatever declaration follows it, so this is what is shown
+ * wherever `_<name>` is hovered or completed - in every file, not just this one. That is the point:
+ * at a call site the declaration otherwise reads as a bare `const` of a locally declared type, and
+ * nothing says the thing is a shared library rather than someone's variable. The banner above it is
+ * `//~` line comments, which TypeScript ignores, so the attachment holds.
+ *
+ * Deliberately says nothing about *this* file - that saving pushes to the database, say. The banner
+ * covers that, and this text is read mostly at call sites in other files, where it would be about
+ * the wrong file.
+ */
+function libraryDoc(ucsName) {
+    // A `*/` inside a UCS name would close the block early and leave the wrapper unparseable.
+    const name = ucsName.replace(/\*\//g, '* /');
+    return [
+        '/**',
+        ` * **Cabinet Vision UCS:JS library** - \`${name}\``,
+        ' *',
+        ` * Shared code, reached as \`${libraryClassName(ucsName)}\` from every UCS. Its body is a class`,
+        ' * body: members are methods written without `function`, and they share state through `this`.',
+        ' */'
+    ].join('\r\n');
+}
 function isValidIdentifier(name) {
     return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(name);
 }
 const IDENTIFIER = '[A-Za-z_$][A-Za-z0-9_$]*';
-/** `const _Name = new class {`, or the earlier `class _Name {` still on disk from older mirrors. */
-const LIBRARY_OPEN = new RegExp(`^[ \\t]*(?:const[ \\t]+${IDENTIFIER}[ \\t]*=[ \\t]*new[ \\t]+class(?:[ \\t]+${IDENTIFIER})?|class[ \\t]+${IDENTIFIER})[ \\t]*\\{[ \\t]*\\r?\\n?`);
+/**
+ * `const _Name = new class {`, or the earlier `class _Name {` still on disk from older mirrors,
+ * together with the JSDoc block above it.
+ *
+ * The comment is optional, so mirrors written before it existed still match. Consuming it here is
+ * safe despite stripping being destructive: it is only ever taken as part of a match that *also*
+ * required the wrapper line, and a JSDoc of the user's own sits inside the body, below that line.
+ */
+const LIBRARY_OPEN = new RegExp(`^(?:[ \\t]*/\\*\\*[\\s\\S]*?\\*/[ \\t]*\\r?\\n)?[ \\t]*(?:const[ \\t]+${IDENTIFIER}[ \\t]*=[ \\t]*new[ \\t]+class(?:[ \\t]+${IDENTIFIER})?|class[ \\t]+${IDENTIFIER})[ \\t]*\\{[ \\t]*\\r?\\n?`);
 /** The matching `}();`. The `()` is required, so a body whose last line is a brace is left alone. */
 const LIBRARY_CLOSE = /(\r?\n)?[ \t]*\}[ \t]*\([ \t]*\)[ \t]*;?[ \t]*(\r?\n)*$/;
 /** The legacy bare `}`. Only safe to strip when the leading sentinel was the legacy one too. */
@@ -179,17 +223,20 @@ const MODULE_MARKER_PATTERN = /(\r?\n)?[ \t]*export[ \t]*\{[ \t]*\}[ \t]*;?[ \t]
 /**
  * The sentinel line written before the code, if any. Single source of truth for the editor guard.
  *
- * The library's class expression is named after the UCS wherever that is a legal identifier, purely
- * so hovers and errors read `const _MyLib: MyLib` rather than `(Anonymous class)`. The name is local
- * to the expression, so it adds no global of its own. The UCS wrapper stays anonymous - nothing
- * refers to it, and a name would only be one more thing to keep in step with a rename.
+ * The library's class expression is named after the UCS wherever that is a legal identifier, so
+ * hovers and errors read `const _mylib: MyLibLibrary` rather than `(Anonymous class)`. The name is
+ * local to the expression, so it adds no global of its own. The UCS wrapper stays anonymous -
+ * nothing refers to it, and a name would only be one more thing to keep in step with a rename.
+ *
+ * A library also carries a JSDoc block between the banner and the wrapper, which is the only part of
+ * any of this that TypeScript reports back to the user at a call site. See `libraryDoc`.
  */
 function leadingSentinel(kind, ucsName) {
     const banner = leadingBanner(kind);
     switch (kind) {
         case 'jsLibrary': {
-            const typeName = isValidIdentifier(ucsName) ? ` ${ucsName}` : '';
-            return `${banner}\r\nconst ${libraryClassName(ucsName)} = new class${typeName.toLowerCase()} {`;
+            const typeName = isValidIdentifier(ucsName) ? ` ${libraryTypeName(ucsName)}` : '';
+            return `${banner}\r\n${libraryDoc(ucsName)}\r\nconst ${libraryClassName(ucsName)} = new class${typeName} {`;
         }
         case 'js': return `${banner}\r\n(function () {`;
         // UCS:M has no wrapper - it is not in the TypeScript project and needs no scoping - but it
@@ -245,8 +292,10 @@ function stripSentinels(text, kind) {
         return text; // no recognisable wrapper, leave untouched
     }
     // Only a legacy file may have its trailing brace stripped on sight. In the current form the
-    // `()` disambiguates the wrapper from a body whose own last line closes a block.
-    const legacy = /^[ \t]*class\b/.test(open[0]);
+    // `()` disambiguates the wrapper from a body whose own last line closes a block. The optional
+    // JSDoc has to be skipped to see which form this is - a legacy mirror never carries one, but
+    // testing the wrapper line rather than the whole match keeps that from being load bearing.
+    const legacy = /^(?:\s*\/\*\*[\s\S]*?\*\/\s*)?[ \t]*class\b/.test(open[0]);
     return text.slice(open[0].length).replace(legacy ? LIBRARY_CLOSE_LEGACY : LIBRARY_CLOSE, '');
 }
 /**

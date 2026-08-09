@@ -162,6 +162,23 @@ export interface UCSJSSystemConstants {
     CADDimTextHPosition: string[];
 }
 
+/**
+ * One entry of `Languages/ucsjs/ucsjs.snippets.json`, in VS Code's own snippet file shape. The file
+ * is no longer contributed through `package.json`, because a `"language": "javascript"` snippet
+ * contribution applies to every JavaScript document in the window; the server offers them instead,
+ * where the document selector already scopes them to UCS:JS.
+ */
+export interface UCSJSSnippet {
+    prefix: string;
+    /** A snippet body is a string or an array of lines, as in a .code-snippets file. */
+    body: string | string[];
+    description?: string;
+}
+
+export interface UCSJSSnippets {
+    [name: string]: UCSJSSnippet;
+}
+
 export interface UCSJSSystemData {
     objects: UCSJSObject[];
     classes: UCSJSClass[];

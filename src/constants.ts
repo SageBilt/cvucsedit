@@ -5,6 +5,7 @@ export const UCSMSYNTAXJSONPATH = path.join(__dirname, '../Languages/ucsm/data/u
 export const UCSMCONTROLSTRUCTURESJSONPATH = path.join(__dirname, '../Languages/ucsm/data/control_structures.json');
 
 export const UCSJSSYSTEMJSONPATH = path.join(__dirname, '../Languages/ucsjs/data/ucsjs_system.json');
+export const UCSJSSNIPPETSJSONPATH = path.join(__dirname, '../Languages/ucsjs/ucsjs.snippets.json');
 
 /**
  * Markdown sources for the documentation written into the mirror folder for AI agents. Kept as

@@ -35,11 +35,13 @@ them either loses work or pushes code that Cabinet Vision cannot run.
    | file | header | opens | closes |
    |---|---|---|---|
    | `ucs/<Name>.ucs.js` | 4 × `//~` | `(function () {` | `})();` |
-   | `lib/<Name>.ucs.js` | 4 × `//~` | `const _<name> = new class <Name> {` | `}();` |
+   | `lib/<Name>.ucs.js` | 4 × `//~` | a JSDoc block, then `const _<name> = new class <Name>Library {` | `}();` |
    | `ucs/<Name>.ucsm` | 4 × `;~` | — | — |
 
    The wrappers exist so VS Code's TypeScript service scopes the file the way Cabinet Vision executes
-   it. Edit only the lines *between* them. Writing anything below the closing sentinel is the one
+   it. A library's JSDoc block is generated with the wrapper and is not documentation of the library:
+   it is what the editor shows whoever hovers `_<name>` elsewhere. Edit only the lines *between* the
+   sentinels. Writing anything below the closing sentinel is the one
    failure the extension cannot recover from: the closing line stops being recognised and gets pushed
    into the database as part of your code, and Cabinet Vision then fails to parse the standard.
 
