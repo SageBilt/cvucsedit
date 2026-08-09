@@ -5,7 +5,15 @@ All notable changes to the "cvucsedit" extension will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.3.0] - 2026-08-10
+
+Two things the UCS:JS completion list should have been showing and was not. The
+snippets have not appeared since 2.0.0, when they went out with the rest of the
+`javascript` language contributions and nothing put them back; they are now
+served by the language server, which knows which files are UCS code. And a
+library, at a call site, read as an anonymous `const` of a lowercased type —
+TypeScript has only the declaration to report, so the declaration now says what
+the thing is.
 
 ### Added
 - **Three more UCS:JS snippets.** `NewHardware` creates a hardware child and

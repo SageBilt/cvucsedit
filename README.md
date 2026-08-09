@@ -184,6 +184,19 @@ Please report all issues on [Github](https://github.com/SageBilt/cvucsedit/issue
 
 ## Release Notes
 
+#### 2.3.0
+
+Two things the UCS:JS completion list should have been showing and was not. The snippets have not appeared since 2.0.0, when they went out with the rest of the `javascript` language contributions and nothing put them back; they are now served by the language server, which knows which files are UCS code. And a library, at a call site, read as an anonymous `const` of a lowercased type — TypeScript has only the declaration to report, so the declaration now says what the thing is.
+
+##### Added
+- Three more UCS:JS snippets. `NewHardware` creates a hardware child and positions it, and `NewAttribute` and `NewNote` each write the three calls a parameter needs to show up as one — the value, the style and the prompt.
+
+##### Changed
+- **Libraries now describe themselves in hover and IntelliSense.** Hovering `_cabshape` used to read `const _cabshape: cabshape`, which is all TypeScript could tell from the declaration and nothing a reader did not already know. Library files now carry a generated documentation block above the wrapper line, so every hover and every completion says it is a Cabinet Vision UCS:JS library, names it, and explains that its body is a class body — in every standard that calls it, not just in the library itself. The type is named `<Name>Library`, which is the part visible without expanding a completion item, and it keeps the name's own capitalisation instead of being lowercased along with the global.
+
+##### Fixed
+- **The UCS:JS snippets are back** — new part, route, dado, hole, linebore, connection and the rest all complete again. 2.0.0 dropped them along with the rest of the `javascript` language contributions, because a snippet contribution applies to every JavaScript file in the window, not just UCS code. They now come from the language server instead, which is already scoped to mirrored UCS:JS and Cabinet Vision's debug folder, so they appear where UCS code is and nowhere else.
+
 #### 2.2.1
 
 Packaging only. No behaviour changes.
