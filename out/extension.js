@@ -63,10 +63,21 @@ const ENABLED_KEY = 'cvucsedit.enabledInWorkspace';
  * tests; nothing loads it at runtime.
  */
 const SERVER_MODULE = path.join('dist', 'server.js');
+/**
+ * The settings `package.json` declares as `restrictedConfigurations`, minus the section prefix.
+ *
+ * VS Code ignores a workspace level value for each of these while the workspace is untrusted and
+ * falls back to the user level one, so granting trust can change where we mirror or which database
+ * we are pointed at, under a connection that has already resolved both. `onTrustGranted` uses the
+ * list to tell the workspace where that can happen from the overwhelming majority where it cannot.
+ */
+const RESTRICTED_SETTINGS = ['Server', 'Database', 'MirrorPath', 'MirrorFolder', 'DebugFolderSuffix'];
 let clients = [];
 let provider;
 let statusItem;
 let running = false;
+/** Session only: the trust notice is worth showing once per window, not once per connect. */
+let warnedAboutTrust = false;
 async function activate(context) {
     //initializeSystemJson();
     // Cheap: registers the tree views and the output channel, opens no connection and touches no
@@ -78,6 +89,7 @@ async function activate(context) {
     registerCommands(context);
     context.subscriptions.push(vscode.languages.registerFoldingRangeProvider('ucsm', // Replace with your language ID
     new ucsmFoldingProvider_1.CustomLanguageFoldingProvider()));
+    context.subscriptions.push(vscode.workspace.onDidGrantWorkspaceTrust(() => void onTrustGranted(context)));
     await setRunning(context, false);
     if (await shouldAutoStart(context)) {
         await start(context);
@@ -220,6 +232,7 @@ async function start(context, userInitiated = false) {
     }
     await setRunning(context, true);
     void warnIfMirrorIsOutOfSight();
+    void warnIfUntrusted();
     return true;
 }
 /**
@@ -242,6 +255,87 @@ async function warnIfMirrorIsOutOfSight() {
     if (choice) {
         await openMirrorWorkspace();
     }
+}
+// ---------------------------------------------------------------------------- workspace trust
+/**
+ * Until 2.3 the extension declared no `untrustedWorkspaces` capability, which VS Code reads as
+ * `supported: false`: in a restricted workspace it was not activated at all and *every* contribution
+ * went with it, the activity bar container included. The reported symptom was the sidebar icon simply
+ * vanishing until the folder was trusted, with nothing on screen to say why.
+ *
+ * `package.json` now declares `limited`, so we load and connect untrusted, with the connection and
+ * mirror location settings ignored when they come from the workspace (`RESTRICTED_SETTINGS`) - a
+ * `.vscode/settings.json` in a folder someone was handed must not aim `cvucsedit.Server` at an SQL
+ * instance of its choosing, since the Cabinet Vision credentials are hard coded and would go with it.
+ *
+ * One thing that declaration cannot buy back: VS Code's own TypeScript support is trust gated too, so
+ * it runs syntax only until the folder is trusted and the whole UCS:JS semantic layer - completion off
+ * `cv-api.d.ts`, hover, rename, find references - stays dark. That is the same loss
+ * `warnIfMirrorIsOutOfSight` describes, reached by a different route, which is why this stays quiet
+ * when the mirror is out of sight anyway: two notifications about one missing feature is noise, and
+ * the offer that actually fixes it there is *Open UCS Workspace*.
+ */
+async function warnIfUntrusted() {
+    if (vscode.workspace.isTrusted || warnedAboutTrust) {
+        return;
+    }
+    if (!provider.mirror.visibleToWorkspace && !(0, debugFolder_1.debugFolder)()) {
+        return;
+    }
+    warnedAboutTrust = true;
+    const choice = await vscode.window.showWarningMessage('This folder is not trusted, so VS Code limits its TypeScript support and UCS:JS completion, ' +
+        'hover, rename and find references are unavailable. The standards list, UCS:M and saving back ' +
+        'to the database all work as usual. Trusting the folder restores the rest.', 'Manage Trust');
+    if (choice) {
+        await manageTrust();
+    }
+}
+/**
+ * There is no API to grant trust - `workspace.requestWorkspaceTrust` never left proposed - so the
+ * furthest we can go is opening the editor that asks. The command id is VS Code's own and is not part
+ * of the extension API, hence the fallback naming the palette entry rather than an error.
+ */
+async function manageTrust() {
+    try {
+        await vscode.commands.executeCommand('workbench.trust.manage');
+    }
+    catch {
+        void vscode.window.showInformationMessage('Run "Workspaces: Manage Workspace Trust" from the command palette to trust this folder.');
+    }
+}
+/**
+ * Trust arriving mid session. If we never started, this may be the first moment we can - and if we
+ * did, the settings VS Code was ignoring have just come into force, so anything resolved from one of
+ * them is potentially stale.
+ *
+ * Only *potentially*: the restricted settings are nearly always user level, in which case trust
+ * changes nothing we read and a reload prompt would be a pointless interruption. So the offer is made
+ * only where a workspace level value actually exists to take over.
+ */
+async function onTrustGranted(context) {
+    if (!running) {
+        if (await shouldAutoStart(context)) {
+            await start(context);
+        }
+        return;
+    }
+    // Drops the "limited" styling the status bar item is wearing.
+    await setRunning(context, true);
+    if (!workspaceOverridesRestrictedSettings()) {
+        return;
+    }
+    const choice = await vscode.window.showInformationMessage('This workspace sets its own Cabinet Vision database or mirror location, which VS Code ignored ' +
+        'while the folder was untrusted. Reload the window to connect with those settings.', 'Reload Window');
+    if (choice) {
+        await vscode.commands.executeCommand('workbench.action.reloadWindow');
+    }
+}
+function workspaceOverridesRestrictedSettings() {
+    const config = vscode.workspace.getConfiguration('cvucsedit');
+    return RESTRICTED_SETTINGS.some(key => {
+        const info = config.inspect(key);
+        return info?.workspaceValue !== undefined || info?.workspaceFolderValue !== undefined;
+    });
 }
 /** Connect on demand, for commands that only make sense once we are running. */
 async function ensureRunning(context) {
@@ -304,9 +398,19 @@ async function setRunning(context, value) {
     // Drives the welcome view in both tree views.
     await vscode.commands.executeCommand('setContext', 'cvucsedit.running', value);
     const config = vscode.workspace.getConfiguration('cvucsedit');
+    statusItem.backgroundColor = undefined;
     if (value) {
-        statusItem.text = '$(database) CV UCS';
-        statusItem.tooltip = `Cabinet Vision UCS: connected to ${config.get('Database', 'CVData')} on ${config.get('Server', '')}. Click to disconnect.`;
+        // Connected but untrusted is a real state now rather than an impossible one, and it is worth
+        // showing after the notification has been dismissed: it is the only standing explanation for
+        // why UCS:JS completion is missing in a window where everything else works.
+        const limited = !vscode.workspace.isTrusted;
+        statusItem.text = limited ? '$(shield) CV UCS' : '$(database) CV UCS';
+        statusItem.tooltip = `Cabinet Vision UCS: connected to ${config.get('Database', 'CVData')} on ${config.get('Server', '')}. Click to disconnect.${limited
+            ? '\n\nThis folder is not trusted, so UCS:JS completion, hover and rename are unavailable.'
+            : ''}`;
+        statusItem.backgroundColor = limited
+            ? new vscode.ThemeColor('statusBarItem.warningBackground')
+            : undefined;
         statusItem.command = 'cvucsedit.stop';
         statusItem.show();
     }

@@ -5,6 +5,24 @@ All notable changes to the "cvucsedit" extension will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **The extension no longer disappears in an untrusted folder.** Opening the
+  mirror — or the folder Cabinet Vision launches to debug in — without trusting
+  it first took the whole extension out, activity bar icon included, with
+  nothing on screen to explain it. It now runs in untrusted workspaces: the
+  standards list, UCS:M support and saving back to the database all work
+  normally. The database and mirror location settings are read from your user
+  settings rather than the workspace's while untrusted, so a folder from
+  someone else cannot redirect the connection.
+
+  One part still needs trust, because it is VS Code's and not ours: TypeScript
+  runs in a limited mode until the folder is trusted, so UCS:JS completion,
+  hover, rename and find references stay unavailable. The status bar item says
+  so while that is the case, and offers the way to grant it. Granting trust
+  mid-session connects without a reload.
+
 ## [2.3.0] - 2026-08-10
 
 Two things the UCS:JS completion list should have been showing and was not. The

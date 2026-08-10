@@ -27,6 +27,19 @@
     "onStartupFinished"
   ],
   "main": "./dist/extension.js",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "UCS code is read from the Cabinet Vision SQL database named in your user settings, and saving a mirrored file writes back to it. The connection and mirror location settings are ignored when they come from an untrusted workspace. VS Code's own TypeScript support is limited until you trust the folder, so UCS:JS completion, hover, rename and find references stay unavailable; the standards list, UCS:M support and database sync work either way.",
+      "restrictedConfigurations": [
+        "cvucsedit.Server",
+        "cvucsedit.Database",
+        "cvucsedit.MirrorPath",
+        "cvucsedit.MirrorFolder",
+        "cvucsedit.DebugFolderSuffix"
+      ]
+    }
+  },
   "contributes": {
     "languages": [
       {

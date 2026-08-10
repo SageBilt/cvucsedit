@@ -101,6 +101,43 @@ runs in `activate`, so nothing about the cleared state shows until the window re
 split into itself plus `disconnect` for it: forgetting must tear down the connection **without**
 writing the `false` that is the very thing being erased.
 
+### Workspace trust is a third gate, and it used to be a silent one
+
+Until 2.3 `package.json` declared no `capabilities.untrustedWorkspaces`, which VS Code reads as
+`supported: false`: in a restricted workspace the extension was not activated **at all**, and every
+contribution went with it — including the `cvucs-container` activity bar entry. The symptom on a
+user's machine was the sidebar icon simply vanishing until the folder was trusted, with nothing on
+screen to say why, and none of the gating above even reached.
+
+It now declares **`limited`**, so the extension loads and connects untrusted, with
+`restrictedConfigurations` covering `Server`, `Database`, `MirrorPath`, `MirrorFolder` and
+`DebugFolderSuffix` — VS Code ignores a *workspace* level value for those and falls back to the user
+level one. That list is the security case for `limited` over plain `true`: the SQL credentials are a
+hard-coded Cabinet Vision account, so a `.vscode/settings.json` in a folder someone was handed could
+otherwise point `cvucsedit.Server` at an instance of its choosing and the credentials would go with
+it. Restricting them costs nothing real, since both are set once per machine at user level.
+
+**What the declaration cannot buy back is TypeScript.** VS Code's own TypeScript support is trust
+gated too and runs syntax only until the folder is trusted, so the whole UCS:JS semantic layer —
+completion off `cv-api.d.ts`, hover, rename, find references — stays dark regardless. That is the
+same loss `warnIfMirrorIsOutOfSight` describes, reached by a different route, which is why
+`warnIfUntrusted` stays quiet when the mirror is out of sight anyway: two notifications about one
+missing feature is noise, and the offer that actually fixes it there is *Open UCS Workspace*. The
+status bar item carries the state standing (`$(shield)`, warning background), since it is the only
+explanation left once the notification is dismissed.
+
+There is **no API to grant trust** — `workspace.requestWorkspaceTrust` never left proposed — so
+`manageTrust` opens VS Code's trust editor and no further. Trust does propagate to subfolders,
+which is worth knowing when telling users what to trust: trusting `~/Cabinet Vision UCS` once covers
+`<Database>/` for every database, and trusting the CV install root covers a debug folder whose
+version segment changes on every upgrade.
+
+`onDidGrantWorkspaceTrust` handles trust arriving mid session: if we never started, this may be the
+first moment we can. If we did, the restricted settings have just come into force under a connection
+that already resolved them — but they are nearly always user level, so
+`workspaceOverridesRestrictedSettings` checks `inspect` for an actual workspace value before offering
+a reload rather than interrupting every window that gets trusted.
+
 ### Two processes
 
 [src/extension.ts](src/extension.ts) starts **two** language-server child processes from the same
