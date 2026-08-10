@@ -5,7 +5,14 @@ All notable changes to the "cvucsedit" extension will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [2.3.1] - 2026-08-10
+
+Reported from a user's machine: in a folder that has not been trusted, the
+extension is not merely limited but absent — the activity bar icon is not there,
+and nothing on screen says why. VS Code disables an extension entirely in a
+restricted workspace unless it says otherwise, and this one never said
+otherwise. It does now. A fix to how the extension declares itself rather than
+to what it does, so a patch.
 
 ### Fixed
 - **The extension no longer disappears in an untrusted folder.** Opening the

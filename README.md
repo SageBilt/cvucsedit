@@ -184,6 +184,14 @@ Please report all issues on [Github](https://github.com/SageBilt/cvucsedit/issue
 
 ## Release Notes
 
+#### 2.3.1
+
+Reported from a user's machine: in a folder that has not been trusted, the extension is not merely limited but absent — the activity bar icon is not there, and nothing on screen says why. VS Code disables an extension entirely in a restricted workspace unless it says otherwise, and this one never said otherwise. It does now.
+
+##### Fixed
+- **The extension no longer disappears in an untrusted folder.** Opening the mirror — or the folder Cabinet Vision launches to debug in — without trusting it first took the whole extension out, activity bar icon included. It now runs in untrusted workspaces: the standards list, UCS:M support and saving back to the database all work normally. While a folder is untrusted the database and mirror location settings are read from your user settings rather than the workspace's, so a folder from someone else cannot redirect the connection.
+- One part still needs trust, because it belongs to VS Code rather than to this extension: TypeScript runs in a limited mode until the folder is trusted, so UCS:JS completion, hover, rename and find references stay unavailable there. The status bar item says so while that is the case and offers the way to grant trust; granting it connects without a reload. Trust applies to subfolders too, so trusting `Cabinet Vision UCS` once covers every database mirrored under it.
+
 #### 2.3.0
 
 Two things the UCS:JS completion list should have been showing and was not. The snippets have not appeared since 2.0.0, when they went out with the rest of the `javascript` language contributions and nothing put them back; they are now served by the language server, which knows which files are UCS code. And a library, at a call site, read as an anonymous `const` of a lowercased type — TypeScript has only the declaration to report, so the declaration now says what the thing is.
