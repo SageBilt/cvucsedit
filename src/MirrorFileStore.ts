@@ -213,6 +213,14 @@ export function libraryTypeName(ucsName: string): string {
 }
 
 /**
+ * The first thing the library JSDoc says, and the one phrase in it that nothing but this extension
+ * writes. `sentinelResidue` looks for it to recognise our own wrapper in text that is about to be
+ * written to the database, so it is deliberately specific enough that a user's own header comment
+ * cannot be mistaken for it.
+ */
+const LIBRARY_DOC_TITLE = 'Cabinet Vision UCS:JS library';
+
+/**
  * The JSDoc block carried by a library's wrapper.
  *
  * TypeScript attaches a JSDoc comment to whatever declaration follows it, so this is what is shown
@@ -230,7 +238,7 @@ function libraryDoc(ucsName: string): string {
     const name = ucsName.replace(/\*\//g, '* /');
     return [
         '/**',
-        ` * **Cabinet Vision UCS:JS library** - \`${name}\``,
+        ` * **${LIBRARY_DOC_TITLE}** - \`${name}\``,
         ' *',
         ` * Shared code, reached as \`${libraryClassName(ucsName)}\` from every UCS. Its body is a class`,
         ' * body: members are methods written without `function`, and they share state through `this`.',
@@ -245,15 +253,29 @@ export function isValidIdentifier(name: string): boolean {
 const IDENTIFIER = '[A-Za-z_$][A-Za-z0-9_$]*';
 
 /**
- * `const _Name = new class {`, or the earlier `class _Name {` still on disk from older mirrors,
- * together with the JSDoc block above it.
+ * The wrapper's opening line: `const _Name = new class {`, or the earlier `class _Name {` still on
+ * disk from older mirrors.
+ *
+ * The bound name is matched as "anything up to the `=`" rather than as an identifier, because
+ * `libraryClassName` does not produce an identifier for every UCS name: a library called `Cab Shape`
+ * is written `const _cab shape = new class {`, which will not parse and - far worse - did not match
+ * here either, so `stripSentinels` left the wrapper in place and the whole of it was pushed to the
+ * database as if it were the user's code. Recognising our own line is what stops that; the name is
+ * still reported as invalid by `writeRow`.
+ */
+const LIBRARY_OPEN_SOURCE =
+    `[ \\t]*(?:const[ \\t]+[^\\r\\n=]+?[ \\t]*=[ \\t]*new[ \\t]+class(?:[ \\t]+${IDENTIFIER})?` +
+    `|class[ \\t]+${IDENTIFIER})[ \\t]*\\{`;
+
+/**
+ * The opening line together with the JSDoc block above it.
  *
  * The comment is optional, so mirrors written before it existed still match. Consuming it here is
  * safe despite stripping being destructive: it is only ever taken as part of a match that *also*
  * required the wrapper line, and a JSDoc of the user's own sits inside the body, below that line.
  */
 const LIBRARY_OPEN = new RegExp(
-    `^(?:[ \\t]*/\\*\\*[\\s\\S]*?\\*/[ \\t]*\\r?\\n)?[ \\t]*(?:const[ \\t]+${IDENTIFIER}[ \\t]*=[ \\t]*new[ \\t]+class(?:[ \\t]+${IDENTIFIER})?|class[ \\t]+${IDENTIFIER})[ \\t]*\\{[ \\t]*\\r?\\n?`
+    `^(?:[ \\t]*/\\*\\*[\\s\\S]*?\\*/[ \\t]*\\r?\\n)?${LIBRARY_OPEN_SOURCE}[ \\t]*\\r?\\n?`
 );
 
 /** The matching `}();`. The `()` is required, so a body whose last line is a brace is left alone. */
@@ -359,6 +381,59 @@ export function stripSentinels(text: string, kind: SentinelKind): string {
     return text.slice(open[0].length).replace(legacy ? LIBRARY_CLOSE_LEGACY : LIBRARY_CLOSE, '');
 }
 
+/** Line anchored forms of the wrapper, for recognising a sentinel that failed to strip. */
+const LIBRARY_OPEN_LINE = new RegExp(`^${LIBRARY_OPEN_SOURCE}[ \\t]*$`);
+const LIBRARY_CLOSE_LINE = /^[ \t]*\}[ \t]*\([ \t]*\)[ \t]*;?[ \t]*$/;
+const UCS_OPEN_LINE = new RegExp(
+    `^[ \\t]*\\([ \\t]*function[ \\t]*(?:${IDENTIFIER})?[ \\t]*\\([ \\t]*\\)[ \\t]*\\{[ \\t]*$`
+);
+const UCS_CLOSE_LINE = /^[ \t]*\}[ \t]*\)[ \t]*\([ \t]*\)[ \t]*;?[ \t]*$/;
+
+/**
+ * What of the mirror's own text is still in `code`, if any, named for a message. Undefined is the
+ * normal answer and means the code is safe to write to the database.
+ *
+ * `stripSentinels` is deliberately tolerant: whatever it does not recognise as a sentinel it leaves
+ * alone and treats as the user's code. That is right for a sentinel someone has mangled, and wrong
+ * for a sentinel written in a shape this build has never seen - which is exactly what 2.3.0 handed
+ * every 2.2 window the moment it added the JSDoc block to the library wrapper. Those windows
+ * stripped the banner, failed to match the wrapper, concluded from the changed hash that the file
+ * had been edited on disk, and pushed the JSDoc, the `const _x = new class {` and the closing `}();`
+ * straight into `UCS.Code` - for every library at once, since every library file had changed in the
+ * same way. Cabinet Vision then refused to compile any of them.
+ *
+ * No pattern written today can be made to recognise a wrapper a later version invents, so this is
+ * the other half of the answer: before anything reaches the database, look for what the mirror puts
+ * into a file and refuse if it is still there. Keyed on text nothing but this extension writes - the
+ * `cvucsedit` marker, the library JSDoc's title - and, failing those, on *both* halves of a wrapper
+ * rather than either alone, so a UCS genuinely written as one IIFE is never locked out of saving.
+ */
+export function sentinelResidue(code: string, kind: SentinelKind): string | undefined {
+    const firstLine = /^[^\r\n]*/.exec(code)?.[0] ?? '';
+    if (firstLine.trimStart().startsWith(bannerPrefix(kind)) && firstLine.includes(BANNER_MARKER)) {
+        return 'the generated header';
+    }
+    if (kind === 'ucsm') {
+        return undefined;
+    }
+
+    // The library JSDoc sits above the wrapper, so it is what a failed strip leaves at the top.
+    const doc = /^[ \t]*\/\*\*[\s\S]*?\*\/[ \t]*\r?\n?/.exec(code);
+    if (doc && doc[0].includes(LIBRARY_DOC_TITLE)) {
+        return 'the generated library header';
+    }
+
+    const lines = (doc ? code.slice(doc[0].length) : code).split(/\r?\n/);
+    const first = lines.find(line => line.trim().length) ?? '';
+    const last = [...lines].reverse().find(line => line.trim().length) ?? '';
+
+    if (kind === 'jsLibrary') {
+        return LIBRARY_OPEN_LINE.test(first) && LIBRARY_CLOSE_LINE.test(last)
+            ? 'the library wrapper' : undefined;
+    }
+    return UCS_OPEN_LINE.test(first) && UCS_CLOSE_LINE.test(last) ? 'the UCS wrapper' : undefined;
+}
+
 /**
  * Materialises UCS rows as real files inside the workspace and keeps them in two way sync with the
  * database. Replaces the former in memory `cvucs:` FileSystemProvider: real `file:` URIs are what
@@ -385,6 +460,8 @@ export class MirrorFileStore implements vscode.Disposable {
     private output: vscode.OutputChannel;
     private initialised = false;
     private warnedAboutStrayFile = false;
+    /** Session only, and one notification is enough: this condition arrives for every file at once. */
+    private warnedAboutResidue = false;
     private label = '';
 
     /** Called after an external edit has been pushed to the database, so the tree stays current. */
@@ -854,12 +931,23 @@ export class MirrorFileStore implements vscode.Disposable {
 
         const seen = new Set<string>();
         const conflicts: string[] = [];
+        const corrupted: string[] = [];
 
         for (const row of placed) {
             seen.add(row.relPath);
             const entry = this.manifest.entries[row.relPath];
             const dbCode = canonical(row.code);
             const dbHash = hash(dbCode);
+
+            // Damage already done, by an older build that pushed its wrapper into the row (see
+            // `sentinelResidue`). Reported rather than repaired: the row is the user's code with
+            // something extra round it, and deciding by hand which lines those are is safer than
+            // guessing at it with an automatic `UPDATE`. Everything below still works - the file
+            // gets a second wrapper on disk and round trips through it - so this only has to be
+            // visible, not blocking.
+            if (sentinelResidue(dbCode, row.kind)) {
+                corrupted.push(row.ucsName);
+            }
 
             let diskCode: string | undefined;
             try {
@@ -892,8 +980,11 @@ export class MirrorFileStore implements vscode.Disposable {
             } else if (diskHash !== base && dbHash === base) {
                 // Edited on disk while we were not watching - an agent, or an external tool.
                 this.log(`${row.relPath}: local edit found, pushing to the database.`);
-                await this.pushToDb(row.ucsId, diskCode, row.relPath, row.ucsName);
-                this.setEntry(row, diskHash);
+                // Only on success: recording the disk hash as synced after a failed or refused push
+                // would tell the next run the two sides agree, and quietly forget the edit.
+                if (await this.pushToDb(row.ucsId, diskCode, row.relPath, row.ucsName, row.kind)) {
+                    this.setEntry(row, diskHash);
+                }
             } else if (diskHash === base && dbHash !== base) {
                 this.log(`${row.relPath}: changed in Cabinet Vision, updating the file.`);
                 await this.writeRow(row, dbHash);
@@ -925,6 +1016,22 @@ export class MirrorFileStore implements vscode.Disposable {
             vscode.window.showWarningMessage(`${message} Neither copy was overwritten.`, 'Show Details')
                 .then(choice => { if (choice) { this.output.show(); } });
         }
+
+        if (corrupted.length) {
+            for (const name of corrupted) {
+                this.log(
+                    `"${name}": the database row itself begins with the mirror's wrapper lines. An ` +
+                    'older build of this extension wrote them there, and Cabinet Vision will report ' +
+                    'a syntax error until they are removed from the standard by hand.'
+                );
+            }
+            vscode.window.showWarningMessage(
+                `${corrupted.length} Cabinet Vision standard${corrupted.length === 1 ? '' : 's'} ` +
+                `(${corrupted.join(', ')}) hold the mirror's wrapper lines in the database itself, ` +
+                'which Cabinet Vision will read as a syntax error. They need removing by hand.',
+                'Show Details'
+            ).then(choice => { if (choice) { this.output.show(); } });
+        }
     }
 
     private async writeRow(row: PlacedRow, dbHash: string) {
@@ -949,7 +1056,18 @@ export class MirrorFileStore implements vscode.Disposable {
         };
     }
 
-    private async pushToDb(ucsId: number, canonicalCode: string, relPath: string, ucsName: string): Promise<boolean> {
+    /**
+     * The only place anything is written to `UCS.Code`, and the only place the sentinel guard has to
+     * be. `syncToDb` (the watcher) and `syncFromDb` (the merge) both come through here.
+     */
+    private async pushToDb(
+        ucsId: number, canonicalCode: string, relPath: string, ucsName: string, kind: SentinelKind
+    ): Promise<boolean> {
+        const residue = sentinelResidue(canonicalCode, kind);
+        if (residue) {
+            this.refuseSentinelPush(relPath, ucsName, residue);
+            return false;
+        }
         try {
             await this.SQLConn.ExecuteStatment(
                 'Update UCS Set Code = @Code Where ID = @ID',
@@ -963,6 +1081,33 @@ export class MirrorFileStore implements vscode.Disposable {
             vscode.window.showErrorMessage(`Could not save UCS "${ucsName}" to the database: ${detail}`);
             return false;
         }
+    }
+
+    /**
+     * Report a push blocked by `sentinelResidue`. The database row is left exactly as it was, so
+     * nothing is lost by refusing - the file on disk still holds whatever the user wrote.
+     *
+     * Logged per file, notified once: the condition that causes this affects every file of a kind at
+     * the same time, and eight identical notifications say nothing the first one did not.
+     */
+    private refuseSentinelPush(relPath: string, ucsName: string, residue: string) {
+        this.log(
+            `${relPath}: NOT saved - ${residue} is still present in the text that would be written ` +
+            `to the database, so this build did not recognise the mirror's own sentinel lines. That ` +
+            `usually means the file was written by a different version of the extension, from ` +
+            `another VS Code window connected to the same database. The database row is untouched.`
+        );
+        if (this.warnedAboutResidue) {
+            return;
+        }
+        this.warnedAboutResidue = true;
+        vscode.window.showErrorMessage(
+            `Cabinet Vision UCS "${ucsName}" was not saved: the file still contains ${residue}, which ` +
+            'must never reach the database. Close any other VS Code window connected to this ' +
+            'database, make sure every one of them runs the same version of this extension, then ' +
+            'refresh the list.',
+            'Show Details'
+        ).then(choice => { if (choice) { this.output.show(); } });
     }
 
     // ---------------------------------------------------------------- watching
@@ -1048,7 +1193,7 @@ export class MirrorFileStore implements vscode.Disposable {
             return; // Echo of our own write, or a change confined to the sentinel lines.
         }
 
-        if (await this.pushToDb(entry.ucsId, diskCode, relPath, entry.ucsName)) {
+        if (await this.pushToDb(entry.ucsId, diskCode, relPath, entry.ucsName, entry.kind)) {
             entry.syncedHash = diskHash;
             await this.saveManifest();
             this.log(`${relPath}: saved to the database.`);

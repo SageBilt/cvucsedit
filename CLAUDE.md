@@ -407,6 +407,30 @@ Each trailing sentinel is matched only when its **opening** line was found, and 
 they cannot be confused with real code: `}();` requires the `()`, or a library whose own last line is
 `}` would lose that brace, and `})();` is specific enough that a UCS ending in its own IIFE survives.
 
+**That tolerance fails open, and `sentinelResidue` is what stops it being destructive.** Whatever
+`stripSentinels` does not recognise it leaves alone *and treats as the user's code* — right for a
+mangled sentinel, catastrophic for a sentinel written in a shape the running build has never seen.
+2.3.0 created exactly that shape: it added the library JSDoc and taught itself to read it, but every
+2.2 window syncing the same mirror could not, so it read the wrapper as an edit, and `syncFromDb`
+pushed the JSDoc, the `const _x = new class {` and the `}();` into `UCS.Code` — for **every library
+at once**, since every library file had changed the same way. No pattern written now can recognise a
+wrapper a later version invents, so the guard runs at the other end: `pushToDb` is the single write
+path, and it refuses any code still carrying the `cvucsedit` marker, the library JSDoc's title, or
+*both* halves of a wrapper. Both halves, not either, so a UCS genuinely written as one IIFE is not
+locked out of saving forever. A refusal leaves the row untouched and does **not** update
+`syncedHash`, so nothing is lost and the next refresh tries again.
+
+The same fail-open bug had a second, version-independent route: `libraryClassName` does not produce
+an identifier for every UCS name, and `const _cab shape = new class {` did not match `LIBRARY_OPEN`,
+so that library's wrapper went to the database on the first sync. `LIBRARY_OPEN` now matches the
+bound name as "anything up to the `=`" rather than as an identifier. The name is still reported as
+one to fix in Cabinet Vision — it will not parse — but it round trips meanwhile.
+
+Rows already holding the wrapper from an earlier build are detected on connect (`corrupted` in
+`syncFromDb`) and reported by name. Not repaired: which lines are the author's is a judgement.
+[src/test/sentinels.test.ts](src/test/sentinels.test.ts) covers the round trip and the guard, and is
+the one part of this repository with real tests, because a regression here writes to production.
+
 ### Where language knowledge lives
 
 Static Cabinet Vision documentation is baked into JSON under [Languages/](Languages/) and loaded with

@@ -5,6 +5,41 @@ All notable changes to the "cvucsedit" extension will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.2] - 2026-08-10
+
+Reported from a user's machine: every enabled UCS:JS library in Cabinet Vision
+started failing to compile, all at once, having acquired the mirror's own
+wrapper lines in the database. Removing them by hand was the only way back.
+
+### Fixed
+- **The mirror can no longer write its own sentinel lines into the database.**
+  2.3.0 added a JSDoc block to the library wrapper and taught the current build
+  to read it. What it could not teach was every *older* build: a 2.2 window
+  syncing a mirror that 2.3 had written did not recognise the new wrapper, so it
+  read the wrapper as the author's own code, decided the file had been edited on
+  disk, and pushed the whole of it into `UCS.Code` — for every library at once,
+  because every library file had changed in the same way. Cabinet Vision then
+  reported a syntax error on each.
+
+  Nothing written today can recognise a wrapper a later version invents, so the
+  fix is on the other side: before anything reaches the database, the text is
+  checked for what the mirror puts into a file, and a save carrying it is
+  refused rather than performed. The database row is left as it was, the file
+  keeps whatever you wrote, and the output channel says which file and why.
+
+  A row that already holds those lines from an earlier run is now reported on
+  connect, by name, so the remaining damage can be found. It is not repaired
+  automatically — which lines are yours is a judgement, not a pattern.
+- **A library whose name is not a valid JavaScript identifier no longer pushes
+  its wrapper to the database.** `Cab Shape` is written `const _cab shape = new
+  class {`, which does not parse and — the real problem — did not match the
+  pattern that takes the wrapper back off either. Such a name is still reported
+  as one to change in Cabinet Vision, but it is now stripped correctly meanwhile.
+- **A failed save no longer counts as a successful one.** When a push made
+  during the startup merge failed, the file's hash was recorded as synced
+  regardless, so the next run saw the two sides agreeing and the edit was
+  quietly forgotten.
+
 ## [2.3.1] - 2026-08-10
 
 Reported from a user's machine: in a folder that has not been trusted, the

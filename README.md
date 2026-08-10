@@ -184,6 +184,17 @@ Please report all issues on [Github](https://github.com/SageBilt/cvucsedit/issue
 
 ## Release Notes
 
+#### 2.3.2
+
+Reported from a user's machine: every enabled UCS:JS library in Cabinet Vision started failing to compile, all at once, each having acquired the extension's own wrapper lines in the database. Removing them by hand was the only way back. **Anyone who has seen this should install this version everywhere before connecting again** — the fault is in the older versions, so a single window still running one can still do it.
+
+##### Fixed
+- **The extension can no longer write its own wrapper lines into your standards.** 2.3.0 changed the block that sits above a library's code and taught itself to read the new form. What it could not teach was the older versions: a 2.2 window opened on the same mirrored files did not recognise the new form, mistook it for something you had typed, and saved the whole of it into the standard — every library at once, since every library file had changed in the same way. Cabinet Vision then reported a syntax error on each one.
+
+  Saving is now checked before it happens rather than trusted: anything still carrying the extension's own lines is refused, the standard in the database is left exactly as it was, and the "Cabinet Vision UCS Sync" output channel says which file and why. A standard that already has those lines in it from an earlier version is now listed by name when you connect, so the remaining damage is easy to find. It is not repaired for you — which lines are yours is a judgement, not a rule.
+- **A library whose name is not a valid JavaScript name no longer damages its own standard.** A library called `Cab Shape` produced a wrapper that could not be read back, with the same result as above. Such a name still needs changing in Cabinet Vision, and the output channel still says so, but it now saves correctly meanwhile.
+- **A save that fails is no longer treated as one that worked.** If a save made while the lists were loading failed, the file was recorded as up to date anyway, so the next refresh saw nothing to do and the edit was quietly lost.
+
 #### 2.3.1
 
 Reported from a user's machine: in a folder that has not been trusted, the extension is not merely limited but absent — the activity bar icon is not there, and nothing on screen says why. VS Code disables an extension entirely in a restricted workspace unless it says otherwise, and this one never said otherwise. It does now.
