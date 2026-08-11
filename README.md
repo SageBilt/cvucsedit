@@ -185,6 +185,15 @@ Please report all issues on [Github](https://github.com/SageBilt/cvucsedit/issue
 
 ## Release Notes
 
+#### 2.3.4
+
+Four methods Cabinet Vision documents on the assembly object were missing from the extension's description of the API, and two more were missing an optional argument. All six now match *JavaScript Assembly Object* in the Cabinet Vision help.
+
+##### Fixed
+- **`GetDescendants()` and `GetDescendants('filter')` are now offered.** The deep-dive version of `GetChildren` — every object below the current one, not just its immediate children — was missing altogether, so writing it was marked as an error and nothing was offered on the result. It takes the same name filters, with `?` and `*` wildcards and `|` between them.
+- **`RemoveCAD(axis)` and `RemoveShape()` are now offered.** Both were missing, which left the documented way of taking dynamic CAD or a shape back off a top-level assembly — where, unlike on a part, they stay put — marked as an error.
+- **`GetShape(axis)` and `GetParameterValue('DX', true)` are accepted.** Both methods were described without their optional argument, so the very calls Cabinet Vision's documentation gives as examples were reported as having too many arguments.
+
 #### 2.3.3
 
 Cabinet Vision exposes a .NET API, so `GetChildren` gives you a .NET list and not a JavaScript array — as Cabinet Vision's own documentation says. The extension's description of the API did not, and called it an array.

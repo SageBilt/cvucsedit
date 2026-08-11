@@ -1620,6 +1620,28 @@
             ]
         },
         {
+            "name": "GetDescendants",
+            "parentObject": ["_this", "_cab"],
+            "definition": "GetDescendants()",
+            "value": "GetDescendants()",
+            "description": "Return a deep dive collection of object tree children of the current object.\n Note: as CV exposes a .NET API this will return a .NET List object and not the native JavaScript Array.\n For a basic cabinet this will return all the assembly tree objects below the cabinet",
+            "example": "var result = _this.GetDescendants();\nfor (var i = 0; i < result.Count; i++) {\n    var descendant = result[i];\n}",
+            "returnType": "System::Collections::Generic::List - array of CVAsmManaged all descendant objects",
+            "parameterDef": []
+        },
+        {
+            "name": "GetDescendants",
+            "parentObject": ["_this", "_cab"],
+            "definition": "GetDescendants(string filter)",
+            "value": "GetDescendants('${1:filter}')",
+            "description": "Return a deep dive collection of object tree children of the current object using a filter. The filter can include wild cards ? and *. There can also be multiple filters separated by the | symbol (see GetChildren(string filter)).\n Note: as CV exposes a .NET API this will return a .NET List object and not the native JavaScript Array.\n For a basic cabinet 'AS' will return a list of AS (adjustable shelf) objects",
+            "example": "var result = _this.GetDescendants('AS');",
+            "returnType": "System::Collections::Generic::List - array of CVAsmManaged all descendant objects",
+            "parameterDef": [
+                {"ParamName": "string filter", "ParamValue": "Name filter, optionally separated with a pipe, using full names or wild card characters","DataType": "ucsmSyntax"}
+            ]
+        },
+        {
             "name": "GetFirstChild",
             "parentObject": ["_this", "_cab"],
             "definition": "GetFirstChild()",
@@ -1642,13 +1664,14 @@
         {
             "name": "GetParameterValue",
             "parentObject": ["_this", "_cab"],
-            "definition": "GetParameterValue(string name)",
-            "value": "GetParameterValue('${1:paramName}')",
+            "definition": "GetParameterValue(string name)…[optional]bool local)",
+            "value": "GetParameterValue('${1:paramName}'${2:, local[optional]})",
             "description": "Return the value of the given parameter",
-            "example": "var result = _this.GetParameterValue('DX');",
+            "example": "var result = _this.GetParameterValue('DX');\nvar resultlocal = _this.GetParameterValue('DX', true);",
             "returnType": "variant - value of parameter else null on invalid parameter",
             "parameterDef": [
-                {"ParamName": "string name", "ParamValue": "Parameter name","DataType": "ucsmSyntax"}
+                {"ParamName": "string name", "ParamValue": "Parameter name","DataType": "ucsmSyntax"},
+                {"ParamName": "bool local[optional]", "ParamValue": "Specify if the parameter search is limited to the current object or not. If false, the search will traverse up the object tree to find the parameter, if true, the search will be limited to the current object. Defaults to false if not specified.","DataType": "bool"}
             ]
         },
         {
@@ -1664,12 +1687,14 @@
         {
             "name": "GetShape",
             "parentObject": ["_this", "_cab"],
-            "definition": "GetShape()",
-            "value": "GetShape()",
+            "definition": "GetShape()…[optional]int axis)",
+            "value": "GetShape(${1:AXIS_[optional]})",
             "description": "Return the shape of the current object. For an object without a shape the shape will be a rectangle.\nNote: This function requires a xShaping license and will return null if not licensed.",
-            "example": "var shape = _this.GetShape();",
+            "example": "var shape = _this.GetShape();\nvar axisshape = _this.GetShape(AXIS_XZ);",
             "returnType": "CVShapeManaged - reference to a shape object",
-            "parameterDef": []
+            "parameterDef": [
+                {"ParamName": "int axis[optional]", "ParamValue": "The object axis the shape is read from, represented by one of the Shape Axis constants","DataType": "constants.ShapeAxis"}
+            ]
         },
         {
             "name": "HasParameter",
@@ -1733,6 +1758,18 @@
             ]
         },
         {
+            "name": "RemoveCAD",
+            "parentObject": ["_this", "_cab"],
+            "definition": "RemoveCAD(int axis)",
+            "value": "RemoveCAD(${1:AXIS_})",
+            "description": "Removes the dynamic CAD on the given axis. This function is not really useful for CAD on parts, but it provides a way to remove CAD from the top level assemblies where the dynamic CAD is more permanent.\nNote: This function requires a x2D CAD license.",
+            "example": "_this.RemoveCAD(AXIS_XY);",
+            "returnType": "void",
+            "parameterDef": [
+                {"ParamName": "int axis", "ParamValue": "The object axis the CAD is removed from, represented by one of the Shape Axis constants","DataType": "constants.ShapeAxis"}
+            ]
+        },
+        {
             "name": "RemoveParameter",
             "parentObject": ["_this", "_cab"],
             "definition": "RemoveParameter(string name)",
@@ -1743,6 +1780,16 @@
             "parameterDef": [
                 {"ParamName": "string name", "ParamValue": "Parameter name","DataType": "ucsmSyntax"}
             ]
+        },
+        {
+            "name": "RemoveShape",
+            "parentObject": ["_this", "_cab"],
+            "definition": "RemoveShape()",
+            "value": "RemoveShape()",
+            "description": "Removes the current shape and sets the object back to the default \"cube\". Only useful on top level assemblies, where the shape set by SetShape is more permanent.\nNote: This function requires a xShaping license.",
+            "example": "_this.RemoveShape();",
+            "returnType": "void",
+            "parameterDef": []
         },
         {
             "name": "ReplacePart",

@@ -5,6 +5,30 @@ All notable changes to the "cvucsedit" extension will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.4] - 2026-08-11
+
+Four methods Cabinet Vision documents on the assembly object were missing from
+the generated API description, and two more were declared without the optional
+argument the documentation gives them. All six are checked against
+*JavaScript Assembly Object* in the Cabinet Vision help.
+
+### Fixed
+- **`GetDescendants()` and `GetDescendants(string filter)` are declared.** The
+  deep-dive counterpart to `GetChildren` was absent entirely, so a call to it
+  was an error in the editor and offered no completion on its result. Both
+  return `CVList<CVAsmManaged>`, and the filter takes the same wildcard and
+  pipe-separated syntax `GetChildren` does.
+- **`RemoveCAD(int axis)` and `RemoveShape()` are declared.** Both were absent,
+  which meant the only documented way to take dynamic CAD or a shape back off a
+  top-level assembly — where, unlike on a part, `AddCAD` and `SetShape` persist
+  — was itself reported as an error. The axis argument narrows to the
+  `AXIS_XY` / `AXIS_XZ` / `AXIS_ZY` constants.
+- **`GetShape` accepts its optional axis and `GetParameterValue` its optional
+  `local` flag.** Both were declared with the shorter signature alone, so
+  `_this.GetShape(AXIS_XZ)` and `_this.GetParameterValue('DX', true)` — the
+  examples Cabinet Vision's own documentation gives — were rejected as passing
+  too many arguments.
+
 ## [2.3.3] - 2026-08-11
 
 Cabinet Vision exposes a .NET API, so `GetChildren` hands back a
