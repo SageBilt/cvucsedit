@@ -39,7 +39,15 @@ export class DtsGenerator {
         const text = (raw ?? '').trim();
         if (!text) return 'void';
 
-        if (/CVAsmManaged/.test(text) && /\barray\b|List/i.test(text)) return 'CVAsmManaged[]';
+        // Cabinet Vision exposes a .NET API, so anything it describes as a collection comes back as
+        // a System.Collections.Generic.List and *not* a JavaScript array: it counts with `Count`,
+        // and none of the array methods are on it. `CVList<T>`, emitted by `build`, is that shape.
+        if (/\bList\b/.test(text)) {
+            const element = /CVShapeManaged/.test(text) ? 'CVShapeManaged'
+                : /CVAsmManaged/.test(text) ? 'CVAsmManaged'
+                    : 'any';
+            return `CVList<${element}>`;
+        }
         if (/CVShapeManaged/.test(text)) return 'CVShapeManaged | null';
         if (/CVAsmManaged/.test(text)) {
             return /\bnull\b/.test(text) ? 'CVAsmManaged | null' : 'CVAsmManaged';
@@ -355,6 +363,168 @@ export class DtsGenerator {
 
     // ------------------------------------------------------------------ emit
 
+    /**
+     * The .NET collection types, emitted verbatim.
+     *
+     * Cabinet Vision exposes a .NET API, so a method documented as returning a collection returns a
+     * real `System.Collections.Generic.List` and the script host bridges its members through as
+     * they are: `Count` rather than `length`, `ForEach` rather than `forEach`, `Item(i)` alongside
+     * `[i]`. Typing that as `T[]` offered the JavaScript array surface instead, none of which is
+     * there - and `length`, the one an author reaches for first, is `undefined` rather than an
+     * error, so the counted loop written against it silently never runs.
+     *
+     * The member list is the one CV's own debugger reports for a live list, so it is what the
+     * runtime really exposes rather than what `List<T>` has on paper.
+     */
+    private static readonly COLLECTIONS: string[] = [
+        '/**',
+        ' * A .NET delegate parameter - an `Action<T>`, `Predicate<T>` or `Comparison<T>`.',
+        ' *',
+        ' * **Cabinet Vision cannot build one from a JavaScript function**, so every member declared',
+        ' * as taking one exists on the object but cannot be called from UCS:JS. Doing so fails at',
+        ' * runtime with *"The best overloaded method match for ... has some invalid arguments"*.',
+        ' *',
+        ' * Walk the list yourself instead:',
+        ' *',
+        ' * @example',
+        ' * for (var i = 0; i < children.Count; i++) {',
+        ' *     var child = children[i];',
+        ' * }',
+        ' */',
+        'type CVDelegate<TSignature> = TSignature & {',
+        '    readonly __cvDelegate: \'Cabinet Vision cannot build a .NET delegate from a JavaScript function\';',
+        '};',
+        '',
+        '/**',
+        ' * A .NET `System.Collections.Generic.List` returned by Cabinet Vision - **not** a JavaScript',
+        ' * array. It is counted with `Count`, not `length`, and the methods on it are .NET methods:',
+        ' * capitalised, and behaving as .NET does. There is no `map`, `filter`, `push` or `slice`,',
+        ' * and the members that take a callback - `ForEach`, `Find`, `Sort` - cannot be called from',
+        ' * UCS:JS at all, because the callback is a .NET delegate. See `CVDelegate`.',
+        ' *',
+        ' * Indexing works, and a counted `for` is the usual way to walk one:',
+        ' *',
+        ' * @example',
+        ' * var children = _this.GetChildren(\'Door*\');',
+        ' * for (var i = 0; i < children.Count; i++) {',
+        ' *     var child = children[i];',
+        ' * }',
+        ' *',
+        ' * The list is a snapshot handed to the script: adding to it or removing from it changes the',
+        ' * list alone, and adds or deletes nothing in the Cabinet Vision model.',
+        ' */',
+        'interface CVList<T> {',
+        '    /** Number of items. The .NET name - `length` is undefined on this object. */',
+        '    readonly Count: number;',
+        '    readonly [index: number]: T;',
+        '    /** The item at `index`; the same as `list[index]`. */',
+        '    Item(index: number): T;',
+        '    /** Allocated capacity, not the number of items. `Count` is almost always what you want. */',
+        '    Capacity: number;',
+        '',
+        '    /** True if `item` is in the list. */',
+        '    Contains(item: T): boolean;',
+        '    /** Position of the first matching item, or -1 when it is not present. */',
+        '    IndexOf(item: T): number;',
+        '    /** Position of the last matching item, or -1 when it is not present. */',
+        '    LastIndexOf(item: T): number;',
+        '    /** A copy as a .NET array - counted with `Length`, and still not a JavaScript array. */',
+        '    ToArray(): CVArray<T>;',
+        '    /** A new list of `count` items starting at `index`. */',
+        '    GetRange(index: number, count: number): CVList<T>;',
+        '    /** A read only view of this list; the mutating members throw on what it returns. */',
+        '    AsReadOnly(): CVList<T>;',
+        '    CopyTo(array: CVArray<T>, arrayIndex?: number): void;',
+        '    /** Enumerator, for when a counted `for` will not do. */',
+        '    GetEnumerator(): CVEnumerator<T>;',
+        '    /** Position of `item` in a list already sorted, else a negative number. */',
+        '    BinarySearch(item: T): number;',
+        '',
+        '    // Every member below takes a .NET delegate, which Cabinet Vision cannot build from a',
+        '    // JavaScript function - see `CVDelegate`. Declared so that they carry that answer, and',
+        '    // marked deprecated so the editor strikes them out rather than recommending them.',
+        '',
+        '    /**',
+        '     * Calls a .NET `Action<T>` for each item. This is not `Array.forEach`.',
+        '     *',
+        '     * @deprecated Not callable from UCS:JS - Cabinet Vision cannot build a .NET delegate',
+        '     * from a JavaScript function. Use `for (var i = 0; i < list.Count; i++)`.',
+        '     */',
+        '    ForEach(action: CVDelegate<(item: T) => void>): void;',
+        '    /**',
+        '     * The first item matching a .NET `Predicate<T>`, else null.',
+        '     *',
+        '     * @deprecated Not callable from UCS:JS - see `CVDelegate`. Walk the list with a counted',
+        '     * `for` and keep the first item your own test accepts.',
+        '     */',
+        '    Find(match: CVDelegate<(item: T) => boolean>): T | null;',
+        '    /** @deprecated Not callable from UCS:JS - see `CVDelegate`. */',
+        '    FindLast(match: CVDelegate<(item: T) => boolean>): T | null;',
+        '    /** @deprecated Not callable from UCS:JS - see `CVDelegate`. */',
+        '    FindAll(match: CVDelegate<(item: T) => boolean>): CVList<T>;',
+        '    /** @deprecated Not callable from UCS:JS - see `CVDelegate`. */',
+        '    FindIndex(match: CVDelegate<(item: T) => boolean>): number;',
+        '    /** @deprecated Not callable from UCS:JS - see `CVDelegate`. */',
+        '    FindLastIndex(match: CVDelegate<(item: T) => boolean>): number;',
+        '    /** @deprecated Not callable from UCS:JS - see `CVDelegate`. */',
+        '    Exists(match: CVDelegate<(item: T) => boolean>): boolean;',
+        '    /** @deprecated Not callable from UCS:JS - see `CVDelegate`. */',
+        '    TrueForAll(match: CVDelegate<(item: T) => boolean>): boolean;',
+        '    /** @deprecated Not callable from UCS:JS - see `CVDelegate`. */',
+        '    ConvertAll(converter: CVDelegate<(item: T) => any>): CVList<any>;',
+        '',
+        '    // Mutating members. These change this list only - never the Cabinet Vision model.',
+        '',
+        '    Add(item: T): void;',
+        '    AddRange(items: CVList<T> | CVArray<T>): void;',
+        '    Insert(index: number, item: T): void;',
+        '    InsertRange(index: number, items: CVList<T> | CVArray<T>): void;',
+        '    /** Removes the first matching item, and reports whether one was found. */',
+        '    Remove(item: T): boolean;',
+        '    RemoveAt(index: number): void;',
+        '    RemoveRange(index: number, count: number): void;',
+        '    Clear(): void;',
+        '    Reverse(): void;',
+        '    TrimExcess(): void;',
+        '    /** @deprecated Not callable from UCS:JS - see `CVDelegate`. */',
+        '    RemoveAll(match: CVDelegate<(item: T) => boolean>): number;',
+        '    /**',
+        '     * Sorts in place. The no argument form works only where .NET can compare the items',
+        '     * itself - numbers and strings - and throws on objects, which need a comparison that',
+        '     * cannot be passed from UCS:JS.',
+        '     *',
+        '     * @deprecated for a list of objects - see `CVDelegate`.',
+        '     */',
+        '    Sort(): void;',
+        '',
+        '    Equals(other: any): boolean;',
+        '    GetHashCode(): number;',
+        '    GetType(): any;',
+        '    ToString(): string;',
+        '}',
+        '',
+        '/**',
+        ' * A .NET array, as returned by `ToArray`. Counted with `Length` - the capital is not a typo,',
+        ' * and lower case `length` is undefined here too.',
+        ' */',
+        'interface CVArray<T> {',
+        '    readonly Length: number;',
+        '    readonly [index: number]: T;',
+        '    GetValue(index: number): T;',
+        '}',
+        '',
+        '/**',
+        ' * A .NET enumerator. `MoveNext` must be called before the first read of `Current`, so the',
+        ' * loop is `while (e.MoveNext()) { … e.Current … }`.',
+        ' */',
+        'interface CVEnumerator<T> {',
+        '    MoveNext(): boolean;',
+        '    readonly Current: T;',
+        '    Reset(): void;',
+        '}',
+        ''
+    ];
+
     public build(dynamicData: DynamicData): string {
         this.unmappedReturnTypes.clear();
         const out: string[] = [];
@@ -425,6 +595,10 @@ export class DtsGenerator {
             !m.objectType && (this.parents(m).includes('_this') || this.parents(m).includes('_cab')));
         const asmProperties = this.data.properties.filter(p =>
             !p.objectType && (this.parents(p).includes('_this') || this.parents(p).includes('_cab')));
+
+        // Cabinet Vision hands back .NET collections. Typing those as `T[]` put every array method
+        // in the completion list and `length` on the object, none of which exist at runtime.
+        out.push(...DtsGenerator.COLLECTIONS);
 
         out.push('/** An assembly, part or other object in the Cabinet Vision model. */');
         out.push('interface CVAsmManaged {');

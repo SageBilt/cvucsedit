@@ -472,6 +472,29 @@ rules, unmapped values fall back to `any` with a console warning) and `parameter
 (15 values). `ParamName` is `"<type> <name>"`, so the identifier is the **second** token, and may
 carry an `[optional]` / `(optional …)` marker.
 
+A `returnType` naming a `List` maps to **`CVList<T>`, never `T[]`**. Cabinet Vision exposes a .NET
+API, so `GetChildren` returns a `System.Collections.Generic.List` and the script host bridges its
+members through as they are — `Count` not `length`, `ForEach` not `forEach`, `Item(i)` alongside
+`[i]`, and each callback a .NET delegate taking the item alone. Typing it as `CVAsmManaged[]`
+offered the JavaScript array surface instead, and `length` is the dangerous member of it: it is
+`undefined` rather than an error, so the counted loop written from completion silently never runs.
+
+`DtsGenerator.COLLECTIONS` holds `CVList<T>` plus `CVArray<T>` (what `ToArray` returns — `Length`,
+capitalised, so the same trap one level down) and `CVEnumerator<T>`, emitted verbatim next to
+`CVAsmManaged`. Its member list is what CV's own debugger reports for a live list rather than what
+`List<T>` has on paper. Not declared, for want of that evidence: `[Symbol.iterator]`, since a symbol
+key would not have shown in the dump.
+
+**A member existing is not the same as it being callable**, which is the second lesson and the
+reason `CVDelegate<T>` exists. `ForEach`, `Find`, `Sort(comparison)` and the rest take an `Action<T>`
+or `Predicate<T>`, and CV's host will not build a .NET delegate from a script function — the call
+fails with *"The best overloaded method match … has some invalid arguments"*. Those members are
+therefore declared taking `CVDelegate<Signature>`, a brand no function is assignable to, and marked
+`@deprecated` so VS Code strikes them through in completion. Deleting them instead would have been
+worse: the member is on the object, it appears in the debugger, and an author who tries it deserves
+the answer at the call site rather than silence. The brand is what makes the message legible — the
+mismatch TypeScript prints ends in the brand's own string, which says why.
+
 A `DataType` may list **several alternatives separated by `|`**, for a parameter the documentation
 declares as `Object` because its type depends on an earlier argument — `ModifyParameter`'s third
 argument is a description string, a `parameterTypes` constant or a `parameterModStyles` constant

@@ -116,6 +116,7 @@ Because mirrored UCS:JS files are real JavaScript files in your workspace, VS Co
   - All documented constants, types and functions for UCS:JS, along with the CVAsmManaged, CVShapeManaged and 2D CAD objects and their properties and methods.
   - `_cvSystem.CreateObject()` is typed per class name, so `CreateObject('cvArc')` offers arc members, `CreateObject('cvDimension')` offers dimension members, and so on.
   - Completion is filtered by type, so `_this.` offers only CVAsmManaged members. This applies to the built in objects like `_this` and `_cab` and equally to your own variables assigned from them.
+  - A collection returned by Cabinet Vision is typed as the .NET list it really is, so `GetChildren()` offers `Count`, `Item()`, `ForEach`, `Find` and the rest of `List<T>` rather than JavaScript array methods that are not there at runtime.
   - Cabinet Vision JavaScript libraries are offered project wide, with each library's public properties and methods. A library identifies itself in the list and in its hover — that it is a Cabinet Vision UCS:JS library, which one, and that its body is a class body — so a call site reads as more than someone's variable.
   - Parameters are filled in automatically when a method is picked from the list, for library methods as well as documented Cabinet Vision methods. Constant arguments show their group as the placeholder, for example `ModifyParameter(name, PARMOD_, PARSTYLE_)`.
   - Context aware completion inside string arguments. When the cursor is placed inside the string of `Evaluate()`, which evaluates an equation written in UCS:M, the list is populated with UCS:M parameters. Arguments that take a material or a connection are populated from your database, and arguments that take a constant are narrowed to just that group.
@@ -183,6 +184,17 @@ Please report all issues on [Github](https://github.com/SageBilt/cvucsedit/issue
 
 
 ## Release Notes
+
+#### 2.3.3
+
+Cabinet Vision exposes a .NET API, so `GetChildren` gives you a .NET list and not a JavaScript array — as Cabinet Vision's own documentation says. The extension's description of the API did not, and called it an array.
+
+##### Fixed
+- **Collections are described as the .NET lists they are.** Because `GetChildren` was described as returning an array, completion offered `length`, `forEach`, `map` and `filter` on the result, and none of those exist when the standard runs. `length` was the expensive one: it is not an error, it is simply `undefined`, so `for (var i = 0; i < children.length; i++)` never runs once and the standard appears to do nothing at all.
+
+  The list now offers what it really has — `Count`, `Item()` and indexing, `Contains`, `IndexOf`, `GetRange`, `ToArray`, `Add`, `Remove` and the rest — with documentation on each. `ToArray()` is a .NET array in turn, counted with `Length`. Adding to or removing from one of these lists changes the list only, never the model.
+- **Methods that take a callback are shown as unavailable, because Cabinet Vision cannot call them from a standard.** `ForEach`, `Find`, `FindAll`, `Exists`, `RemoveAll` and `Sort` with a comparison all expect a .NET delegate, and a JavaScript function is not one, so the standard stops with *"The best overloaded method match ... has some invalid arguments"*. They are struck through in the completion list and their hover says to use a counted `for` loop instead — rather than being hidden, since the method is genuinely on the object and you will see it in Cabinet Vision's debugger.
+- The guidance the extension writes for AI agents covers this too, so an agent asked to loop over the children of a cabinet is told the same thing rather than assuming an array — and rather than reaching for `ForEach`.
 
 #### 2.3.2
 

@@ -5,6 +5,49 @@ All notable changes to the "cvucsedit" extension will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.3] - 2026-08-11
+
+Cabinet Vision exposes a .NET API, so `GetChildren` hands back a
+`System.Collections.Generic.List` and not a JavaScript array — as its own
+documentation says. The generated API description did not say it, and described
+the result as an array instead.
+
+### Fixed
+- **A collection returned by Cabinet Vision is now typed as the .NET list it
+  is.** `GetChildren` was declared as `CVAsmManaged[]`, so completion offered
+  the whole JavaScript array surface — `length`, `forEach`, `map`, `filter`,
+  `push` — none of which is on the object at runtime. `length` was the costly
+  one: it is `undefined` rather than an error, so `for (var i = 0; i <
+  children.length; i++)` runs no iterations and the standard silently does
+  nothing.
+
+  The new `CVList<T>` declares the members the list actually has, taken from
+  what Cabinet Vision's own debugger reports for a live one: `Count`, `Item(i)`
+  and indexing, `Contains`, `IndexOf`, `GetRange`, `ToArray`, `Add`, `Remove`
+  and the rest of `List<T>`. `ToArray()` returns `CVArray<T>`, counted with
+  `Length`, since a .NET array is not a JavaScript one either; `GetEnumerator()`
+  returns `CVEnumerator<T>`. Mutating members are documented as changing the
+  list alone — removing an object from the collection deletes nothing from the
+  model.
+- **The members that take a callback are marked as uncallable, because they
+  are.** `ForEach`, `Find`, `FindAll`, `FindIndex`, `Exists`, `TrueForAll`,
+  `RemoveAll`, `ConvertAll` and `Sort(comparison)` want a .NET `Action<T>` or
+  `Predicate<T>`, and Cabinet Vision does not build one of those from a
+  JavaScript function: the call fails at runtime with *"The best overloaded
+  method match for `List<CVAsmManaged>.ForEach(System.Action<CVAsmManaged>)` has
+  some invalid arguments"*.
+
+  They are still declared, since they are on the object and show in the
+  debugger, but their parameter is `CVDelegate<T>` — a type no JavaScript
+  function satisfies — and they are marked deprecated, so the editor strikes
+  them through and the hover says to use a counted `for` loop. Deleting them
+  would have left the same attempt failing with no explanation anywhere.
+
+### Changed
+- The UCS:JS reference carried in the mirror for AI agents gains a section on
+  collections, so an agent writing a loop over `GetChildren` is told the same
+  thing rather than assuming an array.
+
 ## [2.3.2] - 2026-08-10
 
 Reported from a user's machine: every enabled UCS:JS library in Cabinet Vision

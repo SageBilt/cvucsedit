@@ -1602,8 +1602,8 @@
             "parentObject": ["_this", "_cab"],
             "definition": "GetChildren()",
             "value": "GetChildren()",
-            "description": "Return a collection of object tree children of the current object.\n For a basic cabinet this will return [Case, Interior, Face]",
-            "example": "var result = _this.GetChildren();",
+            "description": "Return a collection of object tree children of the current object.\n Note: as CV exposes a .NET API this will return a .NET List object and not the native JavaScript Array.\n For a basic cabinet this will return [Case, Interior, Face]",
+            "example": "var result = _this.GetChildren();\nfor (var i = 0; i < result.Count; i++) {\n    var child = result[i];\n}",
             "returnType": "System::Collections::Generic::List - array of CVAsmManaged child objects",
             "parameterDef": []
         },

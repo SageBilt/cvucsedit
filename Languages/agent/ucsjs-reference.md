@@ -111,6 +111,64 @@ if (length < 20)      { … }
 else if (length > 50) { … }
 ```
 
+## Collections are .NET lists, not arrays
+
+Cabinet Vision exposes a .NET API, so anything that returns a collection — `GetChildren()` above all
+— hands back a `System.Collections.Generic.List`, not a JavaScript array. It is declared in
+`cv-api.d.ts` as `CVList<T>`, and the difference is not cosmetic:
+
+```js
+var children = _this.GetChildren('Door*');
+
+for (var i = 0; i < children.Count; i++) {   // Count, not length
+    var child = children[i];                  // indexing works
+}
+```
+
+`length` is `undefined` on it. `children.length` does not throw; the loop simply never runs, which is
+why the symptom is "the standard did nothing" rather than an error.
+
+The methods it does have are .NET's, capitalised, and take plain values:
+
+```js
+if (children.Contains(child)) { … }
+var at = children.IndexOf(child);      // -1 when not present
+var some = children.GetRange(0, 3);    // a new CVList
+```
+
+**Nothing that takes a callback can be called from UCS:JS.** `ForEach`, `Find`, `FindAll`,
+`FindIndex`, `Exists`, `TrueForAll`, `RemoveAll`, `ConvertAll` and `Sort(comparison)` are all on the
+object, and all of them want a .NET delegate — an `Action<T>` or `Predicate<T>` — which Cabinet
+Vision will not build from a JavaScript function. The editor strikes them out, and calling one stops
+the standard at runtime:
+
+```
+Error: The best overloaded method match for
+'System.Collections.Generic.List<CVAsmManaged>.ForEach(System.Action<CVAsmManaged>)'
+has some invalid arguments
+```
+
+So there is one way to walk a list — the counted `for` above — and searching or filtering is your own
+loop with your own test.
+
+There is no `map`, `filter`, `push` or `slice` either. `ToArray()` returns a .NET array, counted with
+`Length`, so it is not the escape hatch it looks like — build a real JavaScript array by hand if you
+want the array methods:
+
+```js
+var list = [];
+for (var i = 0; i < children.Count; i++) { list.push(children[i]); }
+```
+
+Adding to or removing from the list changes **the list only**. It is a snapshot handed to the
+script: `children.Remove(door)` does not delete anything from the cabinet.
+
+The same is true of every other .NET object Cabinet Vision hands you — a callback is never accepted,
+and a member is capitalised as .NET spells it.
+
+A method that returns a *single* object (`GetFirstChild`, `GetNextSibling`, `GetParent`) returns
+`null` when there is none — check for it before use.
+
 ## Case sensitivity
 
 UCS:M is case insensitive. JavaScript is not, and neither are the CV object names:
