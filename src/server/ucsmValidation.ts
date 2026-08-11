@@ -106,8 +106,9 @@ export class ucsmValidation {
     private filterUCSMContext(lineText:string) : {filteredText: string,startOffset: number } | undefined {
 
         function getParamDataType(methodDef: UCSJSSystemMethod,paramIndex: number) {
-            return paramIndex < methodDef.parameterDef.length
-            ? methodDef.parameterDef[paramIndex].DataType
+            const defs = methodDef.parameterDef ?? [];
+            return paramIndex < defs.length
+            ? defs[paramIndex].DataType
             : undefined;
         }
 

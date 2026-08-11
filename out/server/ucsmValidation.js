@@ -109,8 +109,9 @@ class ucsmValidation {
     }
     filterUCSMContext(lineText) {
         function getParamDataType(methodDef, paramIndex) {
-            return paramIndex < methodDef.parameterDef.length
-                ? methodDef.parameterDef[paramIndex].DataType
+            const defs = methodDef.parameterDef ?? [];
+            return paramIndex < defs.length
+                ? defs[paramIndex].DataType
                 : undefined;
         }
         const lineParamCount = this.getParamCount(lineText);

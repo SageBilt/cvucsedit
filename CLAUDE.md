@@ -549,10 +549,14 @@ Context awareness hinges on two private helpers in `server.ts`:
   lowercase `type` key; that has been normalised to `Type` to match `UCSJSObject`.
 - An entry with an `objectType` (currently only `CVShapeManaged`) belongs to **that** interface, not
   to its `parentObject`.
-- Some methods document their parameters in `definition` but ship an **empty `parameterDef`** (the
-  six `_cvMath` comparison helpers). `DtsGenerator.paramsFromDefinition` falls back to parsing
-  `definition`, otherwise they would emit a no-argument signature that rejects valid calls. Prefer
-  filling in `parameterDef` when editing the JSON — it is the only source of `DataType`.
+- Some methods document their parameters in `definition` but carry **no `parameterDef` key at all**
+  (the seven `_cvMath` helpers: `Epsilon`, `isEQ`, `isGT`, `isGTE`, `isLT`, `isLTE`, `isZero`).
+  `DtsGenerator.paramsFromDefinition` falls back to parsing `definition`, otherwise they would emit a
+  no-argument signature that rejects valid calls. Prefer filling in `parameterDef` when editing the
+  JSON — it is the only source of `DataType`. The field is **optional** in `UCSJSSystemMethod`, and
+  must stay that way: it was declared required, which is how `methodDef.parameterDef.length` in
+  `getMethodParamType` passed `strict` type checking and then threw on every hover and completion
+  inside a `_cvMath` call, rejecting the whole LSP request.
 - Parameters are filled in on completion by TypeScript, not by us: `package.json`
   `contributes.configurationDefaults` turns on `javascript.suggest.completeFunctionCalls`. This
   changes the *default* window-wide (users can still override it), and it replaces the old

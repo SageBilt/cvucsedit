@@ -136,7 +136,8 @@ export interface UCSJSSystemMethod {
     description: string;
     example: string;
     returnType: string;
-    parameterDef: UCSJSParameterDef[];
+    /** Absent on the seven `_cvMath` helpers, which document their arguments in `definition` only. */
+    parameterDef?: UCSJSParameterDef[];
     objectType?:string;
     /** Emit one overload per entry in `classes`, keyed on the class name literal (CreateObject). */
     factory?: boolean;

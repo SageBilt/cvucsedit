@@ -139,8 +139,11 @@ class LanguageServer {
             this.connection.console.log(`isInside "${isInside}" paramIndex "${paramIndex}" argsStart "${argsStart}"`);
             if (isInside) {
                 // Determine the DataType based on paramIndex
-                const dataType = paramIndex < methodDef.parameterDef.length
-                    ? methodDef.parameterDef[paramIndex].DataType
+                // `parameterDef` is absent on the `_cvMath` helpers, so this cannot be indexed blind:
+                // an exception here rejects the whole hover/completion request.
+                const defs = methodDef.parameterDef ?? [];
+                const dataType = paramIndex < defs.length
+                    ? defs[paramIndex].DataType
                     : undefined;
                 if (dataType)
                     return { paramType: dataType, insideStr: inString };
