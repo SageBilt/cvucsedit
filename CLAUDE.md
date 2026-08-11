@@ -188,6 +188,7 @@ dedicated folder has never had a dotted form.
 ```
 cvucs/<Database>/
   .gitignore           "*" — the folder ignores itself, so we never touch the user's .gitignore
+                       (cvucsedit.WriteMirrorGitignore turns this off; see below)
   jsconfig.json        generated
   cv-api.d.ts          generated
   AGENTS.md            generated — rules of the road for AI agents
@@ -270,8 +271,36 @@ now cover that, in decreasing order of how much they can be relied on:
    `AGENTS.md`.
 3. **The folder no longer being hidden**, covered above.
 
-The mirror `.gitignore` is still `*`: these are generated, per-database and rewritten on every
-activation, so committing them into the user's project would be churn.
+The mirror `.gitignore` is still `*` by default: these are generated, per-database and rewritten on
+every activation, so committing them into the user's project would be churn.
+
+### Versioning the mirror is possible, and it is the user's risk to take
+
+`cvucsedit.WriteMirrorGitignore` turns the self-ignore off, for someone who wants the mirror in a
+repository of their own. What makes that dangerous is not the generated-file churn but
+`startWatching`: its glob is `**/*.{js,ucsm}` and every change lands in `syncToDb`, so **git cannot
+be told apart from a save**. A `checkout`, `merge`, `pull`, `stash pop`, `revert` or `reset --hard`
+rewrites the working tree, and each rewritten file becomes an `UPDATE UCS SET Code` against
+production; a conflicted merge pushes its `<<<<<<<` markers. The hash guard in `syncToDb` only
+suppresses genuine no-ops, which is also why `core.autocrlf` normalisation is harmless — `canonical`
+strips CRLF before hashing. Branches are lopsided besides: content round-trips, existence does not,
+since creating and deleting rows from the filesystem is unsupported.
+
+None of that is fixable by a setting, so the setting does not pretend to fix it. What it does is put
+the risk in the two places it will actually be read — the setting description, and `AGENTS.md` rule
+1, whose `{{GIT}}` fragment switches to a paragraph telling the agent that git commands are database
+writes and that `git log` / `git show` are the safe way to read history. Agents run git; that
+fragment is the load-bearing half of this feature.
+
+`writeGitignore` is called from `initialize` **and** from `SQLScriptProvider.writeProjectFiles`, so
+the setting takes effect on a refresh rather than needing a window reload — it is the one setting
+whose whole observable effect is a file appearing or disappearing, so deferring it to a reload would
+read as broken. Turning it off *deletes* the file, because otherwise it would do nothing for the
+mirrors that already exist, which is all of them; it deletes only a file whose content is still
+`GITIGNORE_CONTENT`, since an edited one carries rules we know nothing about. It is deliberately not
+in `restrictedConfigurations`: unlike `Server` and `MirrorPath` it names no path and no credential
+target, and the worst an untrusted workspace could do with it is un-hide files the user still has to
+commit themselves.
 
 ### Cabinet Vision's debug folder is the other place UCS:JS lives
 

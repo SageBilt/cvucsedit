@@ -4,7 +4,7 @@
   "name": "cvucsedit",
   "displayName": "Cabinet Vision UCS Editor",
   "description": "Adds features to VS Code for loading, editing and saving Cabinet Vision User Created Standards",
-  "version": "2.3.4",
+  "version": "2.4.0",
   "author": {
     "name": "David Bilton"
   },
@@ -112,6 +112,11 @@
           "type": "boolean",
           "default": true,
           "description": "Maintain a short block in AGENTS.md and CLAUDE.md at the root of the folder holding the mirror, pointing AI agents at it. Most agent tools only look for these files at the project root. In the dedicated mirror folder this is written straight away; in one of your own projects you are asked first, per workspace. Existing files are appended to between markers, never overwritten."
+        },
+        "cvucsedit.WriteMirrorGitignore": {
+          "type": "boolean",
+          "default": true,
+          "description": "Keep a .gitignore containing '*' in the mirror folder, so mirrored UCS code never appears in a git repository. Turn this off only if you intend to version the mirror yourself, and understand that git then writes to the live database: the file watcher cannot tell a checkout, merge, pull, stash pop or reset from a save, so anything that rewrites a file on disk is pushed to Cabinet Vision, one UPDATE per changed file, with no undo. A conflicted merge pushes its conflict markers too, and a branch cannot add or remove standards. Reading history ('git log', 'git show', 'git diff') is safe; restoring from it is not. Turning this off deletes the .gitignore if it is still the one we wrote; a file you have edited yourself is left alone."
         },
         "cvucsedit.CheckJs": {
           "type": "boolean",

@@ -5,6 +5,37 @@ All notable changes to the "cvucsedit" extension will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2026-08-12
+
+The mirror has always written a `.gitignore` containing `*` into itself, so that
+UCS code never appears in anyone's repository and the user's own `.gitignore` is
+never touched. Some users want to version their standards regardless. That is
+their call to make, so it is now a setting — with the risk stated where it will
+be read rather than found out.
+
+### Added
+- **`cvucsedit.WriteMirrorGitignore` (default `true`).** Turning it off removes
+  the `.gitignore`, leaving the mirror visible to git. Only the file the
+  extension wrote is removed — one that has been edited by hand carries rules we
+  know nothing about and is left alone, with a line in the output channel saying
+  so. Turning the setting back on restores it. Both directions take effect on the
+  next list refresh rather than needing a window reload, since the whole visible
+  effect of this setting is a file appearing or disappearing.
+- **The risk is documented in three places**, because none of it is fixable by a
+  setting. The file watcher cannot tell git apart from a save, so anything that
+  rewrites the working tree — `checkout`, `switch`, `merge`, `pull`, `stash pop`,
+  `revert`, `reset --hard` — becomes one `UPDATE UCS SET Code` per changed file
+  against the live database, and a conflicted merge pushes its `<<<<<<<` markers
+  with it. A branch also cannot add or remove standards, so it tracks the
+  contents of each standard but never which ones exist. Reading history (`git
+  log`, `git diff`, `git show <rev>:<path>`) touches no file and is safe.
+- **The generated `AGENTS.md` changes with the setting.** Rule 1 normally notes
+  that there is no git history to fall back on; with the mirror tracked it
+  instead tells the agent that git commands are database writes, never to check
+  something out to look at it, and to read history with `git show` instead. An
+  AI agent is likelier than the user to reach for `git checkout` unprompted, so
+  this is the part of the change that does the most work.
+
 ## [2.3.4] - 2026-08-11
 
 Four methods Cabinet Vision documents on the assembly object were missing from

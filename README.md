@@ -45,7 +45,7 @@ Addition to VSCode's built in features, this extension provides these features.
   - By default the mirror is a folder of its own outside your projects — `<your home folder>/Cabinet Vision UCS/` — which you open as its own window with **Cabinet Vision UCS: Open UCS Workspace**. Set `cvucsedit.MirrorLocation` to `workspace` to mirror into the project you have open instead, under `cvucs/`.
   - Sync is two way. Saving in the editor, an AI agent writing the file, and an external tool writing the file all take the same route back to the database.
   - On startup disk and database are reconciled. A change made only on disk is pushed to the database, a change made only in Cabinet Vision rewrites the file, and a file changed on both sides is reported as a conflict with neither side overwritten.
-  - The folder ignores itself in git, so your own `.gitignore` is never touched.
+  - The folder ignores itself in git, so your own `.gitignore` is never touched. `cvucsedit.WriteMirrorGitignore` turns that off if you want to version the mirror yourself — read the warning on the setting first, because git commands then write to the live database.
   - Creating or deleting a UCS from the filesystem is not supported — use Cabinet Vision to add or remove a UCS.
 - **Documentation for AI coding agents**
   - The mirrored folder documents itself. `AGENTS.md` (and a `CLAUDE.md` that imports it) tells an agent the things it cannot see from the files: that saving writes straight to the live database, that creating a file does not create a UCS, and which lines belong to the extension rather than to your code.
@@ -160,6 +160,7 @@ UCS code is mirrored to real files on disk, and VS Code's JavaScript language fe
 * `cvucsedit.MirrorPath`: Full path of the dedicated mirror folder (defaults to **&lt;your home folder&gt;\Cabinet Vision UCS**). Each database gets a subfolder of its own. Avoid a cloud-synced folder such as OneDrive — the mirror tracks a live database.
 * `cvucsedit.MirrorFolder`: The folder name used when `cvucsedit.MirrorLocation` is **workspace** (defaults to **cvucs**). Deliberately not hidden — some AI agent tools skip dot-prefixed folders. A mirror left in the old `.cvucs` folder is moved here automatically.
 * `cvucsedit.WriteRootAgentFiles`: Keep a short Cabinet Vision UCS section in `AGENTS.md` and `CLAUDE.md` at the root of the folder holding the mirror, pointing AI agents at it (defaults to **true**). In your own project you are asked before this is written for the first time. Existing files are appended to between markers, never overwritten.
+* `cvucsedit.WriteMirrorGitignore`: Keep a `.gitignore` containing `*` in the mirror folder, so mirrored UCS code never appears in a git repository (defaults to **true**). Turn it off only if you mean to version the mirror yourself, and read *Putting the mirror in git* below first. Turning it off deletes the `.gitignore` if it is still the one the extension wrote; one you have edited yourself is left alone.
 * `cvucsedit.CheckJs`: Report JavaScript type errors in mirrored UCS:JS files (defaults to **false**). Completion, hover, go to definition and rename work either way; enabling this also surfaces type errors, which can be noisy.
 * `cvucsedit.DebugFolderSuffix`: The end of the folder path Cabinet Vision opens when it launches VS Code to debug a UCS (defaults to **Temp/UCSJS**). A window opened on a folder ending this way connects automatically and gets UCS:JS language support on its plain `.js` files. Only the ending is matched, since the install path and version differ per machine. Clear it to turn that off.
 
@@ -178,12 +179,37 @@ UCS code is mirrored to real files on disk, and VS Code's JavaScript language fe
 * `cvucsedit.clearSearchUCSLibList`: Clear library Search.
 * `cvucsedit.refreshUCSLibList`: Refresh library List.
 * 
+## Putting the mirror in git
+
+By default the mirror folder ignores itself, so your UCS code never turns up in a repository. `cvucsedit.WriteMirrorGitignore` turns that off for anyone who wants to version it anyway. Before you do, understand what you are taking on — this is a real risk, not a tidiness preference.
+
+**Git commands become database writes.** The extension watches the mirror folder and saves any file that changes to the live database. It cannot tell who changed it, and git's whole job is changing files. So `checkout`, `switch`, `merge`, `pull`, `stash pop`, `revert` and `reset --hard` are all pushed to Cabinet Vision, one `UPDATE` per changed file, with no confirmation and no undo. Checking out last month's branch to look at it rewrites every standard it touches, for everyone on that database.
+
+The rest of what to expect:
+
+* **A conflicted merge pushes its conflict markers.** Git writes `<<<<<<<` into the file and waits for you to resolve it; the extension saves that first, and Cabinet Vision can no longer parse the standard.
+* **A branch cannot add or remove standards.** Those are created and deleted in Cabinet Vision only. A branch tracks what is *inside* each standard, never which standards exist, so switching branches quietly leaves the repository and the database disagreeing.
+* **`manifest.json` is bookkeeping, not content.** It records what was last synced, which is how the extension works out whether a change came from you or from Cabinet Vision. Restoring an old copy of it can make the database silently win over work you have not pushed. Consider ignoring it, along with the generated files (`cv-api.d.ts`, `jsconfig.json`, `AGENTS.md`, `CLAUDE.md`, `ucsjs-reference.md`, `ucsm-reference.md`) — those are rewritten on every refresh and will otherwise fill your history with noise.
+
+**Reading history is safe; restoring from it is not.** `git log`, `git diff` and `git show <rev>:<path>` change no file on disk, so they cannot reach the database. If you want an old version back, copy it out with `git show` and paste it in deliberately, so that one standard is saved and nothing else moves.
+
+Committing is safe too — so a workable habit is to commit often, never check out, and treat the repository as a record of what happened rather than as something you restore from. If you turn the setting off, the generated `AGENTS.md` changes to warn AI agents about all of this as well, since an agent is more likely than you are to reach for `git checkout`.
+
 ## Known Issues
 
 Please report all issues on [Github](https://github.com/SageBilt/cvucsedit/issues)
 
 
 ## Release Notes
+
+#### 2.4.0
+
+The mirror folder has always hidden itself from git, and some users would rather it did not. It can now be turned off, with the risks written down rather than discovered.
+
+##### Added
+- **`cvucsedit.WriteMirrorGitignore`.** Turn it off and the `.gitignore` containing `*` is removed, leaving the mirror visible to git so you can version your standards yourself. The setting deletes only the file the extension wrote; one you have edited is left alone, and turning the setting back on restores it. It takes effect on the next refresh, without reloading the window.
+- **A warning that means it.** Versioning the mirror is genuinely risky, because the extension cannot tell a git command from a save: `checkout`, `merge`, `pull`, `stash pop` and `reset --hard` all rewrite files, and every rewritten file is pushed to the live database with no undo. See *Putting the mirror in git* above before turning this on, and prefer `git log` / `git show`, which touch nothing.
+- **AI agents are told as well.** With the setting off, the generated `AGENTS.md` swaps its "there is no git history" note for a paragraph explaining that git commands write to the database and that history should be read, never checked out. An agent is more likely than you are to reach for `git checkout` unprompted.
 
 #### 2.3.4
 

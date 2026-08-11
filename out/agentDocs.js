@@ -155,11 +155,16 @@ class AgentDocsGenerator {
      * companion `CLAUDE.md` is a one line import of it rather than a copy, so there is one source
      * of truth in the folder.
      */
-    buildAgentsMd(database, server, root) {
+    buildAgentsMd(database, server, root, gitIgnored) {
         return AgentDocsGenerator.fill(AgentDocsGenerator.template('AGENTS.template.md'), {
             DATABASE: database,
             SERVER: server,
-            ROOT: root
+            ROOT: root,
+            // Two fragments rather than one paragraph with a clause swapped: when the mirror is
+            // tracked, the thing an agent has to be told is not "there is history" but that git
+            // itself writes to the database, and that is a paragraph of its own. Trimmed because it
+            // is spliced into a list item that supplies its own blank line.
+            GIT: AgentDocsGenerator.template(gitIgnored ? 'git-ignored.template.md' : 'git-tracked.template.md').trimEnd()
         });
     }
     buildClaudeMd() {

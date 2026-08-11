@@ -15,9 +15,10 @@ them either loses work or pushes code that Cabinet Vision cannot run.
 ## The seven rules
 
 1. **Saving a file here writes straight to the live database.** A file watcher pushes every save to
-   `UPDATE UCS SET Code`. There is no staging step, no undo and no git history — this folder ignores
-   itself (`.gitignore` contains `*`). Treat every write as a change to production data. Do not make
-   speculative or bulk edits "to see what happens".
+   `UPDATE UCS SET Code`. There is no staging step and no undo. Treat every write as a change to
+   production data. Do not make speculative or bulk edits "to see what happens".
+
+   {{GIT}}
 
 2. **You cannot create a UCS.** Writing a new file into `ucs/` or `lib/` does *nothing* — it is not
    in `manifest.json`, so the watcher ignores it and logs a message to an output channel you cannot

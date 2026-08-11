@@ -138,6 +138,10 @@ const MANIFEST_VERSION = 1;
 const MANIFEST_NAME = 'manifest.json';
 const WRITE_DEBOUNCE_MS = 300;
 
+/** Ignore everything, including this file, so the mirror is invisible to git without touching the
+ * user's own `.gitignore`. Compared as well as written - see `writeGitignore`. */
+const GITIGNORE_CONTENT = '*\r\n';
+
 /**
  * Not dot prefixed, deliberately. A hidden folder is skipped outright by some AI agent tools when
  * they look for context and instruction files, which defeats the entire point of mirroring to disk.
@@ -619,9 +623,7 @@ export class MirrorFileStore implements vscode.Disposable {
         await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(this.root, 'ucs'));
         await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(this.root, 'lib'));
 
-        // Self ignoring, so the mirror never appears in the user's repository and we never have to
-        // edit their .gitignore.
-        await this.writeIfChanged(vscode.Uri.joinPath(this.root, '.gitignore'), '*\r\n');
+        await this.writeGitignore();
 
         await this.loadManifest(database);
         this.startWatching();
@@ -664,6 +666,55 @@ export class MirrorFileStore implements vscode.Disposable {
         } catch (error) {
             this.log(`Could not move the mirror out of ${LEGACY_MIRROR_FOLDER}/ - ${
                 error instanceof Error ? error.message : String(error)}. The old folder can be deleted by hand.`);
+        }
+    }
+
+    /**
+     * Keep the mirror self ignoring, so it never appears in the user's repository and we never have
+     * to edit their `.gitignore`.
+     *
+     * `cvucsedit.WriteMirrorGitignore` turns that off for someone who wants to version the mirror
+     * themselves. It is a real risk rather than a preference - the watcher cannot tell a `checkout`
+     * from a save, so restoring an old commit is a bulk `UPDATE` against production - and the setting
+     * exists because that is the user's call to make, not ours. What we owe them is that the risk is
+     * stated where they turn it on (the setting description) and where an agent will read it
+     * (`AGENTS.md` rule 1, which switches text with this flag).
+     *
+     * Turning it off has to *remove* the file, or it would do nothing at all for the mirrors that
+     * already exist - which is all of them. Only the file we wrote is removed: once someone has
+     * edited it, it is theirs, and deleting it would throw away ignore rules we know nothing about.
+     * Re-run on every refresh rather than on activation alone, so the setting takes effect without a
+     * window reload.
+     */
+    public async writeGitignore(): Promise<void> {
+        if (!this.root) {
+            return;
+        }
+        const uri = vscode.Uri.joinPath(this.root, '.gitignore');
+
+        if (vscode.workspace.getConfiguration('cvucsedit').get('WriteMirrorGitignore', true)) {
+            if (await this.writeIfChanged(uri, GITIGNORE_CONTENT)) {
+                this.log('.gitignore: restored. The mirror is ignored by git again.');
+            }
+            return;
+        }
+
+        try {
+            const existing = Buffer.from(await vscode.workspace.fs.readFile(uri)).toString('utf8');
+            if (existing.trim() !== GITIGNORE_CONTENT.trim()) {
+                this.log(
+                    '.gitignore: left alone, since it is no longer the one we wrote. Remove the ' +
+                    "'*' line by hand if you meant to track the mirror in git."
+                );
+                return;
+            }
+            await vscode.workspace.fs.delete(uri);
+            this.log(
+                '.gitignore: removed (cvucsedit.WriteMirrorGitignore is off). Git now sees this ' +
+                'folder. Remember that a checkout, merge or reset here writes to the live database.'
+            );
+        } catch {
+            // Already gone, or unreadable - either way there is nothing to remove.
         }
     }
 

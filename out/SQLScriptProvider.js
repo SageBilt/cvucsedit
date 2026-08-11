@@ -196,12 +196,15 @@ class SQLScriptProvider {
         const generator = new dtsGenerator_1.DtsGenerator();
         const dts = generator.build(this.USCMDynamicData);
         await this.mirror.writeProjectFiles(dts, generator.buildJsConfig());
+        // Here rather than in `initialize` alone so that turning `WriteMirrorGitignore` on or off
+        // takes effect on a refresh, without a window reload.
+        await this.mirror.writeGitignore();
         // The mirror is reachable by AI agents, so it has to carry its own instructions. `cv-api.d.ts`
         // covers the UCS:JS API and nothing else: not the sync rules, and not UCS:M at all.
         const config = vscode.workspace.getConfiguration('cvucsedit');
         const docs = new agentDocs_1.AgentDocsGenerator();
         await this.mirror.writeAgentDocs({
-            'AGENTS.md': docs.buildAgentsMd(config.get('Database', 'CVData'), config.get('Server', '(unknown server)'), this.mirror.rootLabel),
+            'AGENTS.md': docs.buildAgentsMd(config.get('Database', 'CVData'), config.get('Server', '(unknown server)'), this.mirror.rootLabel, config.get('WriteMirrorGitignore', true)),
             'CLAUDE.md': docs.buildClaudeMd(),
             'ucsjs-reference.md': docs.buildUcsjsReference(),
             'ucsm-reference.md': docs.buildUcsmReference()
